@@ -1,0 +1,49 @@
+import { Box, Divider, Paper, Stack, Typography } from '@mui/material'
+import { useNerStore } from '../../../state/nerStore'
+import { HighlightedText } from '../highlight'
+import { EntitiesTable } from '../components/EntitiesTable'
+import { NerForm } from '../components/NerForm'
+
+export function ExtractingNerPage() {
+  const { state, actions } = useNerStore()
+  const entities = state.resp?.entities ?? []
+
+  return (
+    <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <NerForm
+            model={state.model}
+            text={state.text}
+            labels={state.labels}
+            threshold={state.threshold}
+            loading={state.loading}
+            error={state.error}
+            onChangeModel={actions.setModel}
+            onChangeText={actions.setText}
+            onChangeLabels={actions.setLabels}
+            onChangeThreshold={actions.setThreshold}
+            onExtract={actions.extract}
+            onResetExample={actions.resetExample}
+          />
+        </Paper>
+      </Box>
+
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Paper variant="outlined" sx={{ p: 2 }}>
+          <Stack spacing={2}>
+            <HighlightedText text={state.text} entities={entities} />
+
+            <Divider />
+
+            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+              Entities ({entities.length})
+            </Typography>
+            <EntitiesTable entities={entities} />
+          </Stack>
+        </Paper>
+      </Box>
+    </Stack>
+  )
+}
+
