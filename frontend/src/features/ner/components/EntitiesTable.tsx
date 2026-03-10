@@ -1,4 +1,5 @@
 import { Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
+import { getLabelColor } from '../highlight'
 import type { NerEntity } from '../../../types/ner'
 
 function formatScore(score: number | undefined) {
@@ -10,7 +11,7 @@ export function EntitiesTable(props: { entities: NerEntity[] }) {
   const { entities } = props
 
   return (
-    <TableContainer sx={{ maxHeight: 320 }}>
+    <TableContainer sx={{ maxHeight: 300 }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
@@ -30,7 +31,15 @@ export function EntitiesTable(props: { entities: NerEntity[] }) {
                 </Typography>
               </TableCell>
               <TableCell>
-                <Chip size="small" label={e.label} />
+                <Chip
+                  size="small"
+                  label={e.label}
+                  sx={{
+                    bgcolor: getLabelColor(e.label),
+                    border: '1px solid',
+                    borderColor: 'divider',
+                  }}
+                />
               </TableCell>
               <TableCell>{formatScore(e.score)}</TableCell>
               <TableCell>{e.start ?? ''}</TableCell>

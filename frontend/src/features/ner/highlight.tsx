@@ -1,5 +1,6 @@
-import { Box, Chip, Stack, Typography } from '@mui/material'
-import type { NerEntity } from '../../types/ner'
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
+import { useMemo, useState } from 'react'
+import type { NerChunkSpan, NerEntity } from '../../types/ner'
 
 // Deterministic label colors (stable per label name)
 const LABEL_COLORS = [
@@ -39,6 +40,15 @@ type TextSegment =
   | { type: 'plain'; text: string }
   | { type: 'highlight'; text: string; label: string }
 
+type ChunkWithEntities = {
+  index: number
+  start: number
+  end: number
+  originalText?: string
+  correctedText: string
+  entities: NerEntity[]
+}
+
 export function buildHighlightSegments(text: string, entities: NerEntity[]): TextSegment[] {
   const segments: TextSegment[] = []
   const len = text.length
@@ -70,10 +80,33 @@ export function HighlightedText(props: {
   text: string
   entities: NerEntity[]
   title?: string
+  chunks?: NerChunkSpan[]
 }) {
-  const { text, entities, title = 'Highlighted text' } = props
+  const { text, entities, title = 'Highlighted text', chunks } = props
+  const [openChunksModal, setOpenChunksModal] = useState(false)
   const segments = buildHighlightSegments(text, entities)
   const labelsInResult = Array.from(new Set(entities.map((e) => e.label)))
+
+  const chunksWithEntities: ChunkWithEntities[] = useMemo(() => {
+    if (!chunks || chunks.length === 0) return []
+    return chunks.map((c) => {
+      const start = c.start ?? 0
+      const end = c.end ?? start
+      const ents = entities.filter((e) => {
+        const es = e.start ?? 0
+        const ee = e.end ?? es
+        return es >= start && ee <= end
+      })
+      return {
+        index: c.index,
+        start,
+        end,
+        originalText: c.original_text,
+        correctedText: c.corrected_text ?? text.slice(start, end),
+        entities: ents,
+      }
+    })
+  }, [chunks, entities, text])
 
   return (
     <Stack spacing={1.5}>
@@ -137,6 +170,152 @@ export function HighlightedText(props: {
             />
           ))}
         </Stack>
+      )}
+
+      {chunksWithEntities.length > 0 && (
+        <>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => setOpenChunksModal(true)}
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            View entities by chunk ({chunksWithEntities.length})
+          </Button>
+
+          <Dialog
+            open={openChunksModal}
+            onClose={() => setOpenChunksModal(false)}
+            fullWidth
+            maxWidth="md"
+          >
+            <DialogTitle>Entities by chunk</DialogTitle>
+            <DialogContent dividers>
+              <Stack spacing={2}>
+                {chunksWithEntities.map((c) => (
+                  <Box
+                    key={c.index}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: 'grey.50',
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                      Chunk {c.index + 1}{' '}
+                      <Typography component="span" variant="caption" sx={{ opacity: 0.7 }}>
+                        ({c.start} – {c.end})
+                      </Typography>
+                    </Typography>
+                    {typeof c.originalText === 'string' && c.originalText.trim() !== '' && (
+                      <Box sx={{ mb: 1 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                          Before
+                        </Typography>
+                        <Box
+                          sx={{
+                            mt: 0.5,
+                            p: 1,
+                            borderRadius: 1,
+                            bgcolor: 'background.paper',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            maxHeight: 100,
+                            overflow: 'auto',
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.7 }}
+                          >
+                            {c.originalText}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+                    <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                      After
+                    </Typography>
+                    <Box
+                      sx={{
+                        mt: 0.5,
+                        mb: 1,
+                        p: 1,
+                        borderRadius: 1,
+                        bgcolor: 'background.paper',
+                        maxHeight: 140,
+                        overflow: 'auto',
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        component="span"
+                        sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.7 }}
+                      >
+                        {buildHighlightSegments(
+                          c.correctedText,
+                          c.entities.map((e) => ({
+                            ...e,
+                            start: (e.start ?? 0) - c.start,
+                            end: (e.end ?? 0) - c.start,
+                          }))
+                        ).map((seg, i) =>
+                          seg.type === 'plain' ? (
+                            <span key={i}>{seg.text}</span>
+                          ) : (
+                            <Box
+                              key={i}
+                              component="span"
+                              sx={{
+                                bgcolor: getLabelColor(seg.label),
+                                px: 0.3,
+                                borderRadius: 0.5,
+                                border: '1px solid',
+                                borderColor: getLabelColor(seg.label),
+                              }}
+                              title={seg.label}
+                            >
+                              {seg.text}
+                            </Box>
+                          )
+                        )}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                      Entities ({c.entities.length})
+                    </Typography>
+                    {c.entities.length === 0 ? (
+                      <Typography variant="caption" sx={{ display: 'block', opacity: 0.7 }}>
+                        No entities in this chunk.
+                      </Typography>
+                    ) : (
+                      <Stack
+                        component="ul"
+                        sx={{ m: 0, mt: 0.5, pl: 2, listStyle: 'disc' }}
+                        spacing={0.3}
+                      >
+                        {c.entities.map((e, idx) => (
+                          <li key={`${c.index}-${idx}`}>
+                            <Typography variant="caption">
+                              <strong>{e.label}</strong>: {e.text}{' '}
+                              {typeof e.score === 'number' &&
+                                `(${(e.score * 100).toFixed(1)}%)`}
+                            </Typography>
+                          </li>
+                        ))}
+                      </Stack>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setOpenChunksModal(false)}>Close</Button>
+            </DialogActions>
+          </Dialog>
+        </>
       )}
     </Stack>
   )

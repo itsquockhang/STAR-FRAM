@@ -3,5 +3,8 @@ flask-cors>=4.0.0
 gliner
 transformers>=4.48.0
 torch
-chonkie[semantic]
+chonkie[all]
 sentence-transformers
+youtube-transcript-api>=1.0.0
+underthesea
+sentencepiece

@@ -7,8 +7,11 @@ SUPPORTED_MODELS = [
 ]
 
 # Chunking: Chonkie SemanticChunker + Jina embeddings
-CHUNK_EMBEDDING_MODEL = os.getenv("CHUNK_EMBEDDING_MODEL", "jinaai/jina-embeddings-v5-text-nano")
-CHUNK_CHAR_THRESHOLD = int(os.getenv("CHUNK_CHAR_THRESHOLD", "1500"))  # Only chunk when text is longer
-CHUNK_SIZE_TOKENS = int(os.getenv("CHUNK_SIZE_TOKENS", "512"))
+CHUNK_EMBEDDING_MODEL = os.getenv("CHUNK_EMBEDDING_MODEL", "google/embeddinggemma-300m")
+CHUNK_CHAR_THRESHOLD = int(os.getenv("CHUNK_CHAR_THRESHOLD", "155"))  # Only chunk when text is longer
+CHUNK_SIZE_TOKENS = int(os.getenv("CHUNK_SIZE_TOKENS", "160"))
 CHUNK_SIMILARITY_THRESHOLD = float(os.getenv("CHUNK_SIMILARITY_THRESHOLD", "0.7"))
+
+# Parallel chunk processing (best on CPU). If CUDA is available, code will auto-fallback to 1.
+CHUNK_MAX_WORKERS = int(os.getenv("CHUNK_MAX_WORKERS", "4"))
 

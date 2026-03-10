@@ -19,6 +19,7 @@ def get_model(model_name: str) -> GLiNER:
       model = _models.get(model_name)
       if model is None:
           model = GLiNER.from_pretrained(model_name)
+          # _attn_implementation='flash_attention_2'
           _models[model_name] = model
       return model
 

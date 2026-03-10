@@ -7,6 +7,8 @@ import { NerForm } from '../components/NerForm'
 export function ExtractingNerPage() {
   const { state, actions } = useNerStore()
   const entities = state.resp?.entities ?? []
+  const chunks = state.resp?.chunks ?? []
+  const textUsed = state.resp?.text_used ?? state.text
 
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
@@ -17,12 +19,16 @@ export function ExtractingNerPage() {
             text={state.text}
             labels={state.labels}
             threshold={state.threshold}
+            chunkingMode={state.chunkingMode}
+            useSpellCorrection={state.useSpellCorrection}
             loading={state.loading}
             error={state.error}
             onChangeModel={actions.setModel}
             onChangeText={actions.setText}
             onChangeLabels={actions.setLabels}
             onChangeThreshold={actions.setThreshold}
+            onChangeChunkingMode={actions.setChunkingMode}
+            onChangeUseSpellCorrection={actions.setUseSpellCorrection}
             onExtract={actions.extract}
             onResetExample={actions.resetExample}
           />
@@ -32,7 +38,12 @@ export function ExtractingNerPage() {
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={2}>
-            <HighlightedText text={state.text} entities={entities} />
+            <HighlightedText
+              text={textUsed}
+              entities={entities}
+              chunks={chunks}
+              title="Highlighted text"
+            />
 
             <Divider />
 

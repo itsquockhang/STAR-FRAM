@@ -59,13 +59,10 @@ export function Navbar() {
           }}
         >
           <Box
-            sx={{
-              width: 26,
-              height: 26,
-              borderRadius: '30%',
-              bgcolor: 'primary.main',
-              backgroundImage: 'radial-gradient(circle at 30% 30%, #ffffff55 0, transparent 60%)',
-            }}
+            component="img"
+            src="/logo.png"
+            alt="STARFRAM"
+            sx={{ width: 48, height: 48, borderRadius: 1 }}
           />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1 }}>
@@ -93,6 +90,7 @@ export function Navbar() {
           }}
         >
           <NavButton to="/extracting-ner" label="Extracting NER" />
+          <NavButton to="/youtube-transcript" label="YouTube Transcript" />
           <NavButton to="/workspace" label="Workspace" />
         </Box>
 

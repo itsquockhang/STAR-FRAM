@@ -5,6 +5,7 @@ import {
   Button,
   Chip,
   CircularProgress,
+  FormControlLabel,
   FormControl,
   InputLabel,
   ListItemText,
@@ -14,6 +15,7 @@ import {
   Stack,
   TextField,
   Typography,
+  Switch,
 } from '@mui/material'
 import type { SelectChangeEvent } from '@mui/material'
 import type { SupportedModel } from '../../../types/ner'
@@ -25,12 +27,16 @@ export function NerForm(props: {
   text: string
   labels: string[]
   threshold: number
+  chunkingMode: 'none' | 'semantic' | 'token' | 'sentence'
+  useSpellCorrection: boolean
   loading: boolean
   error: string | null
   onChangeModel: (m: SupportedModel) => void
   onChangeText: (t: string) => void
   onChangeLabels: (labels: string[]) => void
   onChangeThreshold: (t: number) => void
+  onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'sentence') => void
+  onChangeUseSpellCorrection: (v: boolean) => void
   onExtract: () => void
   onResetExample: () => void
 }) {
@@ -39,12 +45,16 @@ export function NerForm(props: {
     text,
     labels,
     threshold,
+    chunkingMode,
+    useSpellCorrection,
     loading,
     error,
     onChangeModel,
     onChangeText,
     onChangeLabels,
     onChangeThreshold,
+    onChangeChunkingMode,
+    onChangeUseSpellCorrection,
     onExtract,
     onResetExample,
   } = props
@@ -71,7 +81,8 @@ export function NerForm(props: {
         label="Text"
         value={text}
         onChange={(e) => onChangeText(e.target.value)}
-        minRows={10}
+        minRows={5}
+        maxRows={5}
         multiline
         fullWidth
       />
@@ -118,6 +129,40 @@ export function NerForm(props: {
           max={1}
           step={0.01}
           onChange={(_, v) => onChangeThreshold(v as number)}
+        />
+      </Box>
+
+      <Box>
+        <Typography variant="body2" sx={{ mb: 1, opacity: 0.85 }}>
+          Chunking
+        </Typography>
+        <FormControl fullWidth>
+          <Select
+            size="small"
+            value={chunkingMode}
+            onChange={(e: SelectChangeEvent) =>
+              onChangeChunkingMode(
+                e.target.value as 'none' | 'semantic' | 'token' | 'sentence'
+              )
+            }
+          >
+            <MenuItem value="none">No chunking</MenuItem>
+            <MenuItem value="semantic">Semantic chunker (Chonkie)</MenuItem>
+            <MenuItem value="token">Token chunker (fixed-size tokens)</MenuItem>
+            <MenuItem value="sentence">Sentence chunker (Underthesea)</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      <Box>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={useSpellCorrection}
+              onChange={(e) => onChangeUseSpellCorrection(e.target.checked)}
+            />
+          }
+          label="Spelling correction per chunk (@protonx-legal-tc)"
         />
       </Box>
 

@@ -8,6 +8,8 @@ type NerStoreState = {
   text: string
   labels: string[]
   threshold: number
+  chunkingMode: 'none' | 'semantic' | 'token' | 'sentence'
+  useSpellCorrection: boolean
   loading: boolean
   error: string | null
   resp: NerResponse | null
@@ -18,6 +20,8 @@ type NerStoreActions = {
   setText: (t: string) => void
   setLabels: (labels: string[]) => void
   setThreshold: (t: number) => void
+  setChunkingMode: (m: NerStoreState['chunkingMode']) => void
+  setUseSpellCorrection: (v: boolean) => void
   resetExample: () => void
   extract: () => Promise<void>
 }
@@ -30,7 +34,9 @@ export function NerStoreProvider(props: { children: React.ReactNode }) {
   const [model, setModel] = useState<SupportedModel>(SUPPORTED_MODELS[0])
   const [text, setText] = useState(DEFAULT_TEXT)
   const [labels, setLabels] = useState<string[]>([...DEFAULT_LABELS])
-  const [threshold, setThreshold] = useState(0.05)
+  const [threshold, setThreshold] = useState(0.3)
+  const [chunkingMode, setChunkingMode] = useState<NerStoreState['chunkingMode']>('token')
+  const [useSpellCorrection, setUseSpellCorrection] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resp, setResp] = useState<NerResponse | null>(null)
@@ -53,6 +59,9 @@ export function NerStoreProvider(props: { children: React.ReactNode }) {
           text,
           labels,
           threshold,
+          use_chunking: chunkingMode !== 'none',
+          chunking_strategy: chunkingMode === 'none' ? 'semantic' : chunkingMode,
+          use_spell_correction: useSpellCorrection,
           use_cache: true,
         }),
       })
@@ -65,11 +74,21 @@ export function NerStoreProvider(props: { children: React.ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [labels, model, text, threshold])
+  }, [chunkingMode, labels, model, text, threshold, useSpellCorrection])
 
   const state = useMemo<NerStoreState>(
-    () => ({ model, text, labels, threshold, loading, error, resp }),
-    [error, labels, loading, model, resp, text, threshold]
+    () => ({
+      model,
+      text,
+      labels,
+      threshold,
+      chunkingMode,
+      useSpellCorrection,
+      loading,
+      error,
+      resp,
+    }),
+    [chunkingMode, error, labels, loading, model, resp, text, threshold, useSpellCorrection]
   )
 
   const actions = useMemo<NerStoreActions>(
@@ -78,6 +97,8 @@ export function NerStoreProvider(props: { children: React.ReactNode }) {
       setText,
       setLabels,
       setThreshold,
+      setChunkingMode,
+      setUseSpellCorrection,
       resetExample,
       extract,
     }),

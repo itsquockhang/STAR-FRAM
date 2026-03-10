@@ -49,6 +49,11 @@ export const LABEL_OPTIONS = [
   'Certifiers',
   'International Development Actors',
   'Donors',
+  'Locations',
+  'People',
+  'Engineers',
+  'Actors',
+  'Diseases',
 ]
 
 export const DEFAULT_LABELS = [
@@ -61,5 +66,9 @@ export const DEFAULT_LABELS = [
   'Agriculture Department Officials',
   'Storage Providers',
   'Transporters',
+  'Locations',
+  'People',
+  'Engineers',
+  'Diseases',
 ]
 

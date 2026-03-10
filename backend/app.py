@@ -5,6 +5,7 @@ from flask_cors import CORS
 
 from config import DEFAULT_MODEL, SUPPORTED_MODELS
 from ner_service import clear_label_cache, handle_ner
+from youtube_service import fetch_transcript
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -30,6 +31,17 @@ def clear_cache():
 def ner():
     payload = request.get_json(silent=True) or {}
     body, status = handle_ner(payload)
+    return jsonify(body), status
+
+
+@app.post("/api/youtube/transcript")
+def youtube_transcript():
+    payload = request.get_json(silent=True) or {}
+    url_or_id = str(payload.get("url") or payload.get("video_id") or "").strip()
+    languages = payload.get("languages")
+    if not url_or_id:
+        return jsonify({"error": "Missing 'url' or 'video_id'"}), 400
+    body, status = fetch_transcript(url_or_id, languages=languages)
     return jsonify(body), status
 
 
