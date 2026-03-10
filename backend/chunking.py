@@ -4,6 +4,7 @@ from typing import Any, List
 
 from chonkie import SemanticChunker, TokenChunker
 from underthesea import sent_tokenize
+from tokenizers import Tokenizer
 
 from config import CHUNK_EMBEDDING_MODEL, CHUNK_SIMILARITY_THRESHOLD, CHUNK_SIZE_TOKENS
 
@@ -31,8 +32,9 @@ def get_token_chunker() -> TokenChunker:
     if _token_chunker is None:
         with _chunker_lock:
             if _token_chunker is None:
+                custom_tokenizer = Tokenizer.from_pretrained("google/embeddinggemma-300m")
                 _token_chunker = TokenChunker(
-                    tokenizer="gpt2",
+                    tokenizer=custom_tokenizer,
                     chunk_size=CHUNK_SIZE_TOKENS,
                     chunk_overlap=20,
                 )

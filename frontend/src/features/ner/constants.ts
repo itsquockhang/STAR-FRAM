@@ -54,6 +54,7 @@ export const LABEL_OPTIONS = [
   'Engineers',
   'Actors',
   'Diseases',
+  'Crops',
 ]
 
 export const DEFAULT_LABELS = [
@@ -70,5 +71,6 @@ export const DEFAULT_LABELS = [
   'People',
   'Engineers',
   'Diseases',
+  'Crops',
 ]
 

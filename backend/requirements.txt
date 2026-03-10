@@ -8,3 +8,6 @@ sentence-transformers
 youtube-transcript-api>=1.0.0
 underthesea
 sentencepiece
+python-docx
+trafilatura
+gunicorn

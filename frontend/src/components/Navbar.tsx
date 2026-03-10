@@ -91,6 +91,8 @@ export function Navbar() {
         >
           <NavButton to="/extracting-ner" label="Extracting NER" />
           <NavButton to="/youtube-transcript" label="YouTube Transcript" />
+          <NavButton to="/document-import" label="Document Import" />
+          <NavButton to="/web-extract" label="Web Extract" />
           <NavButton to="/workspace" label="Workspace" />
         </Box>
 

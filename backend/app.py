@@ -4,7 +4,9 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from config import DEFAULT_MODEL, SUPPORTED_MODELS
+from document_service import extract_text_from_upload
 from ner_service import clear_label_cache, handle_ner
+from web_service import extract_web_text
 from youtube_service import fetch_transcript
 
 app = Flask(__name__)
@@ -42,6 +44,26 @@ def youtube_transcript():
     if not url_or_id:
         return jsonify({"error": "Missing 'url' or 'video_id'"}), 400
     body, status = fetch_transcript(url_or_id, languages=languages)
+    return jsonify(body), status
+
+
+@app.post("/api/doc/extract")
+def doc_extract():
+    if "file" not in request.files:
+        return jsonify({"error": "Missing file upload field 'file'"}), 400
+
+    f = request.files["file"]
+    filename = f.filename or ""
+    data = f.read() or b""
+    body, status = extract_text_from_upload(filename, data)
+    return jsonify(body), status
+
+
+@app.post("/api/web/extract")
+def web_extract():
+    payload = request.get_json(silent=True) or {}
+    url = str(payload.get("url") or "").strip()
+    body, status = extract_web_text(url)
     return jsonify(body), status
 
 
