@@ -36,6 +36,7 @@ def _run_ner_on_text(
     text: str,
     labels: List[str],
     threshold: float,
+    multi_label: bool,
     use_cache: bool,
     model_name: str,
     label_batch_size: int,
@@ -59,13 +60,17 @@ def _run_ner_on_text(
             cached_labels = True
         try:
             outputs = model.batch_predict_with_embeds(
-                [text], embeds, labels, threshold=threshold, multi_label=True
+                [text], embeds, labels, threshold=threshold, multi_label=multi_label
             )
             entities = outputs[0] if isinstance(outputs, list) and outputs else []
         except Exception:
-            entities = model.predict_entities(text, labels, threshold=threshold, multi_label=True)
+            entities = model.predict_entities(
+                text, labels, threshold=threshold, multi_label=multi_label
+            )
     else:
-        entities = model.predict_entities(text, labels, threshold=threshold, multi_label=True)
+        entities = model.predict_entities(
+            text, labels, threshold=threshold, multi_label=multi_label
+        )
     return entities, cached_labels
 
 
@@ -81,6 +86,7 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     label_batch_size = int(payload.get("label_batch_size", 8))
     use_chunking = bool(payload.get("use_chunking", True))
     chunk_char_threshold = int(payload.get("chunk_char_threshold", CHUNK_CHAR_THRESHOLD))
+    multi_label = bool(payload.get("multi_label", True))
 
     if model_name not in SUPPORTED_MODELS:
         return (
@@ -186,6 +192,7 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
                     corrected,
                     labels,
                     threshold,
+                    multi_label,
                     use_cache,
                     model_name,
                     label_batch_size,
@@ -222,7 +229,14 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
                 else text
             )
             entities, cached_labels = _run_ner_on_text(
-                model, text_used, labels, threshold, use_cache, model_name, label_batch_size
+                model,
+                text_used,
+                labels,
+                threshold,
+                multi_label,
+                use_cache,
+                model_name,
+                label_batch_size,
             )
     else:
         text_used = (
@@ -231,7 +245,14 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
             else text
         )
         entities, cached_labels = _run_ner_on_text(
-            model, text_used, labels, threshold, use_cache, model_name, label_batch_size
+            model,
+            text_used,
+            labels,
+            threshold,
+            multi_label,
+            use_cache,
+            model_name,
+            label_batch_size,
         )
 
     took_ms = int((time.perf_counter() - t0) * 1000)
@@ -243,6 +264,7 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
         "took_ms": took_ms,
         "chunking_strategy": chunking_strategy,
         "use_spell_correction": use_spell_correction,
+        "multi_label": multi_label,
     }
     if chunks_used is not None:
         out["chunks_used"] = chunks_used

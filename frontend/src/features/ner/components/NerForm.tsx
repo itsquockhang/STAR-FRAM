@@ -29,6 +29,7 @@ export function NerForm(props: {
   threshold: number
   chunkingMode: 'none' | 'semantic' | 'token' | 'sentence'
   useSpellCorrection: boolean
+  multiLabel: boolean
   loading: boolean
   error: string | null
   onChangeModel: (m: SupportedModel) => void
@@ -37,6 +38,7 @@ export function NerForm(props: {
   onChangeThreshold: (t: number) => void
   onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'sentence') => void
   onChangeUseSpellCorrection: (v: boolean) => void
+  onChangeMultiLabel: (v: boolean) => void
   onExtract: () => void
   onResetExample: () => void
 }) {
@@ -47,6 +49,7 @@ export function NerForm(props: {
     threshold,
     chunkingMode,
     useSpellCorrection,
+    multiLabel,
     loading,
     error,
     onChangeModel,
@@ -55,6 +58,7 @@ export function NerForm(props: {
     onChangeThreshold,
     onChangeChunkingMode,
     onChangeUseSpellCorrection,
+    onChangeMultiLabel,
     onExtract,
     onResetExample,
   } = props
@@ -163,6 +167,18 @@ export function NerForm(props: {
             />
           }
           label="Spelling correction per chunk (@protonx-legal-tc)"
+        />
+      </Box>
+
+      <Box>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={multiLabel}
+              onChange={(e) => onChangeMultiLabel(e.target.checked)}
+            />
+          }
+          label="Allow multiple labels per span (multi-label)"
         />
       </Box>
 

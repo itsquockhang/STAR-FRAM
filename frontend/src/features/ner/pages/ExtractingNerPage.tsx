@@ -21,6 +21,7 @@ export function ExtractingNerPage() {
             threshold={state.threshold}
             chunkingMode={state.chunkingMode}
             useSpellCorrection={state.useSpellCorrection}
+            multiLabel={state.multiLabel}
             loading={state.loading}
             error={state.error}
             onChangeModel={actions.setModel}
@@ -29,6 +30,7 @@ export function ExtractingNerPage() {
             onChangeThreshold={actions.setThreshold}
             onChangeChunkingMode={actions.setChunkingMode}
             onChangeUseSpellCorrection={actions.setUseSpellCorrection}
+            onChangeMultiLabel={actions.setMultiLabel}
             onExtract={actions.extract}
             onResetExample={actions.resetExample}
           />
