@@ -1,4 +1,4 @@
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
+import { Alert, Box, Button, Chip, CircularProgress, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
 import { useMemo, useState } from 'react'
 import type { NerChunkSpan, NerEntity } from '../../types/ner'
 
@@ -49,6 +49,14 @@ type ChunkWithEntities = {
   entities: NerEntity[]
 }
 
+type AgriRelationsResponse = {
+  analysis?: any
+  llm_base_url?: string
+  llm_model?: string
+  error?: string
+  raw?: string
+}
+
 export function buildHighlightSegments(text: string, entities: NerEntity[]): TextSegment[] {
   const segments: TextSegment[] = []
   const len = text.length
@@ -81,9 +89,13 @@ export function HighlightedText(props: {
   entities: NerEntity[]
   title?: string
   chunks?: NerChunkSpan[]
+  showBeforeAfter?: boolean
 }) {
-  const { text, entities, title = 'Highlighted text', chunks } = props
+  const { text, entities, title = 'Highlighted text', chunks, showBeforeAfter = true } = props
   const [openChunksModal, setOpenChunksModal] = useState(false)
+  const [chunkAnalysis, setChunkAnalysis] = useState<Record<number, AgriRelationsResponse | null>>({})
+  const [chunkLoading, setChunkLoading] = useState<Record<number, boolean>>({})
+  const [entitiesOpen, setEntitiesOpen] = useState<Record<number, boolean>>({})
   const segments = buildHighlightSegments(text, entities)
   const labelsInResult = Array.from(new Set(entities.map((e) => e.label)))
 
@@ -107,6 +119,29 @@ export function HighlightedText(props: {
       }
     })
   }, [chunks, entities, text])
+
+  const analyzeChunk = async (c: ChunkWithEntities) => {
+    const idx = c.index
+    setChunkLoading((prev) => ({ ...prev, [idx]: true }))
+    try {
+      const r = await fetch('/api/llm/agri-relations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: c.correctedText,
+        }),
+      })
+      const data = (await r.json()) as AgriRelationsResponse
+      setChunkAnalysis((prev) => ({ ...prev, [idx]: data }))
+    } catch (e) {
+      setChunkAnalysis((prev) => ({
+        ...prev,
+        [idx]: { error: e instanceof Error ? e.message : String(e) },
+      }))
+    } finally {
+      setChunkLoading((prev) => ({ ...prev, [idx]: false }))
+    }
+  }
 
   return (
     <Stack spacing={1.5}>
@@ -209,7 +244,9 @@ export function HighlightedText(props: {
                         ({c.start} – {c.end})
                       </Typography>
                     </Typography>
-                    {typeof c.originalText === 'string' && c.originalText.trim() !== '' && (
+                    {showBeforeAfter &&
+                      typeof c.originalText === 'string' &&
+                      c.originalText.trim() !== '' && (
                       <Box sx={{ mb: 1 }}>
                         <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
                           Before
@@ -235,9 +272,11 @@ export function HighlightedText(props: {
                         </Box>
                       </Box>
                     )}
-                    <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
-                      After
-                    </Typography>
+                    {showBeforeAfter && (
+                      <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                        After
+                      </Typography>
+                    )}
                     <Box
                       sx={{
                         mt: 0.5,
@@ -283,29 +322,150 @@ export function HighlightedText(props: {
                         )}
                       </Typography>
                     </Box>
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                      Entities ({c.entities.length})
-                    </Typography>
-                    {c.entities.length === 0 ? (
-                      <Typography variant="caption" sx={{ display: 'block', opacity: 0.7 }}>
-                        No entities in this chunk.
-                      </Typography>
-                    ) : (
-                      <Stack
-                        component="ul"
-                        sx={{ m: 0, mt: 0.5, pl: 2, listStyle: 'disc' }}
-                        spacing={0.3}
+                    <Box sx={{ mt: 0.5 }}>
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() =>
+                          setEntitiesOpen((prev) => ({ ...prev, [c.index]: !prev[c.index] }))
+                        }
+                        sx={{ px: 0, minWidth: 0, textTransform: 'none' }}
                       >
-                        {c.entities.map((e, idx) => (
-                          <li key={`${c.index}-${idx}`}>
-                            <Typography variant="caption">
-                              <strong>{e.label}</strong>: {e.text}{' '}
-                              {typeof e.score === 'number' &&
-                                `(${(e.score * 100).toFixed(1)}%)`}
+                        Entities ({c.entities.length}) {entitiesOpen[c.index] ? '▲' : '▼'}
+                      </Button>
+                      {c.entities.length === 0 ? (
+                        <Typography variant="caption" sx={{ display: 'block', opacity: 0.7 }}>
+                          No entities in this chunk.
+                        </Typography>
+                      ) : (
+                        <Collapse in={!!entitiesOpen[c.index]} timeout="auto" unmountOnExit>
+                          <Stack
+                            component="ul"
+                            sx={{ m: 0, mt: 0.5, pl: 2, listStyle: 'disc' }}
+                            spacing={0.3}
+                          >
+                            {c.entities.map((e, idx) => (
+                              <li key={`${c.index}-${idx}`}>
+                                <Typography variant="caption">
+                                  <strong>{e.label}</strong>: {e.text}{' '}
+                                  {typeof e.score === 'number' &&
+                                    `(${(e.score * 100).toFixed(1)}%)`}
+                                </Typography>
+                              </li>
+                            ))}
+                          </Stack>
+                        </Collapse>
+                      )}
+                    </Box>
+
+                    <Box sx={{ mt: 1 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => analyzeChunk(c)}
+                        disabled={!!chunkLoading[c.index]}
+                      >
+                        {chunkLoading[c.index] ? (
+                          <Stack direction="row" alignItems="center" gap={1}>
+                            <CircularProgress size={16} />
+                            <span>Analyzing…</span>
+                          </Stack>
+                        ) : (
+                          'Analyze agri relations'
+                        )}
+                      </Button>
+                    </Box>
+
+                    {chunkAnalysis[c.index]?.error && (
+                      <Alert severity="warning" sx={{ mt: 1 }}>
+                        {chunkAnalysis[c.index]?.error}
+                      </Alert>
+                    )}
+
+                    {chunkAnalysis[c.index]?.analysis && (
+                      <Box
+                        sx={{
+                          mt: 1,
+                          p: 1.25,
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          bgcolor: 'background.paper',
+                        }}
+                      >
+                        <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+                          Relationship summary
+                        </Typography>
+                        <Typography variant="body2" sx={{ mb: 1, opacity: 0.9 }}>
+                          {String(chunkAnalysis[c.index]?.analysis?.summary ?? '')}
+                        </Typography>
+
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap">
+                          {(chunkAnalysis[c.index]?.analysis?.factors ?? []).length > 0 && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                                Factors
+                              </Typography>
+                              <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                                {(chunkAnalysis[c.index]?.analysis?.factors ?? []).map(
+                                  (f: any, i: number) => (
+                                    <Chip key={i} size="small" label={f?.name ?? 'unknown'} />
+                                  )
+                                )}
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {(chunkAnalysis[c.index]?.analysis?.targets ?? []).length > 0 && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                                Targets
+                              </Typography>
+                              <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                                {(chunkAnalysis[c.index]?.analysis?.targets ?? []).map(
+                                  (t: any, i: number) => (
+                                    <Chip key={i} size="small" label={t?.name ?? 'unknown'} />
+                                  )
+                                )}
+                              </Stack>
+                            </Box>
+                          )}
+                        </Stack>
+
+                        {(chunkAnalysis[c.index]?.analysis?.impacts ?? []).length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                              Impacts
                             </Typography>
-                          </li>
-                        ))}
-                      </Stack>
+                            <Stack component="ul" sx={{ m: 0, mt: 0.5, pl: 2 }} spacing={0.4}>
+                              {(chunkAnalysis[c.index]?.analysis?.impacts ?? []).map(
+                                (imp: any, i: number) => (
+                                  <li key={i}>
+                                    <Typography variant="caption">
+                                      <strong>{imp?.from ?? '?'}</strong> →{' '}
+                                      <strong>{imp?.to ?? '?'}</strong> ({imp?.effect ?? 'khong_ro'})
+                                    </Typography>
+                                  </li>
+                                )
+                              )}
+                            </Stack>
+                          </Box>
+                        )}
+
+                        {chunkAnalysis[c.index]?.analysis?.outcome && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                              Outcome
+                            </Typography>
+                            <Typography variant="caption" display="block">
+                              {String(chunkAnalysis[c.index]?.analysis?.outcome?.result ?? 'khong_ro')}
+                              {chunkAnalysis[c.index]?.analysis?.outcome?.reason
+                                ? ` — ${String(chunkAnalysis[c.index]?.analysis?.outcome?.reason)}`
+                                : ''}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
                     )}
                   </Box>
                 ))}

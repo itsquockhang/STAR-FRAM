@@ -5,6 +5,7 @@ from flask_cors import CORS
 
 from config import DEFAULT_MODEL, SUPPORTED_MODELS
 from document_service import extract_text_from_upload
+from llm_agri_service import extract_agri_relations
 from ner_service import clear_label_cache, handle_ner
 from web_service import extract_web_text
 from youtube_service import fetch_transcript
@@ -64,6 +65,14 @@ def web_extract():
     payload = request.get_json(silent=True) or {}
     url = str(payload.get("url") or "").strip()
     body, status = extract_web_text(url)
+    return jsonify(body), status
+
+
+@app.post("/api/llm/agri-relations")
+def llm_agri_relations():
+    payload = request.get_json(silent=True) or {}
+    text = str(payload.get("text") or "")
+    body, status = extract_agri_relations(text)
     return jsonify(body), status
 
 

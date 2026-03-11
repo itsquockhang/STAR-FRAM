@@ -44,6 +44,7 @@ export function ExtractingNerPage() {
               text={textUsed}
               entities={entities}
               chunks={chunks}
+              showBeforeAfter={state.useSpellCorrection}
               title="Highlighted text"
             />
 

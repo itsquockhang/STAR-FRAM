@@ -30,6 +30,8 @@ export type NerResponse = {
 export const SUPPORTED_MODELS = [
   'urchade/gliner_multi-v2.1',
   'knowledgator/gliner-bi-base-v2.0',
+  'knowledgator/gliner-qwen-0.5B-v1.0',
+  'knowledgator/gliner-qwen-1.5B-v1.0',
 ] as const
 
 export type SupportedModel = (typeof SUPPORTED_MODELS)[number]

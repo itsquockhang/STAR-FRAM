@@ -11,3 +11,5 @@ sentencepiece
 python-docx
 trafilatura
 gunicorn
+openai
+pillow
