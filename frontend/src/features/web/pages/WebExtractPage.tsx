@@ -52,6 +52,37 @@ export function WebExtractPage() {
     navigate('/extracting-ner')
   }, [actions, navigate, result?.text])
 
+  const onSaveTxt = useCallback(() => {
+    if (!result?.text) return
+    const blob = new Blob([result.text], { type: 'text/plain;charset=utf-8' })
+    // Try to derive a simple filename from URL host/path, fallback to generic
+    let filename = 'web-extract.txt'
+    try {
+      if (result.url) {
+        const u = new URL(result.url)
+        const hostPart = u.hostname.replace(/^www\./, '').replace(/[^a-zA-Z0-9.-]+/g, '-')
+        const pathPart = u.pathname
+          .split('/')
+          .filter(Boolean)
+          .slice(-2)
+          .join('-')
+          .replace(/[^a-zA-Z0-9.-]+/g, '-')
+        const base = [hostPart, pathPart].filter(Boolean).join('__')
+        if (base) filename = `${base}.txt`
+      }
+    } catch {
+      // ignore URL parsing errors and keep default filename
+    }
+    const urlObj = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = urlObj
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(urlObj)
+  }, [result?.text, result?.url])
+
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -123,9 +154,14 @@ export function WebExtractPage() {
                   </Typography>
                 )}
 
-                <Button variant="outlined" onClick={onUseInNer} disabled={!result.text}>
-                  Use in NER
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  <Button variant="outlined" onClick={onUseInNer} disabled={!result.text}>
+                    Use in NER
+                  </Button>
+                  <Button variant="text" onClick={onSaveTxt} disabled={!result.text}>
+                    Save as .txt
+                  </Button>
+                </Stack>
               </>
             ) : (
               <Typography variant="body2" sx={{ opacity: 0.7 }}>

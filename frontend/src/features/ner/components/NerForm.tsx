@@ -27,7 +27,7 @@ export function NerForm(props: {
   text: string
   labels: string[]
   threshold: number
-  chunkingMode: 'none' | 'semantic' | 'token' | 'sentence'
+  chunkingMode: 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling'
   useSpellCorrection: boolean
   multiLabel: boolean
   loading: boolean
@@ -36,7 +36,7 @@ export function NerForm(props: {
   onChangeText: (t: string) => void
   onChangeLabels: (labels: string[]) => void
   onChangeThreshold: (t: number) => void
-  onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'sentence') => void
+  onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling') => void
   onChangeUseSpellCorrection: (v: boolean) => void
   onChangeMultiLabel: (v: boolean) => void
   onExtract: () => void
@@ -146,7 +146,7 @@ export function NerForm(props: {
             value={chunkingMode}
             onChange={(e: SelectChangeEvent) =>
               onChangeChunkingMode(
-                e.target.value as 'none' | 'semantic' | 'token' | 'sentence'
+                e.target.value as 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling'
               )
             }
           >
@@ -154,6 +154,9 @@ export function NerForm(props: {
             <MenuItem value="semantic">Semantic chunker (Chonkie)</MenuItem>
             <MenuItem value="token">Token chunker (fixed-size tokens)</MenuItem>
             <MenuItem value="sentence">Sentence chunker (Underthesea)</MenuItem>
+            <MenuItem value="text-tiling">
+              Text Tiling (embeddinggemma-300m)
+            </MenuItem>
           </Select>
         </FormControl>
       </Box>
