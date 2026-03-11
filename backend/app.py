@@ -8,6 +8,7 @@ from document_service import extract_text_from_upload
 from llm_agri_service import extract_agri_relations
 from ner_service import clear_label_cache, handle_ner
 from web_service import extract_web_text
+from whisperx_service import transcribe_youtube_with_whisperx
 from youtube_service import fetch_transcript
 
 app = Flask(__name__)
@@ -73,6 +74,16 @@ def llm_agri_relations():
     payload = request.get_json(silent=True) or {}
     text = str(payload.get("text") or "")
     body, status = extract_agri_relations(text)
+    return jsonify(body), status
+
+
+@app.post("/api/youtube/whisperx")
+def youtube_whisperx():
+    payload = request.get_json(silent=True) or {}
+    url = str(payload.get("url") or "").strip()
+    language = payload.get("language")
+    model_name = payload.get("model")
+    body, status = transcribe_youtube_with_whisperx(url, language=language, model_name=model_name)
     return jsonify(body), status
 
 

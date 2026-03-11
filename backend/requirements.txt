@@ -13,3 +13,6 @@ trafilatura
 gunicorn
 openai
 pillow
+whisperx
+yt-dlp
+torchaudio<2.9

@@ -16,8 +16,8 @@ export default function App() {
           <Route path="/" element={<Navigate to="/extracting-ner" replace />} />
           <Route path="/extracting-ner" element={<ExtractingNerPage />} />
           <Route path="/youtube-transcript" element={<YouTubeTranscriptPage />} />
-          <Route path="/document-import" element={<DocumentImportPage />} />
           <Route path="/web-extract" element={<WebExtractPage />} />
+          <Route path="/document-import" element={<DocumentImportPage />} />
           <Route
             path="/workspace"
             element={
