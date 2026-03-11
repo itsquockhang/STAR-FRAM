@@ -123,13 +123,9 @@ export function YouTubeTranscriptPage() {
     URL.revokeObjectURL(url)
   }, [result?.text, result?.video_id])
 
-  const canUseWhisperFallback = useMemo(
-    () =>
-      !!(
-        (result?.error || error) &&
-        (result?.error || error)?.toLowerCase().includes('no transcript available')
-      ),
-    [error, result?.error]
+  const canUseWhisper = useMemo(
+    () => !!result?.text || !!error || !!result?.error,
+    [error, result?.error, result?.text]
   )
 
   const onRunWhisper = useCallback(async () => {
@@ -243,7 +239,7 @@ export function YouTubeTranscriptPage() {
                 )}
               </Alert>
             )}
-            {canUseWhisperFallback && (
+            {canUseWhisper && (
               <Button
                 variant="outlined"
                 size="small"

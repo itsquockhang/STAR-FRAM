@@ -2,20 +2,43 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 from typing import Any, Dict, Tuple
+from urllib.parse import parse_qs, urlparse
 
+import mlx_whisper
 import torch
 import whisperx
 from yt_dlp import YoutubeDL
-import time
 
 # TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=true
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "true"
 
-def _download_audio_to_temp(url: str) -> str:
+
+def _extract_video_id_from_url(url: str) -> str:
     """
-    Download YouTube audio stream to a temporary .m4a file using yt-dlp.
-    Returns the local file path.
+    Best-effort extraction of YouTube video id from URL (for logging/filenames only).
+    """
+    try:
+        parsed = urlparse(url)
+        if parsed.hostname in ("youtu.be", "www.youtu.be"):
+            vid = (parsed.path or "").lstrip("/")
+            if vid:
+                return vid
+        if parsed.query:
+            q = parse_qs(parsed.query)
+            v = q.get("v")
+            if v and v[0]:
+                return v[0]
+    except Exception:
+        pass
+    return ""
+
+
+def _download_audio_to_temp(url: str) -> Tuple[str, str]:
+    """
+    Download YouTube audio stream to a temporary file using yt-dlp.
+    Returns (local file path, video_id_if_available).
     """
     tmp_dir = tempfile.mkdtemp(prefix="yt-audio-")
     ydl_opts = {
@@ -27,7 +50,10 @@ def _download_audio_to_temp(url: str) -> str:
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filepath = ydl.prepare_filename(info)
-    return filepath
+    vid = str(info.get("id") or "").strip()
+    if not vid:
+        vid = _extract_video_id_from_url(url)
+    return filepath, vid
 
 
 def transcribe_youtube_with_whisperx(
@@ -46,7 +72,15 @@ def transcribe_youtube_with_whisperx(
     if not url:
         return {"error": "Missing 'url'"}, 400
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+        # Apple Silicon (Metal Performance Shaders)
+        device = "mps"
+    else:
+        device = "cpu"
+
+    # Only used for WhisperX (CUDA/CPU). MLX handles precision internally on MPS.
     compute_type = "float16" if device == "cuda" else "int8"
 
     # Allow only a known set of WhisperX models, default to "tiny"
@@ -78,35 +112,49 @@ def transcribe_youtube_with_whisperx(
     started_at = time.time()
 
     try:
-        audio_path = _download_audio_to_temp(url)
+        audio_path, video_id = _download_audio_to_temp(url)
         print(f"Audio path: {audio_path}")
     except Exception as e:
         return {"error": f"Failed to download audio: {e!s}"}, 502
 
     try:
-        model = whisperx.load_model(model_id, device, compute_type=compute_type)
-        audio = whisperx.load_audio(audio_path)
-        result = model.transcribe(
-            audio,
-            batch_size=16,
-            language=language,
-        )
+        if device == "mps":
+            # Use mlx_whisper on Apple Silicon (Metal / MLX backend)
+            mlx_result = mlx_whisper.transcribe(
+                audio_path,
+                path_or_hf_repo="mlx-community/whisper-medium-mlx-8bit",
+                word_timestamps=True,
+            )
+            result: Dict[str, Any] = {
+                "segments": mlx_result.get("segments") or [],
+                "language": mlx_result.get("language"),
+            }
+        else:
+            # Fallback to WhisperX (CUDA / CPU)
+            model = whisperx.load_model(model_id, device, compute_type=compute_type)
+            audio = whisperx.load_audio(audio_path)
+            result = model.transcribe(
+                audio,
+                batch_size=16,
+                language=language,
+            )
     except Exception as e:
-        return {"error": f"WhisperX transcription failed: {e!s}"}, 500
+        return {"error": f"WhisperX/MLX transcription failed: {e!s}"}, 500
     finally:
-        # Try to free GPU/CPU memory
-        try:
-            del model  # type: ignore[name-defined]
-        except Exception:
-            pass
-        try:
-            import gc
+        # Try to free GPU/CPU memory for WhisperX path
+        if "model" in locals():
+            try:
+                del model  # type: ignore[name-defined]
+            except Exception:
+                pass
+            try:
+                import gc
 
-            gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-        except Exception:
-            pass
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass
 
     elapsed = time.time() - started_at
 
@@ -128,6 +176,7 @@ def transcribe_youtube_with_whisperx(
         "source": "whisperx",
         "elapsed_seconds": elapsed,
         "model": model_id,
+        "video_id": video_id or None,
     }
     return out, 200
 
