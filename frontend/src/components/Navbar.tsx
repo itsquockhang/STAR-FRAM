@@ -56,6 +56,11 @@ export function Navbar() {
             display: 'flex',
             alignItems: 'center',
             gap: 1,
+            cursor: 'pointer',
+          }}
+          onClick={() => {
+            // Full page reload when clicking logo/title
+            window.location.reload()
           }}
         >
           <Box

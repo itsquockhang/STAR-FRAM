@@ -70,22 +70,39 @@ def extract_agri_relations(text: str) -> Tuple[Dict[str, Any], int]:
         return {"error": "Missing 'text'"}, 400
 
     system = (
-        "Bạn là trợ lý phân tích nông nghiệp. Nhiệm vụ: từ một đoạn văn bản tiếng Việt, "
-        "trích xuất mối quan hệ giữa các yếu tố: Nhân tố (nguyên nhân/tác nhân như bệnh, sâu, cỏ dại, thời tiết, đất), "
-        "Đối tượng nông nghiệp (cây trồng/vật nuôi), Tác động, Vấn đề, Giải pháp/biện pháp, Chủ thể (nông dân/HTX), "
-        "Kết quả (tốt hơn/xấu hơn/không rõ)."
-        "\n\nChỉ trả về JSON HỢP LỆ (không markdown, không giải thích), theo schema:\n"
+        "You are an agricultural analysis assistant. The input is a Vietnamese text snippet. "
+        "Your task is to extract the causal chain in agriculture: causes (factors), problems, "
+        "solutions (actions), who applies the solutions (actors), and the outcomes/results."
+        "\n\nReturn ONLY VALID JSON (no markdown, no explanations) with the schema:\n"
         "{\n"
-        '  "summary": "1-2 câu mô tả ngắn quan hệ",\n'
-        '  "factors": [{"name": "...", "type": "benh|sau_hai|co_dai|thoi_tiet|dat|khac"}],\n'
-        '  "targets": [{"name": "...", "type": "cay_trong|vat_nuoi|khac"}],\n'
-        '  "actors": [{"name": "...", "type": "nong_dan|hop_tac_xa|khac"}],\n'
+        '  "summary": "1-2 short sentences in Vietnamese describing the main relationships",\n'
+        '  "factors": [\n'
+        '    {"name": "...", "type": "bệnh|sâu_hại|cỏ_dại|thời_tiết|đất|khác"}\n'
+        "  ],\n"
+        '  "targets": [\n'
+        '    {"name": "...", "type": "cây_trồng|vật_nuôi|khác"}\n'
+        "  ],\n"
+        '  "actors": [\n'
+        '    {"name": "...", "type": "nông_dân|hợp_tác_xã|khác"}\n'
+        "  ],\n"
         '  "problems": ["..."],\n'
-        '  "solutions": [{"name": "...", "category": "canh_tac|hoa_hoc|sinh_hoc|co_gioi|quan_ly|khac"}],\n'
-        '  "impacts": [{"from": "factor/solution", "to": "target/problem", "effect": "tang|giam|gay_ra|giai_quyet|khong_ro", "evidence": "trich_doan_ngan"}],\n'
-        '  "outcome": {"result": "tot_hon|xau_hon|khong_ro", "reason": "..." }\n'
+        '  "solutions": [\n'
+        '    {"name": "...", "category": "canh_tác|hoá_học|sinh_học|cơ_giới|quản_lý|khác"}\n'
+        "  ],\n"
+        '  "impacts": [\n'
+        '    {\n'
+        '      "from": "factor|solution",\n'
+        '      "to": "target|problem",\n'
+        '      "effect": "tăng|giảm|gây_ra|giải_quyết|không_rõ",\n'
+        '      "evidence": "short Vietnamese quote from the text"\n'
+        "    }\n"
+        "  ],\n"
+        '  "outcome": {\n'
+        '    "result": "tốt_hơn|xấu_hơn|không_rõ",\n'
+        '    "reason": "một câu tiếng Việt giải thích vì sao có kết quả này"\n'
+        "  }\n"
         "}\n"
-        "Nếu thiếu thông tin thì dùng mảng rỗng hoặc 'khong_ro'."
+        "If some fields cannot be inferred, use empty arrays or 'không_rõ'."
     )
 
     user = {"text": s}

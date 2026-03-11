@@ -1,5 +1,5 @@
 import { Alert, Box, Button, Chip, CircularProgress, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { NerChunkSpan, NerEntity } from '../../types/ner'
 
 // Deterministic label colors (stable per label name)
@@ -96,6 +96,14 @@ export function HighlightedText(props: {
   const [chunkAnalysis, setChunkAnalysis] = useState<Record<number, AgriRelationsResponse | null>>({})
   const [chunkLoading, setChunkLoading] = useState<Record<number, boolean>>({})
   const [entitiesOpen, setEntitiesOpen] = useState<Record<number, boolean>>({})
+
+  // Reset "Analyze agri relations" results when user extracts NER again (chunks change)
+  useEffect(() => {
+    setChunkAnalysis({})
+    setChunkLoading({})
+    setEntitiesOpen({})
+  }, [chunks])
+
   const segments = buildHighlightSegments(text, entities)
   const labelsInResult = Array.from(new Set(entities.map((e) => e.label)))
 
@@ -404,12 +412,17 @@ export function HighlightedText(props: {
                           {(chunkAnalysis[c.index]?.analysis?.factors ?? []).length > 0 && (
                             <Box>
                               <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
-                                Factors
+                                Factors (causes)
                               </Typography>
                               <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
                                 {(chunkAnalysis[c.index]?.analysis?.factors ?? []).map(
                                   (f: any, i: number) => (
-                                    <Chip key={i} size="small" label={f?.name ?? 'unknown'} />
+                                    <Chip
+                                      key={i}
+                                      size="small"
+                                      label={f?.name ?? 'unknown'}
+                                      title={f?.type ? String(f.type) : undefined}
+                                    />
                                   )
                                 )}
                               </Stack>
@@ -419,12 +432,37 @@ export function HighlightedText(props: {
                           {(chunkAnalysis[c.index]?.analysis?.targets ?? []).length > 0 && (
                             <Box>
                               <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
-                                Targets
+                                Targets (crops/livestock)
                               </Typography>
                               <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
                                 {(chunkAnalysis[c.index]?.analysis?.targets ?? []).map(
                                   (t: any, i: number) => (
-                                    <Chip key={i} size="small" label={t?.name ?? 'unknown'} />
+                                    <Chip
+                                      key={i}
+                                      size="small"
+                                      label={t?.name ?? 'unknown'}
+                                      title={t?.type ? String(t.type) : undefined}
+                                    />
+                                  )
+                                )}
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {(chunkAnalysis[c.index]?.analysis?.actors ?? []).length > 0 && (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                                Actors (who acts)
+                              </Typography>
+                              <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                                {(chunkAnalysis[c.index]?.analysis?.actors ?? []).map(
+                                  (a: any, i: number) => (
+                                    <Chip
+                                      key={i}
+                                      size="small"
+                                      label={a?.name ?? 'unknown'}
+                                      title={a?.type ? String(a.type) : undefined}
+                                    />
                                   )
                                 )}
                               </Stack>
@@ -432,10 +470,49 @@ export function HighlightedText(props: {
                           )}
                         </Stack>
 
+                        {(chunkAnalysis[c.index]?.analysis?.problems ?? []).length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                              Problems
+                            </Typography>
+                            <Stack component="ul" sx={{ m: 0, mt: 0.5, pl: 2 }} spacing={0.4}>
+                              {(chunkAnalysis[c.index]?.analysis?.problems ?? []).map(
+                                (p: any, i: number) => (
+                                  <li key={i}>
+                                    <Typography variant="caption">
+                                      {String(p ?? '')}
+                                    </Typography>
+                                  </li>
+                                )
+                              )}
+                            </Stack>
+                          </Box>
+                        )}
+
+                        {(chunkAnalysis[c.index]?.analysis?.solutions ?? []).length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
+                              Solutions (actions)
+                            </Typography>
+                            <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                              {(chunkAnalysis[c.index]?.analysis?.solutions ?? []).map(
+                                (sln: any, i: number) => (
+                                  <Chip
+                                    key={i}
+                                    size="small"
+                                    label={sln?.name ?? 'unknown'}
+                                    title={sln?.category ? String(sln.category) : undefined}
+                                  />
+                                )
+                              )}
+                            </Stack>
+                          </Box>
+                        )}
+
                         {(chunkAnalysis[c.index]?.analysis?.impacts ?? []).length > 0 && (
                           <Box sx={{ mt: 1 }}>
                             <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
-                              Impacts
+                              Impacts (cause → result)
                             </Typography>
                             <Stack component="ul" sx={{ m: 0, mt: 0.5, pl: 2 }} spacing={0.4}>
                               {(chunkAnalysis[c.index]?.analysis?.impacts ?? []).map(
@@ -444,6 +521,9 @@ export function HighlightedText(props: {
                                     <Typography variant="caption">
                                       <strong>{imp?.from ?? '?'}</strong> →{' '}
                                       <strong>{imp?.to ?? '?'}</strong> ({imp?.effect ?? 'khong_ro'})
+                                      {imp?.evidence
+                                        ? ` — evidence: ${String(imp.evidence)}`
+                                        : ''}
                                     </Typography>
                                   </li>
                                 )
