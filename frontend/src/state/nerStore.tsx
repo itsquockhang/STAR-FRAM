@@ -29,7 +29,7 @@ type NerStoreActions = {
   setUseSpellCorrection: (v: boolean) => void
   setMultiLabel: (v: boolean) => void
   resetExample: () => void
-  extract: () => Promise<void>
+  extract: (textOverride?: string) => Promise<void>
 }
 
 const NerStoreContext = createContext<{ state: NerStoreState; actions: NerStoreActions } | null>(
@@ -55,7 +55,8 @@ export function NerStoreProvider(props: { children: React.ReactNode }) {
     setLabels([...DEFAULT_LABELS])
   }, [])
 
-  const extract = useCallback(async () => {
+  const extract = useCallback(async (textOverride?: string) => {
+    const textForNer = typeof textOverride === 'string' ? textOverride : text
     setLoading(true)
     setError(null)
     setResp(null)
@@ -65,7 +66,7 @@ export function NerStoreProvider(props: { children: React.ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model,
-          text,
+          text: textForNer,
           labels,
           threshold,
           use_chunking: chunkingMode !== 'none',

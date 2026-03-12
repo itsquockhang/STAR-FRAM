@@ -22,6 +22,7 @@ Backend runs at `http://127.0.0.1:8000`.
 - `GET /health`
 - `GET /api/models`
 - `POST /api/ner`
+- `POST /api/translate`
 - `POST /api/youtube/transcript`
 
 Example request body:
@@ -81,6 +82,32 @@ Response:
 ```
 
 `chunks_used` and `chunks` are only present when chunking is used.
+
+### Translation API
+
+`POST /api/translate`
+
+Request body:
+
+```json
+{
+  "text": "Xin chao, toi la STAR-FRAM.",
+  "source_lang_code": "vi",
+  "target_lang_code": "en",
+  "max_new_tokens": 200
+}
+```
+
+Response (success):
+
+```json
+{
+  "model": "google/translategemma-4b-it",
+  "source_lang_code": "vi",
+  "target_lang_code": "en",
+  "translated_text": "Hello, I am STAR-FRAM."
+}
+```
 
 ### YouTube Transcript API
 

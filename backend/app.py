@@ -7,6 +7,7 @@ from config import DEFAULT_MODEL, SUPPORTED_MODELS
 from document_service import extract_text_from_upload
 from llm_agri_service import extract_agri_relations
 from ner_service import clear_label_cache, handle_ner
+from translation_service import handle_translate
 from web_service import extract_web_text
 from whisperx_service import transcribe_youtube_with_whisperx
 from youtube_service import fetch_transcript
@@ -35,6 +36,13 @@ def clear_cache():
 def ner():
     payload = request.get_json(silent=True) or {}
     body, status = handle_ner(payload)
+    return jsonify(body), status
+
+
+@app.post("/api/translate")
+def translate():
+    payload = request.get_json(silent=True) or {}
+    body, status = handle_translate(payload)
     return jsonify(body), status
 
 

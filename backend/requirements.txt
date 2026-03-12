@@ -17,3 +17,5 @@ whisperx
 yt-dlp
 torchaudio<2.9
 mlx_whisper
+mlx-lm
+llama-cpp-python

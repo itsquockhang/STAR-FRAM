@@ -49,7 +49,7 @@ export function NerForm(props: {
   onChangeChunkSizeTokens: (n: number) => void
   onChangeUseSpellCorrection: (v: boolean) => void
   onChangeMultiLabel: (v: boolean) => void
-  onExtract: () => void
+  onExtract: () => void | Promise<void>
   onResetExample: () => void
 }) {
   const {
@@ -142,7 +142,9 @@ export function NerForm(props: {
       <Stack direction="row" spacing={1} alignItems="center">
         <Button
           variant="contained"
-          onClick={onExtract}
+          onClick={() => {
+            void onExtract()
+          }}
           disabled={loading || !text.trim() || labels.length === 0}
           fullWidth
         >

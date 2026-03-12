@@ -35,6 +35,48 @@ type TranscriptResponse = {
   model?: string
 }
 
+type TranslateResponse = {
+  translated_text?: string
+  error?: string
+}
+
+type TranslationDirection = 'vi-en' | 'en-vi'
+
+const TRANSLATION_CHUNK_MAX_CHARS = 1200
+const TRANSLATION_MAX_NEW_TOKENS = 512
+
+function splitTextForTranslation(text: string, maxChars = TRANSLATION_CHUNK_MAX_CHARS): string[] {
+  const source = text.trim()
+  if (!source) return []
+  if (source.length <= maxChars) return [source]
+
+  const chunks: string[] = []
+  let remaining = source
+
+  while (remaining.length > maxChars) {
+    const minimumSplitPoint = Math.floor(maxChars * 0.6)
+    let splitAt = remaining.lastIndexOf('\n', maxChars)
+    if (splitAt < minimumSplitPoint) {
+      splitAt = remaining.lastIndexOf(' ', maxChars)
+    }
+    if (splitAt < minimumSplitPoint) {
+      splitAt = maxChars
+    }
+
+    const chunk = remaining.slice(0, splitAt).trim()
+    if (chunk) {
+      chunks.push(chunk)
+    }
+    remaining = remaining.slice(splitAt).trimStart()
+  }
+
+  if (remaining) {
+    chunks.push(remaining)
+  }
+
+  return chunks
+}
+
 const WHISPERX_HF_MODELS: Record<string, string> = {
   'tiny.en': 'Systran/faster-whisper-tiny.en',
   tiny: 'Systran/faster-whisper-tiny',
@@ -69,16 +111,22 @@ export function YouTubeTranscriptPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<TranscriptResponse | null>(null)
+  const [originalTranscript, setOriginalTranscript] = useState<TranscriptResponse | null>(null)
   const [whisperLoading, setWhisperLoading] = useState(false)
   const [whisperError, setWhisperError] = useState<string | null>(null)
   const [whisperOpen, setWhisperOpen] = useState(false)
+  const [translationDirection, setTranslationDirection] = useState<TranslationDirection>('vi-en')
+  const [translating, setTranslating] = useState(false)
+  const [translationError, setTranslationError] = useState<string | null>(null)
 
   const onFetch = useCallback(async () => {
     const trimmed = url.trim()
     if (!trimmed) return
     setLoading(true)
     setError(null)
+    setTranslationError(null)
     setResult(null)
+    setOriginalTranscript(null)
     try {
       const r = await fetch('/api/youtube/transcript', {
         method: 'POST',
@@ -95,6 +143,7 @@ export function YouTubeTranscriptPage() {
         return
       }
       setResult(data)
+      setOriginalTranscript(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -102,11 +151,70 @@ export function YouTubeTranscriptPage() {
     }
   }, [url, language])
 
+  const onTranslate = useCallback(async () => {
+    const transcriptText = result?.text?.trim() ?? ''
+    if (!transcriptText) return
+
+    const sourceLangCode = translationDirection === 'vi-en' ? 'vi' : 'en'
+    const targetLangCode = translationDirection === 'vi-en' ? 'en' : 'vi'
+    const chunks = splitTextForTranslation(transcriptText)
+
+    setTranslating(true)
+    setTranslationError(null)
+
+    try {
+      const translatedChunks: string[] = []
+
+      for (const chunk of chunks) {
+        const r = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: chunk,
+            source_lang_code: sourceLangCode,
+            target_lang_code: targetLangCode,
+            max_new_tokens: TRANSLATION_MAX_NEW_TOKENS,
+          }),
+        })
+
+        const data = (await r.json()) as TranslateResponse
+        if (!r.ok) throw new Error(data?.error || `Translation failed (${r.status})`)
+
+        const translatedText = (data.translated_text ?? '').trim()
+        if (!translatedText) throw new Error('Translation returned empty text.')
+        translatedChunks.push(translatedText)
+      }
+
+      const translatedTranscript = translatedChunks.join('\n\n').trim()
+      if (!translatedTranscript) throw new Error('Translation returned empty text.')
+
+      setResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              text: translatedTranscript,
+              language: targetLangCode,
+            }
+          : prev
+      )
+    } catch (e) {
+      setTranslationError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setTranslating(false)
+    }
+  }, [result?.text, translationDirection])
+
   const onUseInNer = useCallback(() => {
     if (!result?.text) return
     actions.setText(result.text)
     navigate('/extracting-ner')
   }, [actions, navigate, result?.text])
+
+  const onRestoreOriginal = useCallback(() => {
+    if (!originalTranscript) return
+    setTranslationError(null)
+    setResult(originalTranscript)
+  }, [originalTranscript])
 
   const onSaveTxt = useCallback(() => {
     if (!result?.text) return
@@ -133,6 +241,7 @@ export function YouTubeTranscriptPage() {
     if (!trimmed) return
     setWhisperLoading(true)
     setWhisperError(null)
+    setTranslationError(null)
     try {
       const r = await fetch('/api/youtube/whisperx', {
         method: 'POST',
@@ -148,6 +257,10 @@ export function YouTubeTranscriptPage() {
         ...data,
         error: undefined,
       })
+      setOriginalTranscript({
+        ...data,
+        error: undefined,
+      })
       setError(null)
       setWhisperOpen(false)
     } catch (e) {
@@ -156,6 +269,11 @@ export function YouTubeTranscriptPage() {
       setWhisperLoading(false)
     }
   }, [language, url, whisperModel])
+
+  const canRestoreOriginal =
+    !!originalTranscript?.text &&
+    (!!result?.text || !!result?.language) &&
+    (result?.text !== originalTranscript.text || result?.language !== originalTranscript.language)
 
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
@@ -239,6 +357,7 @@ export function YouTubeTranscriptPage() {
                 )}
               </Alert>
             )}
+            {translationError && <Alert severity="error">{translationError}</Alert>}
             {canUseWhisper && (
               <Button
                 variant="outlined"
@@ -251,6 +370,42 @@ export function YouTubeTranscriptPage() {
             )}
             {result?.text ? (
               <>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <FormControl size="small" sx={{ minWidth: 220 }}>
+                    <Select
+                      value={translationDirection}
+                      onChange={(e) => setTranslationDirection(e.target.value as TranslationDirection)}
+                      disabled={loading || whisperLoading || translating}
+                    >
+                      <MenuItem value="vi-en">Vietnamese to English</MenuItem>
+                      <MenuItem value="en-vi">English to Vietnamese</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="outlined"
+                    onClick={onTranslate}
+                    disabled={loading || whisperLoading || translating || !result.text.trim()}
+                    sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
+                  >
+                    {translating ? (
+                      <Stack direction="row" alignItems="center" gap={1}>
+                        <CircularProgress size={18} />
+                        <span>Translating…</span>
+                      </Stack>
+                    ) : (
+                      'Translate'
+                    )}
+                  </Button>
+                  <Button
+                    variant="text"
+                    onClick={onRestoreOriginal}
+                    disabled={!canRestoreOriginal || loading || whisperLoading || translating}
+                    sx={{ alignSelf: { xs: 'stretch', sm: 'center' } }}
+                  >
+                    Restore
+                  </Button>
+                </Stack>
+
                 <Box
                   sx={{
                     p: 1.5,
@@ -291,11 +446,11 @@ export function YouTubeTranscriptPage() {
                   <Button
                     variant="outlined"
                     onClick={onUseInNer}
-                    disabled={!result.text}
+                    disabled={!result.text || translating}
                   >
                     Use in NER
                   </Button>
-                  <Button variant="text" onClick={onSaveTxt} disabled={!result.text}>
+                  <Button variant="text" onClick={onSaveTxt} disabled={!result.text || translating}>
                     Save as .txt
                   </Button>
                 </Stack>
