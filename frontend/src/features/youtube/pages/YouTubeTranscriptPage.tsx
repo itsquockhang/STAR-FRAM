@@ -118,6 +118,7 @@ export function YouTubeTranscriptPage() {
   const [translationDirection, setTranslationDirection] = useState<TranslationDirection>('vi-en')
   const [translating, setTranslating] = useState(false)
   const [translationError, setTranslationError] = useState<string | null>(null)
+  const [translationProgress, setTranslationProgress] = useState<number | null>(null)
 
   const onFetch = useCallback(async () => {
     const trimmed = url.trim()
@@ -158,14 +159,17 @@ export function YouTubeTranscriptPage() {
     const sourceLangCode = translationDirection === 'vi-en' ? 'vi' : 'en'
     const targetLangCode = translationDirection === 'vi-en' ? 'en' : 'vi'
     const chunks = splitTextForTranslation(transcriptText)
+    if (!chunks.length) return
 
     setTranslating(true)
     setTranslationError(null)
+    setTranslationProgress(0)
 
     try {
       const translatedChunks: string[] = []
 
-      for (const chunk of chunks) {
+      for (let index = 0; index < chunks.length; index++) {
+        const chunk = chunks[index]
         const r = await fetch('/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -183,6 +187,9 @@ export function YouTubeTranscriptPage() {
         const translatedText = (data.translated_text ?? '').trim()
         if (!translatedText) throw new Error('Translation returned empty text.')
         translatedChunks.push(translatedText)
+
+        const progress = Math.round(((index + 1) / chunks.length) * 100)
+        setTranslationProgress(progress)
       }
 
       const translatedTranscript = translatedChunks.join('\n\n').trim()
@@ -201,6 +208,7 @@ export function YouTubeTranscriptPage() {
       setTranslationError(e instanceof Error ? e.message : String(e))
     } finally {
       setTranslating(false)
+      setTranslationProgress(null)
     }
   }, [result?.text, translationDirection])
 
@@ -390,7 +398,12 @@ export function YouTubeTranscriptPage() {
                     {translating ? (
                       <Stack direction="row" alignItems="center" gap={1}>
                         <CircularProgress size={18} />
-                        <span>Translating…</span>
+                        <span>
+                          Translating
+                          {typeof translationProgress === 'number'
+                            ? `… ${translationProgress}%`
+                            : '…'}
+                        </span>
                       </Stack>
                     ) : (
                       'Translate'

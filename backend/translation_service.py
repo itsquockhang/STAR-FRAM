@@ -71,7 +71,7 @@ def _get_mlx_model_and_tokenizer() -> Tuple[Any, Any]:
                 mlx_lm = importlib.import_module("mlx_lm")
                 load_fn = getattr(mlx_lm, "load")
 
-                _mlx_model, _mlx_tokenizer = load_fn(MLX_TRANSLATE_MODEL)
+                _mlx_model, _mlx_tokenizer = load_fn(MLX_TRANSLATE_MODEL, tokenizer_config={"eos_token": "<end_of_turn>"})
     return _mlx_model, _mlx_tokenizer
 
 
@@ -171,18 +171,24 @@ def _translate_with_mlx(
     generate_fn = getattr(mlx_lm, "generate")
 
     model, tokenizer = _get_mlx_model_and_tokenizer()
-    prompt = _build_translation_prompt(source_lang_code, target_lang_code, text)
 
     if getattr(tokenizer, "chat_template", None) is not None:
-        messages = [{"role": "user", "content": prompt}]
+        content = _build_translation_message_content(
+            source_lang_code=source_lang_code,
+            target_lang_code=target_lang_code,
+            text=text,
+        )
+        messages = [{"role": "user", "content": content}]
         prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+    else:
+        prompt = _build_translation_prompt(source_lang_code, target_lang_code, text)
 
     response = generate_fn(
         model,
         tokenizer,
         prompt=prompt,
         max_tokens=max_new_tokens,
-        verbose=False,
+        verbose=True,
     )
     return str(response).strip()
 
@@ -207,11 +213,11 @@ def _parse_llama_output(output: Any) -> str:
                 if isinstance(item, dict):
                     text = item.get("text")
                     if isinstance(text, str):
-                        return text.strip()
+                        return _clean_generated_text(text)
 
         text = first.get("text")
         if isinstance(text, str):
-            return text.strip()
+            return _clean_generated_text(text)
 
     return ""
 
