@@ -9,3 +9,5 @@ frontend/dist/
 
 vaas_articles/
 ytb_videos/
+
+backend/ner_chunks.sqlite3

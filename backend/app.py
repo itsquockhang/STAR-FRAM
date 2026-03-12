@@ -11,9 +11,23 @@ from translation_service import handle_translate
 from web_service import extract_web_text
 from whisperx_service import transcribe_youtube_with_whisperx
 from youtube_service import fetch_transcript
+from chunk_db import (
+    add_entity,
+    delete_chunk,
+    delete_entity,
+    get_chunk_detail,
+    init_db,
+    list_chunks,
+    save_chunks_with_entities,
+    update_chunk,
+    update_entity,
+)
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# Ensure SQLite DB/tables exist for chunk storage.
+init_db()
 
 
 @app.get("/health")
@@ -36,6 +50,58 @@ def clear_cache():
 def ner():
     payload = request.get_json(silent=True) or {}
     body, status = handle_ner(payload)
+    return jsonify(body), status
+
+
+@app.post("/api/ner/chunks/save")
+def ner_chunks_save():
+    payload = request.get_json(silent=True) or {}
+    body, status = save_chunks_with_entities(payload)
+    return jsonify(body), status
+
+
+@app.get("/api/ner/chunks")
+def ner_chunks_list():
+    body, status = list_chunks()
+    return jsonify(body), status
+
+
+@app.get("/api/ner/chunks/<int:chunk_id>")
+def ner_chunk_detail(chunk_id: int):
+    body, status = get_chunk_detail(chunk_id)
+    return jsonify(body), status
+
+
+@app.patch("/api/ner/chunks/<int:chunk_id>")
+def ner_chunk_update(chunk_id: int):
+    payload = request.get_json(silent=True) or {}
+    body, status = update_chunk(chunk_id, payload)
+    return jsonify(body), status
+
+
+@app.delete("/api/ner/chunks/<int:chunk_id>")
+def ner_chunk_delete(chunk_id: int):
+    body, status = delete_chunk(chunk_id)
+    return jsonify(body), status
+
+
+@app.post("/api/ner/chunks/<int:chunk_id>/entities")
+def ner_chunk_add_entity(chunk_id: int):
+    payload = request.get_json(silent=True) or {}
+    body, status = add_entity(chunk_id, payload)
+    return jsonify(body), status
+
+
+@app.patch("/api/ner/entities/<int:entity_id>")
+def ner_entity_update(entity_id: int):
+    payload = request.get_json(silent=True) or {}
+    body, status = update_entity(entity_id, payload)
+    return jsonify(body), status
+
+
+@app.delete("/api/ner/entities/<int:entity_id>")
+def ner_entity_delete(entity_id: int):
+    body, status = delete_entity(entity_id)
     return jsonify(body), status
 
 

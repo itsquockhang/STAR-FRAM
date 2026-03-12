@@ -5,6 +5,7 @@ import { ExtractingNerPage } from './features/ner/pages/ExtractingNerPage'
 import { DocumentImportPage } from './features/docs/pages/DocumentImportPage'
 import { YouTubeTranscriptPage } from './features/youtube/pages/YouTubeTranscriptPage'
 import { WebExtractPage } from './features/web/pages/WebExtractPage'
+import { SavedChunksPage } from './features/ner/pages/SavedChunksPage.tsx'
 
 export default function App() {
   return (
@@ -24,15 +25,7 @@ export default function App() {
           <Route path="/youtube-transcript" element={<YouTubeTranscriptPage />} />
           <Route path="/web-extract" element={<WebExtractPage />} />
           <Route path="/document-import" element={<DocumentImportPage />} />
-          {/* <Route
-            path="/workspace"
-            element={
-              <PlaceholderPage
-                title="Workspace"
-                description="A place to manage shared data across features."
-              />
-            }
-          /> */}
+          <Route path="/workspace" element={<SavedChunksPage />} />
           <Route path="*" element={<Navigate to="/extracting-ner" replace />} />
         </Routes>
       </Container>

@@ -6,6 +6,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useNerStore } from '../state/nerStore'
+import { Workspaces, WorkspacesOutlined } from '@mui/icons-material'
 
 function NavButton(props: { to: string; label: string; icon?: React.ReactNode }) {
   return (
@@ -120,11 +121,11 @@ export function Navbar() {
             label="Document Import"
             icon={<DescriptionOutlinedIcon fontSize="small" />}
           />
-          {/* <NavButton
+          <NavButton
             to="/workspace"
             label="Workspace"
-            icon={<WorkspacePremiumOutlinedIcon fontSize="small" />}
-          /> */}
+            icon={<WorkspacesOutlined fontSize="small" />}
+          />
         </Box>
 
         <Box sx={{ flex: 1 }} />

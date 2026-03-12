@@ -30,6 +30,9 @@ export function ExtractingNerPage() {
   const [translationDirection, setTranslationDirection] = useState<TranslationDirection>('vi-en')
   const [translating, setTranslating] = useState(false)
   const [translationError, setTranslationError] = useState<string | null>(null)
+  const [savingChunks, setSavingChunks] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 
   const responseMatchesCurrentText = !state.resp?.text_used || state.resp.text_used === state.text
   const entities = responseMatchesCurrentText ? state.resp?.entities ?? [] : []
@@ -69,6 +72,44 @@ export function ExtractingNerPage() {
       setTranslating(false)
     }
   }, [actions, state.text, translationDirection])
+
+  const onSaveChunksToDb = useCallback(async () => {
+    setSaveError(null)
+    setSaveSuccess(null)
+
+    if (!chunks.length || !textUsed.trim()) {
+      setSaveError('No chunks to save. Please run NER with chunking enabled first.')
+      return
+    }
+
+    setSavingChunks(true)
+    try {
+      const r = await fetch('/api/ner/chunks/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          doc_title: 'NER text',
+          model: state.model,
+          labels: state.labels,
+          text_used: textUsed,
+          chunks,
+          entities,
+        }),
+      })
+
+      const data = (await r.json()) as { error?: string; chunk_ids?: number[] }
+      if (!r.ok) throw new Error(data?.error || `Request failed (${r.status})`)
+      setSaveSuccess(
+        Array.isArray(data.chunk_ids)
+          ? `Saved ${data.chunk_ids.length} chunks to database.`
+          : 'Saved chunks to database.',
+      )
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSavingChunks(false)
+    }
+  }, [chunks, entities, state.labels, state.model, textUsed])
 
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
@@ -132,6 +173,9 @@ export function ExtractingNerPage() {
               onExtract={actions.extract}
               onResetExample={actions.resetExample}
             />
+
+            {saveError && <Alert severity="error">{saveError}</Alert>}
+            {saveSuccess && <Alert severity="success">{saveSuccess}</Alert>}
           </Stack>
         </Paper>
       </Box>
@@ -153,6 +197,23 @@ export function ExtractingNerPage() {
               Entities ({entities.length})
             </Typography>
             <EntitiesTable entities={entities} />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={onSaveChunksToDb}
+                disabled={state.loading || translating || savingChunks || !chunks.length}
+              >
+                {savingChunks ? (
+                  <Stack direction="row" alignItems="center" gap={1}>
+                    <CircularProgress size={16} />
+                    <span>Saving chunks…</span>
+                  </Stack>
+                ) : (
+                  'Save chunks to database'
+                )}
+              </Button>
+            </Box>
           </Stack>
         </Paper>
       </Box>
