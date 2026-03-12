@@ -17,6 +17,43 @@ _text_tiling_embedder: Any = None
 _chunker_lock = threading.Lock()
 
 
+def release_chunking_resources() -> None:
+    """Release cached chunkers/embedders and clear accelerator caches."""
+    global _text_tiling_embedder
+
+    with _chunker_lock:
+        semantic_chunkers = list(_semantic_chunkers.values())
+        token_chunkers = list(_token_chunkers.values())
+        embedder = _text_tiling_embedder
+
+        _semantic_chunkers.clear()
+        _token_chunkers.clear()
+        _text_tiling_embedder = None
+
+    # Drop strong references so Python/torch can reclaim memory.
+    try:
+        del semantic_chunkers
+        del token_chunkers
+        del embedder
+    except Exception:
+        pass
+
+    try:
+        import gc
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
+
+        if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+            if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
+                torch.mps.empty_cache()
+    except Exception:
+        pass
+
+
 def get_semantic_chunker(chunk_size_tokens: int | None = None) -> SemanticChunker:
     size = int(chunk_size_tokens or CHUNK_SIZE_TOKENS)
     if size < 16:

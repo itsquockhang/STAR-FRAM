@@ -48,3 +48,37 @@ def get_model(model_name: str) -> GLiNER:
         _models[model_name] = model
         return model
 
+
+def release_model(model_name: str) -> bool:
+    """Release a cached GLiNER model and clear accelerator caches."""
+    if model_name not in SUPPORTED_MODELS:
+        model_name = DEFAULT_MODEL
+
+    with _model_lock:
+        model = _models.pop(model_name, None)
+
+    if model is None:
+        return False
+
+    try:
+        del model
+    except Exception:
+        pass
+
+    try:
+        import gc
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            if hasattr(torch.cuda, "ipc_collect"):
+                torch.cuda.ipc_collect()
+
+        if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+            if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
+                torch.mps.empty_cache()
+    except Exception:
+        pass
+
+    return True
+

@@ -129,6 +129,10 @@ def transcribe_youtube_with_whisperx(
         model_id = "tiny"
 
     started_at = time.time()
+    audio_path = ""
+    video_id = ""
+    model = None
+    audio = None
 
     try:
         audio_path, video_id = _download_audio_to_temp(url)
@@ -165,20 +169,33 @@ def transcribe_youtube_with_whisperx(
     except Exception as e:
         return {"error": f"WhisperX/MLX transcription failed: {e!s}"}, 500
     finally:
-        # Try to free GPU/CPU memory for WhisperX path
-        if "model" in locals():
-            try:
-                del model  # type: ignore[name-defined]
-            except Exception:
-                pass
-            try:
-                import gc
+        # Always release heavy objects and clear runtime caches after each request.
+        try:
+            if model is not None:
+                del model
+        except Exception:
+            pass
 
-                gc.collect()
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-            except Exception:
-                pass
+        try:
+            if audio is not None:
+                del audio
+        except Exception:
+            pass
+
+        try:
+            import gc
+
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                if hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+
+            if getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+                if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
+                    torch.mps.empty_cache()
+        except Exception:
+            pass
 
     elapsed = time.time() - started_at
 
