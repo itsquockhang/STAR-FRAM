@@ -11,38 +11,44 @@ from underthesea import sent_tokenize
 
 from config import CHUNK_EMBEDDING_MODEL, CHUNK_SIMILARITY_THRESHOLD, CHUNK_SIZE_TOKENS
 
-_semantic_chunker: Any = None
-_token_chunker: Any = None
+_semantic_chunkers: dict[int, Any] = {}
+_token_chunkers: dict[int, Any] = {}
 _text_tiling_embedder: Any = None
 _chunker_lock = threading.Lock()
 
 
-def get_semantic_chunker() -> SemanticChunker:
-    global _semantic_chunker
-    if _semantic_chunker is None:
-        with _chunker_lock:
-            if _semantic_chunker is None:
-                _semantic_chunker = SemanticChunker(
-                    embedding_model=CHUNK_EMBEDDING_MODEL,
-                    threshold=CHUNK_SIMILARITY_THRESHOLD,
-                    chunk_size=CHUNK_SIZE_TOKENS,
-                    similarity_window=3,
-                )
-    return _semantic_chunker
+def get_semantic_chunker(chunk_size_tokens: int | None = None) -> SemanticChunker:
+    size = int(chunk_size_tokens or CHUNK_SIZE_TOKENS)
+    if size < 16:
+        size = 16
+    with _chunker_lock:
+        ch = _semantic_chunkers.get(size)
+        if ch is None:
+            ch = SemanticChunker(
+                embedding_model=CHUNK_EMBEDDING_MODEL,
+                threshold=CHUNK_SIMILARITY_THRESHOLD,
+                chunk_size=size,
+                similarity_window=3,
+            )
+            _semantic_chunkers[size] = ch
+    return ch
 
 
-def get_token_chunker() -> TokenChunker:
-    global _token_chunker
-    if _token_chunker is None:
-        with _chunker_lock:
-            if _token_chunker is None:
-                custom_tokenizer = Tokenizer.from_pretrained("google/embeddinggemma-300m")
-                _token_chunker = TokenChunker(
-                    tokenizer=custom_tokenizer,
-                    chunk_size=CHUNK_SIZE_TOKENS,
-                    chunk_overlap=20,
-                )
-    return _token_chunker
+def get_token_chunker(chunk_size_tokens: int | None = None) -> TokenChunker:
+    size = int(chunk_size_tokens or CHUNK_SIZE_TOKENS)
+    if size < 16:
+        size = 16
+    with _chunker_lock:
+        ch = _token_chunkers.get(size)
+        if ch is None:
+            custom_tokenizer = Tokenizer.from_pretrained("google/embeddinggemma-300m")
+            ch = TokenChunker(
+                tokenizer=custom_tokenizer,
+                chunk_size=size,
+                chunk_overlap=20,
+            )
+            _token_chunkers[size] = ch
+    return ch
 
 
 def get_text_tiling_embedder() -> SentenceTransformer:
@@ -198,7 +204,7 @@ def _text_tiling_chunks(text: str, k: int = 3, std_factor: float = 0.5) -> List[
     return chunks
 
 
-def chunk_text(text: str, strategy: str = "semantic") -> List[Any]:
+def chunk_text(text: str, strategy: str = "semantic", *, chunk_size_tokens: int | None = None) -> List[Any]:
     """
     Split text into chunks.
 
@@ -211,7 +217,7 @@ def chunk_text(text: str, strategy: str = "semantic") -> List[Any]:
         return []
 
     if strategy == "token":
-        chunker = get_token_chunker()
+        chunker = get_token_chunker(chunk_size_tokens=chunk_size_tokens)
         chunks = chunker.chunk(text)
         return list(chunks)
     if strategy == "sentence":
@@ -219,7 +225,7 @@ def chunk_text(text: str, strategy: str = "semantic") -> List[Any]:
     if strategy == "text-tiling":
         return _text_tiling_chunks(text)
 
-    chunker = get_semantic_chunker()
+    chunker = get_semantic_chunker(chunk_size_tokens=chunk_size_tokens)
     chunks = chunker.chunk(text)
     return list(chunks)
 

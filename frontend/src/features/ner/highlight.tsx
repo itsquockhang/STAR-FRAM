@@ -1,4 +1,5 @@
 import { Alert, Box, Button, Chip, CircularProgress, Collapse, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material'
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined'
 import { useEffect, useMemo, useState } from 'react'
 import type { NerChunkSpan, NerEntity } from '../../types/ner'
 
@@ -379,7 +380,10 @@ export function HighlightedText(props: {
                             <span>Analyzing…</span>
                           </Stack>
                         ) : (
-                          'Analyze agri relations'
+                          <>
+                            <InsightsOutlinedIcon fontSize="small" sx={{ mr: 0.5 }} />
+                            Analyze agri relations
+                          </>
                         )}
                       </Button>
                     </Box>

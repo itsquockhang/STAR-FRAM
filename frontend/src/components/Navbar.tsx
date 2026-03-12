@@ -1,8 +1,13 @@
 import { AppBar, Box, Button, Chip, Toolbar, Typography } from '@mui/material'
+import GrainOutlinedIcon from '@mui/icons-material/GrainOutlined'
+import OndemandVideoOutlinedIcon from '@mui/icons-material/OndemandVideoOutlined'
+import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useNerStore } from '../state/nerStore'
 
-function NavButton(props: { to: string; label: string }) {
+function NavButton(props: { to: string; label: string; icon?: React.ReactNode }) {
   return (
     <Button
       component={NavLink}
@@ -21,6 +26,7 @@ function NavButton(props: { to: string; label: string }) {
           bgcolor: 'action.hover',
         },
       }}
+      startIcon={props.icon}
     >
       {props.label}
     </Button>
@@ -94,11 +100,31 @@ export function Navbar() {
             borderColor: 'divider',
           }}
         >
-          <NavButton to="/extracting-ner" label="Extracting NER" />
-          <NavButton to="/youtube-transcript" label="YouTube Transcript" />
-          <NavButton to="/web-extract" label="Web Extract" />
-          <NavButton to="/document-import" label="Document Import" />
-          <NavButton to="/workspace" label="Workspace" />
+          <NavButton
+            to="/extracting-ner"
+            label="Extracting NER"
+            icon={<GrainOutlinedIcon fontSize="small" />}
+          />
+          <NavButton
+            to="/youtube-transcript"
+            label="YouTube Transcript"
+            icon={<OndemandVideoOutlinedIcon fontSize="small" />}
+          />
+          <NavButton
+            to="/web-extract"
+            label="Web Extract"
+            icon={<LanguageOutlinedIcon fontSize="small" />}
+          />
+          <NavButton
+            to="/document-import"
+            label="Document Import"
+            icon={<DescriptionOutlinedIcon fontSize="small" />}
+          />
+          {/* <NavButton
+            to="/workspace"
+            label="Workspace"
+            icon={<WorkspacePremiumOutlinedIcon fontSize="small" />}
+          /> */}
         </Box>
 
         <Box sx={{ flex: 1 }} />

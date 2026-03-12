@@ -5,6 +5,10 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControlLabel,
   FormControl,
   InputLabel,
@@ -17,6 +21,8 @@ import {
   Typography,
   Switch,
 } from '@mui/material'
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined'
+import { useState } from 'react'
 import type { SelectChangeEvent } from '@mui/material'
 import type { SupportedModel } from '../../../types/ner'
 import { SUPPORTED_MODELS } from '../../../types/ner'
@@ -28,6 +34,8 @@ export function NerForm(props: {
   labels: string[]
   threshold: number
   chunkingMode: 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling'
+  chunkCharThreshold: number
+  chunkSizeTokens: number
   useSpellCorrection: boolean
   multiLabel: boolean
   loading: boolean
@@ -37,6 +45,8 @@ export function NerForm(props: {
   onChangeLabels: (labels: string[]) => void
   onChangeThreshold: (t: number) => void
   onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling') => void
+  onChangeChunkCharThreshold: (n: number) => void
+  onChangeChunkSizeTokens: (n: number) => void
   onChangeUseSpellCorrection: (v: boolean) => void
   onChangeMultiLabel: (v: boolean) => void
   onExtract: () => void
@@ -48,6 +58,8 @@ export function NerForm(props: {
     labels,
     threshold,
     chunkingMode,
+    chunkCharThreshold,
+    chunkSizeTokens,
     useSpellCorrection,
     multiLabel,
     loading,
@@ -57,29 +69,31 @@ export function NerForm(props: {
     onChangeLabels,
     onChangeThreshold,
     onChangeChunkingMode,
+    onChangeChunkCharThreshold,
+    onChangeChunkSizeTokens,
     onChangeUseSpellCorrection,
     onChangeMultiLabel,
     onExtract,
     onResetExample,
   } = props
 
+  const [openSettings, setOpenSettings] = useState(false)
+
   return (
     <Stack spacing={2}>
-      <FormControl fullWidth>
-        <InputLabel id="model-select-label">Model</InputLabel>
-        <Select
-          labelId="model-select-label"
-          value={model}
-          label="Model"
-          onChange={(e: SelectChangeEvent) => onChangeModel(e.target.value as SupportedModel)}
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography variant="subtitle2" sx={{ opacity: 0.8 }}>
+          NER configuration
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => setOpenSettings(true)}
+          startIcon={<SettingsOutlinedIcon fontSize="small" />}
         >
-          {SUPPORTED_MODELS.map((m) => (
-            <MenuItem key={m} value={m}>
-              {m}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+          Settings
+        </Button>
+      </Stack>
 
       <TextField
         label="Text"
@@ -123,68 +137,6 @@ export function NerForm(props: {
         )}
       />
 
-      <Box>
-        <Typography variant="body2" sx={{ mb: 1, opacity: 0.85 }}>
-          Threshold: {threshold.toFixed(2)}
-        </Typography>
-        <Slider
-          value={threshold}
-          min={0}
-          max={1}
-          step={0.01}
-          onChange={(_, v) => onChangeThreshold(v as number)}
-        />
-      </Box>
-
-      <Box>
-        <Typography variant="body2" sx={{ mb: 1, opacity: 0.85 }}>
-          Chunking
-        </Typography>
-        <FormControl fullWidth>
-          <Select
-            size="small"
-            value={chunkingMode}
-            onChange={(e: SelectChangeEvent) =>
-              onChangeChunkingMode(
-                e.target.value as 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling'
-              )
-            }
-          >
-            <MenuItem value="none">No chunking</MenuItem>
-            <MenuItem value="semantic">Semantic chunker (Chonkie)</MenuItem>
-            <MenuItem value="token">Token chunker (fixed-size tokens)</MenuItem>
-            <MenuItem value="sentence">Sentence chunker (Underthesea)</MenuItem>
-            <MenuItem value="text-tiling">
-              Text Tiling (embeddinggemma-300m)
-            </MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-
-      <Box>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={useSpellCorrection}
-              onChange={(e) => onChangeUseSpellCorrection(e.target.checked)}
-            />
-          }
-          label="Spelling correction per chunk (@protonx-legal-tc)"
-        />
-      </Box>
-
-      <Box>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={multiLabel}
-              onChange={(e) => onChangeMultiLabel(e.target.checked)}
-            />
-          }
-          label="Allow multiple labels per span (multi-label)"
-        />
-      </Box>
-
       {error && <Alert severity="error">{error}</Alert>}
 
       <Stack direction="row" spacing={1} alignItems="center">
@@ -207,6 +159,121 @@ export function NerForm(props: {
           Reset
         </Button>
       </Stack>
+
+      <Dialog open={openSettings} onClose={() => setOpenSettings(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>NER settings</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <FormControl fullWidth>
+              <InputLabel id="model-select-label">Model</InputLabel>
+              <Select
+                labelId="model-select-label"
+                value={model}
+                label="Model"
+                onChange={(e: SelectChangeEvent) => onChangeModel(e.target.value as SupportedModel)}
+              >
+                {SUPPORTED_MODELS.map((m) => (
+                  <MenuItem key={m} value={m}>
+                    {m}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1, opacity: 0.85 }}>
+                Threshold: {threshold.toFixed(2)}
+              </Typography>
+              <Slider
+                value={threshold}
+                min={0}
+                max={1}
+                step={0.01}
+                onChange={(_, v) => onChangeThreshold(v as number)}
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="body2" sx={{ mb: 1, opacity: 0.85 }}>
+                Chunking
+              </Typography>
+              <FormControl fullWidth>
+                <Select
+                  size="small"
+                  value={chunkingMode}
+                  onChange={(e: SelectChangeEvent) =>
+                    onChangeChunkingMode(
+                      e.target.value as 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling'
+                    )
+                  }
+                >
+                  <MenuItem value="none">No chunking</MenuItem>
+                  <MenuItem value="semantic">Semantic chunker (Chonkie)</MenuItem>
+                  <MenuItem value="token">Token chunker (fixed-size tokens)</MenuItem>
+                  <MenuItem value="sentence">Sentence chunker (Underthesea)</MenuItem>
+                  <MenuItem value="text-tiling">
+                    Text Tiling (embeddinggemma-300m)
+                  </MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField
+                size="small"
+                label="Chunk if text length > (chars)"
+                value={chunkCharThreshold}
+                onChange={(e) => {
+                  const n = Number(e.target.value)
+                  if (Number.isFinite(n)) onChangeChunkCharThreshold(Math.max(0, Math.floor(n)))
+                }}
+                fullWidth
+                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                helperText="Only apply chunking when the input text is longer than this (characters)."
+              />
+              <TextField
+                size="small"
+                label="Chunk size (tokens)"
+                value={chunkSizeTokens}
+                onChange={(e) => {
+                  const n = Number(e.target.value)
+                  if (Number.isFinite(n)) onChangeChunkSizeTokens(Math.max(16, Math.floor(n)))
+                }}
+                fullWidth
+                inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                helperText="Used by Semantic/Token chunkers."
+              />
+            </Stack>
+
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={useSpellCorrection}
+                    onChange={(e) => onChangeUseSpellCorrection(e.target.checked)}
+                  />
+                }
+                label="Spelling correction per chunk (@protonx-legal-tc)"
+              />
+            </Box>
+
+            <Box>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={multiLabel}
+                    onChange={(e) => onChangeMultiLabel(e.target.checked)}
+                  />
+                }
+                label="Allow multiple labels per span (multi-label)"
+              />
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSettings(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   )
 }

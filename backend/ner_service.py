@@ -5,7 +5,13 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 
-from config import CHUNK_MAX_WORKERS, DEFAULT_MODEL, SUPPORTED_MODELS, CHUNK_CHAR_THRESHOLD
+from config import (
+    CHUNK_MAX_WORKERS,
+    CHUNK_SIZE_TOKENS,
+    DEFAULT_MODEL,
+    SUPPORTED_MODELS,
+    CHUNK_CHAR_THRESHOLD,
+)
 from model_loader import get_model
 from chunking import chunk_text
 from text_corrector import correct_text
@@ -86,6 +92,7 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     label_batch_size = int(payload.get("label_batch_size", 8))
     use_chunking = bool(payload.get("use_chunking", True))
     chunk_char_threshold = int(payload.get("chunk_char_threshold", CHUNK_CHAR_THRESHOLD))
+    chunk_size_tokens = int(payload.get("chunk_size_tokens", CHUNK_SIZE_TOKENS))
     multi_label = bool(payload.get("multi_label", True))
 
     if model_name not in SUPPORTED_MODELS:
@@ -124,7 +131,7 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
 
     if use_chunking and len(text) > chunk_char_threshold:
         try:
-            chunks = chunk_text(text, strategy=chunking_strategy)
+            chunks = chunk_text(text, strategy=chunking_strategy, chunk_size_tokens=chunk_size_tokens)
         except Exception as e:
             return {"error": f"Chunking failed: {e!s}"}, 500
         if chunks:

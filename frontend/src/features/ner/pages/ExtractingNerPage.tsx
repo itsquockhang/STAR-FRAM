@@ -20,6 +20,8 @@ export function ExtractingNerPage() {
             labels={state.labels}
             threshold={state.threshold}
             chunkingMode={state.chunkingMode}
+            chunkCharThreshold={state.chunkCharThreshold}
+            chunkSizeTokens={state.chunkSizeTokens}
             useSpellCorrection={state.useSpellCorrection}
             multiLabel={state.multiLabel}
             loading={state.loading}
@@ -29,6 +31,8 @@ export function ExtractingNerPage() {
             onChangeLabels={actions.setLabels}
             onChangeThreshold={actions.setThreshold}
             onChangeChunkingMode={actions.setChunkingMode}
+            onChangeChunkCharThreshold={actions.setChunkCharThreshold}
+            onChangeChunkSizeTokens={actions.setChunkSizeTokens}
             onChangeUseSpellCorrection={actions.setUseSpellCorrection}
             onChangeMultiLabel={actions.setMultiLabel}
             onExtract={actions.extract}
