@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 import time
 from typing import Any, Dict, Tuple
 from urllib.parse import parse_qs, urlparse
 
-import mlx_whisper
 import torch
 import whisperx
 from yt_dlp import YoutubeDL
@@ -47,6 +47,25 @@ def _download_audio_to_temp(url: str) -> Tuple[str, str]:
         "quiet": True,
         "noprogress": True,
     }
+
+    # yt-dlp now requires an external JS runtime for some YouTube clients.
+    # Auto-detect common runtimes and pass them explicitly.
+    js_runtime_bins = {
+        "deno": ("deno",),
+        "node": ("node", "nodejs"),
+        "quickjs": ("qjs", "quickjs"),
+        "bun": ("bun",),
+    }
+    js_runtimes: Dict[str, Dict[str, str]] = {}
+    for runtime, bins in js_runtime_bins.items():
+        for bin_name in bins:
+            path = shutil.which(bin_name)
+            if path:
+                js_runtimes[runtime] = {"path": path}
+                break
+    if js_runtimes:
+        ydl_opts["js_runtimes"] = js_runtimes
+
     with YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filepath = ydl.prepare_filename(info)
@@ -120,6 +139,9 @@ def transcribe_youtube_with_whisperx(
     try:
         if device == "mps":
             # Use mlx_whisper on Apple Silicon (Metal / MLX backend)
+            # Import lazily so non-Apple environments do not require MLX shared libs.
+            import mlx_whisper
+
             mlx_result = mlx_whisper.transcribe(
                 audio_path,
                 path_or_hf_repo="mlx-community/whisper-medium-mlx-8bit",
