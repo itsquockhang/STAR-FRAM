@@ -124,6 +124,7 @@ def transcribe_youtube_with_whisperx(
                 audio_path,
                 path_or_hf_repo="mlx-community/whisper-medium-mlx-8bit",
                 word_timestamps=True,
+                verbose=True,
             )
             result: Dict[str, Any] = {
                 "segments": mlx_result.get("segments") or [],
@@ -137,6 +138,7 @@ def transcribe_youtube_with_whisperx(
                 audio,
                 batch_size=16,
                 language=language,
+                verbose=True,
             )
     except Exception as e:
         return {"error": f"WhisperX/MLX transcription failed: {e!s}"}, 500
