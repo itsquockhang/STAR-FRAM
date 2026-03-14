@@ -1,8 +1,6 @@
 import { AppBar, Box, Button, Chip, Toolbar, Typography } from '@mui/material'
 import GrainOutlinedIcon from '@mui/icons-material/GrainOutlined'
-import OndemandVideoOutlinedIcon from '@mui/icons-material/OndemandVideoOutlined'
-import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined'
-import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
+import CloudDownloadOutlinedIcon from '@mui/icons-material/CloudDownloadOutlined'
 import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useNerStore } from '../state/nerStore'
@@ -107,19 +105,9 @@ export function Navbar() {
             icon={<GrainOutlinedIcon fontSize="small" />}
           />
           <NavButton
-            to="/youtube-transcript"
-            label="YouTube Transcript"
-            icon={<OndemandVideoOutlinedIcon fontSize="small" />}
-          />
-          <NavButton
-            to="/web-extract"
-            label="Web Extract"
-            icon={<LanguageOutlinedIcon fontSize="small" />}
-          />
-          <NavButton
-            to="/document-import"
-            label="Document Import"
-            icon={<DescriptionOutlinedIcon fontSize="small" />}
+            to="/collect-data"
+            label="Collect Data"
+            icon={<CloudDownloadOutlinedIcon fontSize="small" />}
           />
           <NavButton
             to="/workspace"

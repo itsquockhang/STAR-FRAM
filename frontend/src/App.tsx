@@ -2,9 +2,7 @@ import { Box, Container } from '@mui/material'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { ExtractingNerPage } from './features/ner/pages/ExtractingNerPage'
-import { DocumentImportPage } from './features/docs/pages/DocumentImportPage'
-import { YouTubeTranscriptPage } from './features/youtube/pages/YouTubeTranscriptPage'
-import { WebExtractPage } from './features/web/pages/WebExtractPage'
+import { CollectDataPage } from './features/collect/pages/CollectDataPage'
 import { SavedChunksPage } from './features/ner/pages/SavedChunksPage.tsx'
 
 export default function App() {
@@ -32,9 +30,10 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/extracting-ner" replace />} />
             <Route path="/extracting-ner" element={<ExtractingNerPage />} />
-            <Route path="/youtube-transcript" element={<YouTubeTranscriptPage />} />
-            <Route path="/web-extract" element={<WebExtractPage />} />
-            <Route path="/document-import" element={<DocumentImportPage />} />
+            <Route path="/collect-data" element={<CollectDataPage />} />
+            <Route path="/youtube-transcript" element={<Navigate to="/collect-data" replace />} />
+            <Route path="/web-extract" element={<Navigate to="/collect-data" replace />} />
+            <Route path="/document-import" element={<Navigate to="/collect-data" replace />} />
             <Route path="*" element={<Navigate to="/extracting-ner" replace />} />
           </Routes>
         </Container>
