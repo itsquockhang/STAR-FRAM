@@ -14,6 +14,12 @@ LLM_MODEL = os.getenv("LLM_MODEL", "").strip()
 LLM_TIMEOUT_SECS = float(os.getenv("LLM_TIMEOUT_SECS", "120"))
 LLM_TRY_EXTRAS = os.getenv("LLM_TRY_EXTRAS", "0").lower() in ("1", "true", "yes", "y")
 
+OCR_PROMPT = (
+    "OCR this document page. Return all the text exactly as it appears, "
+    "preserving layout where possible. Use markdown formatting for tables and lists. "
+    "Do not add any commentary."
+)
+
 
 def _normalize_base_url(base_url: str) -> str:
     u = (base_url or "").rstrip("/")
@@ -62,6 +68,35 @@ def _post_chat_completions(messages: List[Dict[str, Any]]) -> str:
         except Exception:
             return _call(with_extras=False)
     return _call(with_extras=False)
+
+
+def ocr_image_base64(image_base64: str, mime: str = "image/jpeg") -> str:
+    """
+    Send a single image (base64) to the LLM for OCR. Returns extracted text.
+    Uses the same LLM_BASE_URL / LLM_MODEL as agri relations.
+    """
+    if not image_base64:
+        return ""
+    url = f"data:{mime};base64,{image_base64}"
+    content: List[Dict[str, Any]] = [
+        {"type": "image_url", "image_url": {"url": url}},
+        {"type": "text", "text": OCR_PROMPT},
+    ]
+    messages = [{"role": "user", "content": content}]
+    client = OpenAI(
+        api_key=LLM_API_KEY,
+        base_url=_normalize_base_url(LLM_BASE_URL),
+        timeout=LLM_TIMEOUT_SECS,
+    )
+    model_id = _resolve_model_id(client)
+    kwargs: Dict[str, Any] = {
+        "model": model_id,
+        "messages": messages,
+        "max_tokens": 4096,
+        "temperature": 0,
+    }
+    resp = client.chat.completions.create(**kwargs)
+    return (resp.choices[0].message.content or "").strip()
 
 
 def extract_agri_relations(text: str) -> Tuple[Dict[str, Any], int]:

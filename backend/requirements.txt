@@ -9,6 +9,7 @@ youtube-transcript-api>=1.0.0
 underthesea
 sentencepiece
 python-docx
+PyMuPDF
 trafilatura[all]
 gunicorn
 openai

@@ -5,6 +5,7 @@ from flask_cors import CORS
 
 from config import DEFAULT_MODEL, SUPPORTED_MODELS
 from document_service import extract_text_from_upload
+from pdf_service import extract_text_from_pdf
 from llm_agri_service import extract_agri_relations
 from ner_service import clear_label_cache, handle_ner
 from translation_service import handle_translate
@@ -132,6 +133,20 @@ def doc_extract():
     filename = f.filename or ""
     data = f.read() or b""
     body, status = extract_text_from_upload(filename, data)
+    return jsonify(body), status
+
+
+@app.post("/api/pdf/extract")
+def pdf_extract():
+    if "file" not in request.files:
+        return jsonify({"error": "Missing file upload field 'file'"}), 400
+
+    f = request.files["file"]
+    filename = f.filename or ""
+    data = f.read() or b""
+    if not filename.lower().endswith(".pdf"):
+        return jsonify({"error": "File must be a PDF (.pdf)"}), 400
+    body, status = extract_text_from_pdf(data, filename)
     return jsonify(body), status
 
 
