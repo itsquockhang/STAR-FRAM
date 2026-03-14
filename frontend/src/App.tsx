@@ -1,5 +1,5 @@
 import { Box, Container } from '@mui/material'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { ExtractingNerPage } from './features/ner/pages/ExtractingNerPage'
 import { DocumentImportPage } from './features/docs/pages/DocumentImportPage'
@@ -8,6 +8,9 @@ import { WebExtractPage } from './features/web/pages/WebExtractPage'
 import { SavedChunksPage } from './features/ner/pages/SavedChunksPage.tsx'
 
 export default function App() {
+  const location = useLocation()
+  const isWorkspace = location.pathname === '/workspace'
+
   return (
     <Box
       sx={{
@@ -18,17 +21,24 @@ export default function App() {
       }}
     >
       <Navbar />
-      <Container maxWidth="lg" sx={{ py: 3, pb: 6, flex: 1, width: '100%' }}>
-        <Routes>
-          <Route path="/" element={<Navigate to="/extracting-ner" replace />} />
-          <Route path="/extracting-ner" element={<ExtractingNerPage />} />
-          <Route path="/youtube-transcript" element={<YouTubeTranscriptPage />} />
-          <Route path="/web-extract" element={<WebExtractPage />} />
-          <Route path="/document-import" element={<DocumentImportPage />} />
-          <Route path="/workspace" element={<SavedChunksPage />} />
-          <Route path="*" element={<Navigate to="/extracting-ner" replace />} />
-        </Routes>
-      </Container>
+      {isWorkspace ? (
+        <Box sx={{ py: 2, pb: 4, flex: 1, width: '100%', px: 2, overflow: 'auto' }}>
+          <Routes>
+            <Route path="/workspace" element={<SavedChunksPage />} />
+          </Routes>
+        </Box>
+      ) : (
+        <Container maxWidth="lg" sx={{ py: 3, pb: 6, flex: 1, width: '100%' }}>
+          <Routes>
+            <Route path="/" element={<Navigate to="/extracting-ner" replace />} />
+            <Route path="/extracting-ner" element={<ExtractingNerPage />} />
+            <Route path="/youtube-transcript" element={<YouTubeTranscriptPage />} />
+            <Route path="/web-extract" element={<WebExtractPage />} />
+            <Route path="/document-import" element={<DocumentImportPage />} />
+            <Route path="*" element={<Navigate to="/extracting-ner" replace />} />
+          </Routes>
+        </Container>
+      )}
       <Box
         component="footer"
         sx={{

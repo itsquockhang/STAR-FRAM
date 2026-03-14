@@ -2,12 +2,12 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
+  InputBase,
   Paper,
   Stack,
   Table,
@@ -19,7 +19,10 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Chip,
 } from '@mui/material'
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined'
 import StarIcon from '@mui/icons-material/Star'
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
@@ -35,6 +38,7 @@ type SavedChunkSummary = {
   chunk_index?: number | null
   start?: number | null
   end?: number | null
+  corrected_text?: string | null
   is_starred?: number | boolean
   status?: string | null
   created_at?: string | null
@@ -57,10 +61,57 @@ type SavedChunkDetail = SavedChunkSummary & {
   entities: SavedEntity[]
 }
 
+function formatCreated(s: string | null | undefined): string {
+  if (!s) return '—'
+  try {
+    const d = new Date(s)
+    if (Number.isNaN(d.getTime())) return s
+    return d.toLocaleString(undefined, {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return s
+  }
+}
+
+type SortKey = 'id' | 'doc_title' | 'chunk_index' | 'start' | 'created_at' | null
+type SortDir = 'asc' | 'desc'
+
+const EXCEL_GRID = {
+  borderCollapse: 'collapse' as const,
+  border: '1px solid',
+  borderColor: 'divider',
+  '& .MuiTableCell-root': {
+    borderRight: '1px solid',
+    borderColor: 'divider',
+    py: 0.5,
+    px: 1,
+    fontSize: 13,
+  },
+  '& .MuiTableHead .MuiTableCell-root': {
+    bgcolor: 'grey.200',
+    fontWeight: 600,
+    cursor: 'pointer',
+    userSelect: 'none',
+    '&:hover': { bgcolor: 'grey.300' },
+  },
+  '& .MuiTableBody .MuiTableRow-root:hover': {
+    bgcolor: 'action.hover',
+  },
+}
+
 export function SavedChunksPage() {
   const [items, setItems] = useState<SavedChunkSummary[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [sortKey, setSortKey] = useState<SortKey>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
 
   const [selected, setSelected] = useState<SavedChunkDetail | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
@@ -87,8 +138,27 @@ export function SavedChunksPage() {
     void loadList()
   }, [])
 
+  const handleSort = (key: SortKey) => {
+    if (!key) return
+    setSortDir((prev) => (sortKey === key && prev === 'asc' ? 'desc' : 'asc'))
+    setSortKey(key)
+  }
+
+  const sortedItems = (() => {
+    if (!sortKey) return items
+    const dir = sortDir === 'asc' ? 1 : -1
+    return [...items].sort((a, b) => {
+      const va = a[sortKey as keyof SavedChunkSummary]
+      const vb = b[sortKey as keyof SavedChunkSummary]
+      const na = typeof va === 'number' ? va : (va ?? '').toString()
+      const nb = typeof vb === 'number' ? vb : (vb ?? '').toString()
+      return dir * (na < nb ? -1 : na > nb ? 1 : 0)
+    })
+  })()
+
   const openDetail = async (id: number) => {
     setDetailError(null)
+    setDetailSuccess(null)
     try {
       const r = await fetch(`/api/ner/chunks/${id}`)
       const data = (await r.json()) as SavedChunkDetail & { error?: string }
@@ -97,6 +167,7 @@ export function SavedChunksPage() {
         data.entities = []
       }
       setSelected(data)
+      setSelectedRowId(id)
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : String(e))
     }
@@ -237,32 +308,53 @@ export function SavedChunksPage() {
   }
 
   return (
-    <Box sx={{ maxWidth: 1200 }}>
+    <Box sx={{ width: '100%', minWidth: 0 }}>
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack spacing={2}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>
-            Saved NER chunks
-          </Typography>
           {error && <Alert severity="error">{error}</Alert>}
-          <TableContainer sx={{ maxHeight: 420 }}>
-            <Table size="small" stickyHeader>
+          <TableContainer sx={{ maxHeight: '70vh', overflow: 'auto' }}>
+            <Table size="small" stickyHeader sx={EXCEL_GRID}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Star</TableCell>
-                  <TableCell>ID</TableCell>
-                  <TableCell>Title</TableCell>
-                  <TableCell>Model</TableCell>
-                  <TableCell>Chunk #</TableCell>
-                  <TableCell>Span</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Created</TableCell>
-                  <TableCell>Actions</TableCell>
+                  <TableCell sx={{ width: 40, textAlign: 'center' }}>#</TableCell>
+                  <TableCell sx={{ width: 48, textAlign: 'center' }}>★</TableCell>
+                  <TableCell onClick={() => handleSort('id')} sx={{ width: 60 }}>
+                    ID {sortKey === 'id' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
+                  </TableCell>
+                  <TableCell onClick={() => handleSort('doc_title')} sx={{ minWidth: 140 }}>
+                    Title {sortKey === 'doc_title' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 90 }}>Model</TableCell>
+                  <TableCell onClick={() => handleSort('chunk_index')} sx={{ width: 80, textAlign: 'center' }}>
+                    Chunk # {sortKey === 'chunk_index' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
+                  </TableCell>
+                  <TableCell onClick={() => handleSort('start')} sx={{ width: 90 }}>
+                    Span {sortKey === 'start' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
+                  </TableCell>
+                  <TableCell sx={{ minWidth: 200 }}>Chunk text</TableCell>
+                  <TableCell sx={{ width: 80 }}>Status</TableCell>
+                  <TableCell onClick={() => handleSort('created_at')} sx={{ width: 140 }}>
+                    Created {sortKey === 'created_at' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
+                  </TableCell>
+                  <TableCell sx={{ width: 88, borderRight: 'none' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {items.map((c) => (
-                  <TableRow key={c.id} hover>
-                    <TableCell>
+                {sortedItems.map((c, idx) => (
+                  <TableRow
+                    key={c.id}
+                    hover
+                    onClick={() => openDetail(c.id)}
+                    selected={selectedRowId === c.id}
+                    sx={{
+                      cursor: 'pointer',
+                      bgcolor: selectedRowId === c.id ? 'action.selected' : undefined,
+                      '&.Mui-selected': { bgcolor: 'action.selected' },
+                      '&.Mui-selected:hover': { bgcolor: 'action.selected' },
+                    }}
+                  >
+                    <TableCell sx={{ textAlign: 'center', color: 'text.secondary' }}>{idx + 1}</TableCell>
+                    <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ textAlign: 'center' }}>
                       <IconButton
                         size="small"
                         onClick={() => toggleStar(c)}
@@ -276,35 +368,23 @@ export function SavedChunksPage() {
                       </IconButton>
                     </TableCell>
                     <TableCell>{c.id}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ maxWidth: 180 }}>
                       <Typography variant="body2" noWrap title={c.doc_title ?? ''}>
-                        {c.doc_title || 'Untitled'}
+                        {c.doc_title || '—'}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="caption">{c.model ?? ''}</Typography>
-                    </TableCell>
-                    <TableCell>{(c.chunk_index ?? 0) + 1}</TableCell>
-                    <TableCell>
-                      <Typography variant="caption">
-                        {c.start ?? 0} – {c.end ?? 0}
+                    <TableCell>{c.model ?? '—'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}>{(c.chunk_index ?? 0) + 1}</TableCell>
+                    <TableCell>{`${c.start ?? 0}–${c.end ?? 0}`}</TableCell>
+                    <TableCell sx={{ maxWidth: 400, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                      <Typography variant="body2" component="span" sx={{ fontSize: 12 }}>
+                        {c.corrected_text || '—'}
                       </Typography>
                     </TableCell>
-                    <TableCell>
-                      {c.status && (
-                        <Chip
-                          size="small"
-                          label={c.status}
-                          variant="outlined"
-                          sx={{ textTransform: 'capitalize' }}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption">{c.created_at ?? ''}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Stack direction="row" spacing={0.5}>
+                    <TableCell>{c.status || '—'}</TableCell>
+                    <TableCell>{formatCreated(c.created_at)}</TableCell>
+                    <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ borderRight: 'none' }}>
+                      <Stack direction="row" spacing={0.25}>
                         <Tooltip title="View / edit">
                           <IconButton
                             size="small"
@@ -330,7 +410,7 @@ export function SavedChunksPage() {
                 ))}
                 {!loading && items.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} sx={{ opacity: 0.7 }}>
+                    <TableCell colSpan={10} sx={{ opacity: 0.7 }}>
                       No saved chunks yet. Run NER with chunking enabled, then click
                       &quot;Save chunks to database&quot; on the Extracting NER page.
                     </TableCell>
@@ -459,108 +539,125 @@ export function SavedChunksPage() {
               <Box>
                 <Stack
                   direction="row"
-                  spacing={1}
                   alignItems="center"
                   justifyContent="space-between"
+                  sx={{ mb: 1 }}
                 >
-                  <Typography
-                    variant="caption"
-                    sx={{ fontWeight: 700, opacity: 0.8 }}
-                  >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                     Entities ({selected.entities.length})
                   </Typography>
-                  <Button size="small" onClick={addEntityLocal}>
-                    Add entity
+                  <Button size="small" variant="outlined" onClick={addEntityLocal}>
+                    + Add row
                   </Button>
                 </Stack>
-                <Stack spacing={1} sx={{ mt: 1, maxHeight: 260, overflow: 'auto' }}>
-                  {selected.entities.map((e) => (
-                    <Paper
-                      key={e.id}
-                      variant="outlined"
-                      sx={{ p: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}
-                    >
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <TextField
-                          label="Label"
-                          size="small"
-                          value={e.label}
-                          onChange={(ev) =>
-                            updateEntityField(e.id, 'label', ev.target.value)
-                          }
-                        />
-                        <TextField
-                          label="Score"
-                          size="small"
-                          value={e.score ?? ''}
-                          onChange={(ev) =>
-                            updateEntityField(
-                              e.id,
-                              'score',
-                              ev.target.value ? Number(ev.target.value) : undefined,
-                            )
-                          }
-                          sx={{ width: 90 }}
-                        />
-                        <TextField
-                          label="Start"
-                          size="small"
-                          value={e.start ?? ''}
-                          onChange={(ev) =>
-                            updateEntityField(
-                              e.id,
-                              'start',
-                              ev.target.value ? Number(ev.target.value) : undefined,
-                            )
-                          }
-                          sx={{ width: 90 }}
-                        />
-                        <TextField
-                          label="End"
-                          size="small"
-                          value={e.end ?? ''}
-                          onChange={(ev) =>
-                            updateEntityField(
-                              e.id,
-                              'end',
-                              ev.target.value ? Number(ev.target.value) : undefined,
-                            )
-                          }
-                          sx={{ width: 90 }}
-                        />
-                        <IconButton
-                          size="small"
-                          aria-label="delete-entity"
-                          onClick={() => deleteEntityLocal(e.id)}
-                        >
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => saveEntity(e)}
-                        >
-                          Save
-                        </Button>
-                      </Stack>
-                      <TextField
-                        sx={{ mt: 1 }}
-                        label="Text"
-                        size="small"
-                        fullWidth
-                        value={e.text}
-                        onChange={(ev) =>
-                          updateEntityField(e.id, 'text', ev.target.value)
-                        }
-                      />
-                    </Paper>
-                  ))}
-                  {selected.entities.length === 0 && (
-                    <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                      No entities saved for this chunk yet.
-                    </Typography>
-                  )}
-                </Stack>
+                {selected.entities.length > 0 ? (
+                <TableContainer sx={{ maxHeight: 280, overflow: 'auto' }}>
+                  <Table size="small" sx={EXCEL_GRID}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ width: 36, textAlign: 'center' }}>#</TableCell>
+                        <TableCell sx={{ minWidth: 100 }}>Label</TableCell>
+                        <TableCell sx={{ minWidth: 160 }}>Text</TableCell>
+                        <TableCell sx={{ width: 70, textAlign: 'right' }}>Score</TableCell>
+                        <TableCell sx={{ width: 60, textAlign: 'right' }}>Start</TableCell>
+                        <TableCell sx={{ width: 60, textAlign: 'right' }}>End</TableCell>
+                        <TableCell sx={{ width: 90, borderRight: 'none' }}>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {selected.entities.map((e, idx) => (
+                        <TableRow key={e.id} hover>
+                          <TableCell sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                            {idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ p: 0 }}>
+                            <InputBase
+                              value={e.label}
+                              onChange={(ev) =>
+                                updateEntityField(e.id, 'label', ev.target.value)
+                              }
+                              size="small"
+                              fullWidth
+                              sx={{ px: 1, py: 0.5, fontSize: 13 }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 0 }}>
+                            <InputBase
+                              value={e.text}
+                              onChange={(ev) =>
+                                updateEntityField(e.id, 'text', ev.target.value)
+                              }
+                              size="small"
+                              fullWidth
+                              sx={{ px: 1, py: 0.5, fontSize: 13 }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 0 }}>
+                            <InputBase
+                              value={e.score ?? ''}
+                              onChange={(ev) =>
+                                updateEntityField(
+                                  e.id,
+                                  'score',
+                                  ev.target.value ? Number(ev.target.value) : undefined,
+                                )
+                              }
+                              size="small"
+                              type="number"
+                              inputProps={{ step: 0.01 }}
+                              sx={{ px: 1, py: 0.5, fontSize: 13, textAlign: 'right', width: '100%' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 0 }}>
+                            <InputBase
+                              value={e.start ?? ''}
+                              onChange={(ev) =>
+                                updateEntityField(
+                                  e.id,
+                                  'start',
+                                  ev.target.value ? Number(ev.target.value) : undefined,
+                                )
+                              }
+                              size="small"
+                              type="number"
+                              sx={{ px: 1, py: 0.5, fontSize: 13, textAlign: 'right', width: '100%' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ p: 0 }}>
+                            <InputBase
+                              value={e.end ?? ''}
+                              onChange={(ev) =>
+                                updateEntityField(
+                                  e.id,
+                                  'end',
+                                  ev.target.value ? Number(ev.target.value) : undefined,
+                                )
+                              }
+                              size="small"
+                              type="number"
+                              sx={{ px: 1, py: 0.5, fontSize: 13, textAlign: 'right', width: '100%' }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ borderRight: 'none' }}>
+                            <Stack direction="row" spacing={0.25}>
+                              <Button size="small" sx={{ minWidth: 0, px: 0.75 }} onClick={() => saveEntity(e)}>
+                                Save
+                              </Button>
+                              <IconButton size="small" onClick={() => deleteEntityLocal(e.id)} aria-label="delete">
+                                <DeleteOutlineOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                ) : (
+                  <Typography variant="body2" sx={{ py: 2, opacity: 0.6, textAlign: 'center' }}>
+                    No entities. Click &quot;+ Add row&quot; to add.
+                  </Typography>
+                )}
               </Box>
             </Stack>
           )}

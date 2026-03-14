@@ -185,6 +185,7 @@ def list_chunks() -> Tuple[Dict[str, Any], int]:
         chunk_index,
         start,
         end,
+        corrected_text,
         is_starred,
         status,
         created_at,
