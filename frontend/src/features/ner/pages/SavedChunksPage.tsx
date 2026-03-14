@@ -2,13 +2,18 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
   InputBase,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
   Stack,
   Table,
   TableBody,
@@ -19,7 +24,6 @@ import {
   TextField,
   Tooltip,
   Typography,
-  Chip,
 } from '@mui/material'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
@@ -59,6 +63,18 @@ type SavedChunkDetail = SavedChunkSummary & {
   original_text?: string | null
   corrected_text?: string | null
   entities: SavedEntity[]
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  new: 'New',
+  in_progress: 'In progress',
+  reviewed: 'Reviewed',
+  done: 'Done',
+}
+
+function formatStatus(s: string | null | undefined): string {
+  if (!s) return '—'
+  return STATUS_LABELS[s] ?? s
 }
 
 function formatCreated(s: string | null | undefined): string {
@@ -381,7 +397,7 @@ export function SavedChunksPage() {
                         {c.corrected_text || '—'}
                       </Typography>
                     </TableCell>
-                    <TableCell>{c.status || '—'}</TableCell>
+                    <TableCell>{formatStatus(c.status)}</TableCell>
                     <TableCell>{formatCreated(c.created_at)}</TableCell>
                     <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ borderRight: 'none' }}>
                       <Stack direction="row" spacing={0.25}>
@@ -426,10 +442,18 @@ export function SavedChunksPage() {
         open={!!selected}
         onClose={() => setSelected(null)}
         fullWidth
-        maxWidth="md"
+        maxWidth={false}
+        PaperProps={{
+          sx: {
+            maxWidth: '95vw',
+            width: '95vw',
+            height: '90vh',
+            maxHeight: '90vh',
+          },
+        }}
       >
-        <DialogTitle>Chunk detail</DialogTitle>
-        <DialogContent dividers>
+        {/* <DialogTitle>Chunk detail</DialogTitle> */}
+        <DialogContent dividers sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
           {detailError && <Alert severity="error">{detailError}</Alert>}
           {detailSuccess && <Alert severity="success">{detailSuccess}</Alert>}
           {selected && (
@@ -443,15 +467,23 @@ export function SavedChunksPage() {
                 fullWidth
                 size="small"
               />
-              <Stack direction="row" spacing={1}>
-                <TextField
-                  label="Status"
-                  value={selected.status ?? ''}
-                  onChange={(e) =>
-                    setSelected({ ...selected, status: e.target.value })
-                  }
-                  size="small"
-                />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel id="chunk-status-label">Status</InputLabel>
+                  <Select
+                    labelId="chunk-status-label"
+                    label="Status"
+                    value={selected.status ?? 'new'}
+                    onChange={(e) =>
+                      setSelected({ ...selected, status: e.target.value })
+                    }
+                  >
+                    <MenuItem value="new">New</MenuItem>
+                    <MenuItem value="in_progress">In progress</MenuItem>
+                    <MenuItem value="reviewed">Reviewed</MenuItem>
+                    <MenuItem value="done">Done</MenuItem>
+                  </Select>
+                </FormControl>
                 <Chip
                   size="small"
                   label={selected.model ?? ''}
@@ -476,7 +508,7 @@ export function SavedChunksPage() {
                   }
                   fullWidth
                   multiline
-                  minRows={4}
+                  minRows={6}
                   sx={{ mt: 0.5 }}
                 />
                 {selected.corrected_text && (
@@ -488,7 +520,7 @@ export function SavedChunksPage() {
                       border: '1px solid',
                       borderColor: 'divider',
                       bgcolor: 'grey.50',
-                      maxHeight: 200,
+                      maxHeight: 320,
                       overflow: 'auto',
                     }}
                   >
@@ -551,17 +583,17 @@ export function SavedChunksPage() {
                   </Button>
                 </Stack>
                 {selected.entities.length > 0 ? (
-                <TableContainer sx={{ maxHeight: 280, overflow: 'auto' }}>
+                <TableContainer sx={{ maxHeight: 400, overflow: 'auto' }}>
                   <Table size="small" sx={EXCEL_GRID}>
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ width: 36, textAlign: 'center' }}>#</TableCell>
-                        <TableCell sx={{ minWidth: 100 }}>Label</TableCell>
+                        <TableCell sx={{ width: 250 }}>Label</TableCell>
                         <TableCell sx={{ minWidth: 160 }}>Text</TableCell>
-                        <TableCell sx={{ width: 70, textAlign: 'right' }}>Score</TableCell>
-                        <TableCell sx={{ width: 60, textAlign: 'right' }}>Start</TableCell>
-                        <TableCell sx={{ width: 60, textAlign: 'right' }}>End</TableCell>
-                        <TableCell sx={{ width: 90, borderRight: 'none' }}>Actions</TableCell>
+                        <TableCell sx={{ width: 100, textAlign: 'right' }}>Score</TableCell>
+                        <TableCell sx={{ width: 80, textAlign: 'right' }}>Start</TableCell>
+                        <TableCell sx={{ width: 80, textAlign: 'right' }}>End</TableCell>
+                        <TableCell sx={{ width: 100, borderRight: 'none' }}>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
