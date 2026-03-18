@@ -32,6 +32,12 @@ import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined'
 import StarIcon from '@mui/icons-material/Star'
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import FilterAltOffOutlinedIcon from '@mui/icons-material/FilterAltOffOutlined'
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined'
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
+import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined'
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined'
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildHighlightSegments, getLabelColor } from '../highlight'
 import type { NerEntity } from '../../../types/ner'
@@ -98,6 +104,20 @@ const RATING_LABELS: Record<string, string> = Object.fromEntries(
 )
 
 const MANUAL_ENTITY_LABEL_DEFAULTS = [] as const
+
+const STATUS_COLOR_BY_KEY: Record<string, { bg: string; text: string; border: string }> = {
+  new: { bg: '#e0f2fe', text: '#075985', border: '#7dd3fc' },
+  in_progress: { bg: '#fff7ed', text: '#9a3412', border: '#fdba74' },
+  reviewed: { bg: '#ede9fe', text: '#5b21b6', border: '#c4b5fd' },
+  done: { bg: '#dcfce7', text: '#166534', border: '#86efac' },
+}
+
+const RATING_COLOR_BY_KEY: Record<string, { bg: string; text: string; border: string }> = {
+  excellent: { bg: '#dcfce7', text: '#166534', border: '#86efac' },
+  good: { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
+  medium: { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
+  needs_improvement: { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
+}
 
 const TAG_COLOR_BY_KEY: Record<string, { bg: string; text: string; border: string }> = {
   english: { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
@@ -166,6 +186,30 @@ function formatClassificationTag(tag: string): string {
 function formatRating(rating: string | null | undefined): string {
   if (!rating) return '—'
   return RATING_LABELS[rating] ?? rating
+}
+
+function getStatusChipSx(status: string | null | undefined) {
+  const key = String(status ?? '').trim()
+  const color = STATUS_COLOR_BY_KEY[key] ?? { bg: '#e5e7eb', text: '#374151', border: '#cbd5e1' }
+  return {
+    bgcolor: color.bg,
+    color: color.text,
+    border: '1px solid',
+    borderColor: color.border,
+    fontWeight: 600,
+  }
+}
+
+function getRatingChipSx(rating: string | null | undefined) {
+  const key = String(rating ?? '').trim()
+  const color = RATING_COLOR_BY_KEY[key] ?? { bg: '#e5e7eb', text: '#374151', border: '#cbd5e1' }
+  return {
+    bgcolor: color.bg,
+    color: color.text,
+    border: '1px solid',
+    borderColor: color.border,
+    fontWeight: 600,
+  }
 }
 
 function normalizeSearchText(value: unknown): string {
@@ -808,10 +852,15 @@ export function SavedChunksPage() {
               </Select>
             </FormControl>
             <Stack direction="row" spacing={1}>
-              <Button variant="outlined" onClick={resetFilters}>
+              <Button variant="outlined" onClick={resetFilters} startIcon={<FilterAltOffOutlinedIcon />}>
                 Clear filters
               </Button>
-              <Button variant="contained" onClick={exportCsv} disabled={sortedItems.length === 0}>
+              <Button
+                variant="contained"
+                onClick={exportCsv}
+                disabled={sortedItems.length === 0}
+                startIcon={<DownloadOutlinedIcon />}
+              >
                 Export CSV ({sortedItems.length})
               </Button>
             </Stack>
@@ -889,7 +938,9 @@ export function SavedChunksPage() {
                         {c.corrected_text || '—'}
                       </Typography>
                     </TableCell>
-                    <TableCell>{formatStatus(c.status)}</TableCell>
+                    <TableCell>
+                      <Chip size="small" label={formatStatus(c.status)} sx={getStatusChipSx(c.status)} />
+                    </TableCell>
                     <TableCell>
                       {normalizeClassificationTags(c.classification_tags).length > 0 ? (
                         <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
@@ -906,7 +957,13 @@ export function SavedChunksPage() {
                         '—'
                       )}
                     </TableCell>
-                    <TableCell>{formatRating(c.rating)}</TableCell>
+                    <TableCell>
+                      {c.rating ? (
+                        <Chip size="small" label={formatRating(c.rating)} sx={getRatingChipSx(c.rating)} />
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
                     <TableCell>{formatCreated(c.created_at)}</TableCell>
                     <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ borderRight: 'none' }}>
                       <Stack direction="row" spacing={0.25}>
@@ -1128,6 +1185,7 @@ export function SavedChunksPage() {
                     variant="outlined"
                     onClick={addEntityFromTextSelection}
                     disabled={!selectedTextRange || addingEntityFromSelection || !manualEntityLabel.trim()}
+                    startIcon={<AddCircleOutlineOutlinedIcon />}
                   >
                     {addingEntityFromSelection ? 'Adding...' : 'Add entity from selection'}
                   </Button>
@@ -1199,7 +1257,7 @@ export function SavedChunksPage() {
                   <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                     Entities ({selected.entities.length})
                   </Typography>
-                  <Button size="small" variant="outlined" onClick={addEntityLocal}>
+                  <Button size="small" variant="outlined" onClick={addEntityLocal} startIcon={<AddOutlinedIcon />}>
                     + Add row
                   </Button>
                 </Stack>
@@ -1293,7 +1351,12 @@ export function SavedChunksPage() {
                           </TableCell>
                           <TableCell sx={{ borderRight: 'none' }}>
                             <Stack direction="row" spacing={0.25}>
-                              <Button size="small" sx={{ minWidth: 0, px: 0.75 }} onClick={() => saveEntity(e)}>
+                              <Button
+                                size="small"
+                                sx={{ minWidth: 0, px: 0.75 }}
+                                onClick={() => saveEntity(e)}
+                                startIcon={<SaveOutlinedIcon fontSize="small" />}
+                              >
                                 Save
                               </Button>
                               <IconButton size="small" onClick={() => deleteEntityLocal(e.id)} aria-label="delete">
@@ -1321,6 +1384,7 @@ export function SavedChunksPage() {
               setSelected(null)
               setSelectedTextRange(null)
             }}
+            startIcon={<CloseOutlinedIcon />}
           >
             Close
           </Button>
@@ -1328,6 +1392,7 @@ export function SavedChunksPage() {
             onClick={saveDetail}
             variant="contained"
             disabled={savingDetail || !selected}
+            startIcon={<SaveOutlinedIcon />}
           >
             {savingDetail ? 'Saving…' : 'Save changes'}
           </Button>

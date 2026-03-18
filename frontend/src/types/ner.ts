@@ -32,6 +32,10 @@ export const SUPPORTED_MODELS = [
   'knowledgator/gliner-bi-base-v2.0',
   'knowledgator/gliner-qwen-0.5B-v1.0',
   'knowledgator/gliner-qwen-1.5B-v1.0',
+  'urchade/gliner_base',
+  'urchade/gliner_multi',
+  'urchade/gliner_medium-v2',
+  'urchade/gliner_medium-v2.1',
 ] as const
 
 export type SupportedModel = (typeof SUPPORTED_MODELS)[number]

@@ -16,6 +16,7 @@ from llm_agri_service import ocr_image_base64
 MIN_TEXT_PER_PAGE_FOR_PYMUPDF = 50
 PDF_RENDER_DPI = 150
 MAX_OCR_WORKERS = 4
+MAX_PAGES_TO_EXTRACT = 10
 
 
 def _extract_text_pymupdf(doc: Any) -> str:
@@ -68,6 +69,12 @@ def extract_text_from_pdf(data: bytes, filename: str) -> Tuple[Dict[str, Any], i
         num_pages = len(doc)
         if num_pages == 0:
             return {"error": "PDF has no pages."}, 422
+        
+        if num_pages > MAX_PAGES_TO_EXTRACT:
+            doc.close()
+            return {
+                "error": f"PDF has {num_pages} pages. Maximum allowed is {MAX_PAGES_TO_EXTRACT} pages."
+            }, 422
 
         # Prefer direct text extraction
         if _page_has_enough_text(doc):

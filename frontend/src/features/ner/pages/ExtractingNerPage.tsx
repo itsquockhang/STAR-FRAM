@@ -10,8 +10,12 @@ import {
   Paper,
   Select,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material'
+import TranslateOutlinedIcon from '@mui/icons-material/TranslateOutlined'
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined'
+import RestoreOutlinedIcon from '@mui/icons-material/RestoreOutlined'
 import { useCallback, useState } from 'react'
 import { useNerStore } from '../../../state/nerStore'
 import { HighlightedText } from '../highlight'
@@ -33,6 +37,8 @@ export function ExtractingNerPage() {
   const [savingChunks, setSavingChunks] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const [docTitle, setDocTitle] = useState('')
+  const [preTranslateText, setPreTranslateText] = useState<string | null>(null)
 
   const responseMatchesCurrentText = true
   const entities = responseMatchesCurrentText ? state.resp?.entities ?? [] : []
@@ -44,6 +50,7 @@ export function ExtractingNerPage() {
     const targetLangCode = translationDirection === 'vi-en' ? 'en' : 'vi'
 
     setTranslationError(null)
+    setPreTranslateText((prev) => prev ?? state.text)
     setTranslating(true)
 
     try {
@@ -73,6 +80,13 @@ export function ExtractingNerPage() {
     }
   }, [actions, state.text, translationDirection])
 
+  const onRestoreOriginalText = useCallback(() => {
+    if (!preTranslateText) return
+    actions.setText(preTranslateText)
+    setPreTranslateText(null)
+    setTranslationError(null)
+  }, [actions, preTranslateText])
+
   const onSaveChunksToDb = useCallback(async () => {
     setSaveError(null)
     setSaveSuccess(null)
@@ -82,13 +96,18 @@ export function ExtractingNerPage() {
       return
     }
 
+    if (!docTitle.trim()) {
+      setSaveError('Please enter a document title before saving chunks.')
+      return
+    }
+
     setSavingChunks(true)
     try {
       const r = await fetch('/api/ner/chunks/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          doc_title: 'NER text',
+          doc_title: docTitle.trim(),
           model: state.model,
           labels: state.labels,
           text_used: textUsed,
@@ -109,15 +128,20 @@ export function ExtractingNerPage() {
     } finally {
       setSavingChunks(false)
     }
-  }, [chunks, entities, state.labels, state.model, textUsed])
+  }, [chunks, docTitle, entities, state.labels, state.model, textUsed])
 
   return (
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="stretch">
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={2}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <FormControl size="small" sx={{ minWidth: 200 }}>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              useFlexGap
+              sx={{ flexWrap: 'wrap', alignItems: 'center' }}
+            >
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 }, flexShrink: 0 }}>
                 <InputLabel id="translation-direction-label">Translate</InputLabel>
                 <Select
                   labelId="translation-direction-label"
@@ -125,6 +149,7 @@ export function ExtractingNerPage() {
                   label="Translate"
                   onChange={(e) => setTranslationDirection(e.target.value as TranslationDirection)}
                   disabled={state.loading || translating}
+                  sx={{ minWidth: 180 }}
                 >
                   <MenuItem value="vi-en">Vietnamese to English</MenuItem>
                   <MenuItem value="en-vi">English to Vietnamese</MenuItem>
@@ -132,22 +157,47 @@ export function ExtractingNerPage() {
               </FormControl>
 
               <Button
+                size="small"
                 variant="outlined"
                 onClick={onTranslate}
                 disabled={state.loading || translating || !state.text.trim()}
+                startIcon={!translating ? <TranslateOutlinedIcon /> : undefined}
+                sx={{ px: 1.5, whiteSpace: 'nowrap' }}
               >
                 {translating ? (
                   <Stack direction="row" alignItems="center" gap={1}>
-                    <CircularProgress size={18} />
+                    <CircularProgress size={16} />
                     <span>Translating</span>
                   </Stack>
                 ) : (
                   'Translate'
                 )}
               </Button>
+
+              <Button
+                size="small"
+                variant="outlined"
+                color="inherit"
+                onClick={onRestoreOriginalText}
+                disabled={state.loading || translating || !preTranslateText}
+                startIcon={<RestoreOutlinedIcon />}
+                sx={{ px: 1.5, whiteSpace: 'nowrap' }}
+              >
+                Restore
+              </Button>
             </Stack>
 
             {translationError && <Alert severity="error">{translationError}</Alert>}
+
+            <TextField
+              label="Document title"
+              size="small"
+              value={docTitle}
+              onChange={(e) => setDocTitle(e.target.value)}
+              placeholder="Enter title for saved chunks"
+              disabled={state.loading || translating || savingChunks}
+              fullWidth
+            />
 
             <NerForm
               model={state.model}
@@ -202,7 +252,10 @@ export function ExtractingNerPage() {
                 size="small"
                 variant="outlined"
                 onClick={onSaveChunksToDb}
-                disabled={state.loading || translating || savingChunks || !chunks.length}
+                disabled={
+                  state.loading || translating || savingChunks || !chunks.length || !docTitle.trim()
+                }
+                startIcon={!savingChunks ? <SaveOutlinedIcon /> : undefined}
               >
                 {savingChunks ? (
                   <Stack direction="row" alignItems="center" gap={1}>
