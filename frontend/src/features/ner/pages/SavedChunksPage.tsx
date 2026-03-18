@@ -32,7 +32,7 @@ import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined'
 import StarIcon from '@mui/icons-material/Star'
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildHighlightSegments, getLabelColor } from '../highlight'
 import type { NerEntity } from '../../../types/ner'
 
@@ -96,6 +96,8 @@ const RATING_OPTIONS = [
 const RATING_LABELS: Record<string, string> = Object.fromEntries(
   RATING_OPTIONS.map((item) => [item.value, item.label]),
 )
+
+const MANUAL_ENTITY_LABEL_DEFAULTS = [] as const
 
 const TAG_COLOR_BY_KEY: Record<string, { bg: string; text: string; border: string }> = {
   english: { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
@@ -207,6 +209,12 @@ type SortKey = 'id' | 'doc_title' | 'chunk_index' | 'start' | 'created_at' | nul
 type SortDir = 'asc' | 'desc'
 type StarFilter = 'all' | 'starred' | 'unstarred'
 
+type TextSelectionRange = {
+  start: number
+  end: number
+  text: string
+}
+
 const EXCEL_GRID = {
   borderCollapse: 'collapse' as const,
   border: '1px solid',
@@ -251,6 +259,10 @@ export function SavedChunksPage() {
   const [detailSuccess, setDetailSuccess] = useState<string | null>(null)
   const [savingDetail, setSavingDetail] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [manualEntityLabel, setManualEntityLabel] = useState('')
+  const [selectedTextRange, setSelectedTextRange] = useState<TextSelectionRange | null>(null)
+  const [addingEntityFromSelection, setAddingEntityFromSelection] = useState(false)
+  const correctedTextInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
 
   const loadList = async () => {
     setLoading(true)
@@ -351,6 +363,17 @@ export function SavedChunksPage() {
     )
   }, [classificationFilter, items, selected?.classification_tags])
 
+  const manualEntityLabelOptions = useMemo(() => {
+    const unique = new Set<string>(MANUAL_ENTITY_LABEL_DEFAULTS)
+    for (const entity of selected?.entities ?? []) {
+      const label = String(entity.label ?? '').trim()
+      if (label) {
+        unique.add(label)
+      }
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'en'))
+  }, [selected?.entities])
+
   const sortedItems = useMemo(() => {
     if (!sortKey) return filteredItems
     const dir = sortDir === 'asc' ? 1 : -1
@@ -426,6 +449,103 @@ export function SavedChunksPage() {
     URL.revokeObjectURL(url)
   }
 
+  const updateSelectedTextRange = () => {
+    if (!selected) {
+      setSelectedTextRange(null)
+      return
+    }
+
+    const el = correctedTextInputRef.current
+    if (!el) {
+      setSelectedTextRange(null)
+      return
+    }
+
+    const rawStart = el.selectionStart ?? 0
+    const rawEnd = el.selectionEnd ?? 0
+    if (rawEnd <= rawStart) {
+      setSelectedTextRange(null)
+      return
+    }
+
+    const text = selected.corrected_text ?? ''
+    const raw = text.slice(rawStart, rawEnd)
+    if (!raw.trim()) {
+      setSelectedTextRange(null)
+      return
+    }
+
+    const leadingSpaces = raw.match(/^\s+/)?.[0]?.length ?? 0
+    const trailingSpaces = raw.match(/\s+$/)?.[0]?.length ?? 0
+    const start = rawStart + leadingSpaces
+    const end = Math.max(start, rawEnd - trailingSpaces)
+    const selectedText = text.slice(start, end)
+
+    if (!selectedText.trim() || end <= start) {
+      setSelectedTextRange(null)
+      return
+    }
+
+    setSelectedTextRange({ start, end, text: selectedText })
+  }
+
+  const addEntityFromTextSelection = async () => {
+    if (!selected || !selectedTextRange) return
+    const label = manualEntityLabel.trim()
+    if (!label) {
+      setDetailError('Please provide an entity label before adding from selection.')
+      return
+    }
+
+    setAddingEntityFromSelection(true)
+    setDetailError(null)
+    setDetailSuccess(null)
+    try {
+      const r = await fetch(`/api/ner/chunks/${selected.id}/entities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label,
+          text: selectedTextRange.text,
+          score: -1,
+          start: selectedTextRange.start,
+          end: selectedTextRange.end,
+        }),
+      })
+      const data = (await r.json()) as { error?: string; id?: number }
+      if (!r.ok) throw new Error(data?.error || `Request failed (${r.status})`)
+
+      const newEntity: SavedEntity = {
+        id: data.id ?? Math.max(0, ...selected.entities.map((e) => e.id)) + 1,
+        label,
+        text: selectedTextRange.text,
+        score: -1,
+        start: selectedTextRange.start,
+        end: selectedTextRange.end,
+      }
+
+      setSelected((prev) => {
+        if (!prev || prev.id !== selected.id) return prev
+        const nextEntities = [...prev.entities, newEntity].sort((a, b) => {
+          const sa = a.start ?? 0
+          const sb = b.start ?? 0
+          if (sa !== sb) return sa - sb
+          const ea = a.end ?? 0
+          const eb = b.end ?? 0
+          return ea - eb
+        })
+        return { ...prev, entities: nextEntities }
+      })
+
+      setSelectedTextRange(null)
+      setDetailSuccess('Added entity from selected text (score = -1).')
+    } catch (e) {
+      setDetailError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAddingEntityFromSelection(false)
+    }
+  }
+
   const openDetail = async (id: number) => {
     setDetailError(null)
     setDetailSuccess(null)
@@ -441,6 +561,7 @@ export function SavedChunksPage() {
         classification_tags: normalizeClassificationTags(data.classification_tags),
         rating: data.rating ? String(data.rating) : null,
       })
+      setSelectedTextRange(null)
       setSelectedRowId(id)
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : String(e))
@@ -841,7 +962,10 @@ export function SavedChunksPage() {
 
       <Dialog
         open={!!selected}
-        onClose={() => setSelected(null)}
+        onClose={() => {
+          setSelected(null)
+          setSelectedTextRange(null)
+        }}
         fullWidth
         maxWidth={false}
         PaperProps={{
@@ -960,14 +1084,54 @@ export function SavedChunksPage() {
                 </Typography>
                 <TextField
                   value={selected.corrected_text ?? ''}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setSelected({ ...selected, corrected_text: e.target.value })
-                  }
+                    setSelectedTextRange(null)
+                  }}
+                  onSelect={updateSelectedTextRange}
+                  onKeyUp={updateSelectedTextRange}
+                  onMouseUp={updateSelectedTextRange}
+                  inputRef={correctedTextInputRef}
                   fullWidth
                   multiline
                   minRows={6}
                   sx={{ mt: 0.5 }}
                 />
+                <Stack
+                  direction={{ xs: 'column', md: 'row' }}
+                  spacing={1}
+                  alignItems={{ xs: 'stretch', md: 'center' }}
+                  sx={{ mt: 1 }}
+                >
+                  <Autocomplete
+                    freeSolo
+                    size="small"
+                    options={manualEntityLabelOptions}
+                    value={manualEntityLabel}
+                    onInputChange={(_, value) => setManualEntityLabel(value)}
+                    onChange={(_, value) => setManualEntityLabel(typeof value === 'string' ? value : '')}
+                    sx={{ minWidth: 240 }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Manual entity label"
+                        placeholder="Type label or pick suggestion"
+                      />
+                    )}
+                  />
+                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                    {selectedTextRange
+                      ? `Selected range: ${selectedTextRange.start}-${selectedTextRange.end} (${selectedTextRange.text.length} chars)`
+                      : 'Select text in Corrected text to create a manual entity.'}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    onClick={addEntityFromTextSelection}
+                    disabled={!selectedTextRange || addingEntityFromSelection || !manualEntityLabel.trim()}
+                  >
+                    {addingEntityFromSelection ? 'Adding...' : 'Add entity from selection'}
+                  </Button>
+                </Stack>
                 {selected.corrected_text && (
                   <Box
                     sx={{
@@ -1152,7 +1316,14 @@ export function SavedChunksPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSelected(null)}>Close</Button>
+          <Button
+            onClick={() => {
+              setSelected(null)
+              setSelectedTextRange(null)
+            }}
+          >
+            Close
+          </Button>
           <Button
             onClick={saveDetail}
             variant="contained"
