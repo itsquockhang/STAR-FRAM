@@ -34,7 +34,7 @@ export function ExtractingNerPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 
-  const responseMatchesCurrentText = !state.resp?.text_used || state.resp.text_used === state.text
+  const responseMatchesCurrentText = true
   const entities = responseMatchesCurrentText ? state.resp?.entities ?? [] : []
   const chunks = responseMatchesCurrentText ? state.resp?.chunks ?? [] : []
   const textUsed = responseMatchesCurrentText ? state.resp?.text_used ?? state.text : state.text
