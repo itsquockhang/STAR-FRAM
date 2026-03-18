@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -20,6 +21,45 @@ def _ensure_dir(path: str) -> None:
   directory = os.path.dirname(path)
   if directory and not os.path.exists(directory):
     os.makedirs(directory, exist_ok=True)
+
+
+def _normalize_classification_tags(value: Any) -> List[str]:
+  raw_items: List[Any] = []
+  if isinstance(value, list):
+    raw_items = value
+  elif isinstance(value, str):
+    v = value.strip()
+    if not v:
+      return []
+    try:
+      parsed = json.loads(v)
+      if isinstance(parsed, list):
+        raw_items = parsed
+      else:
+        raw_items = [s.strip() for s in v.split(",")]
+    except Exception:
+      raw_items = [s.strip() for s in v.split(",")]
+
+  out: List[str] = []
+  seen: set[str] = set()
+  for item in raw_items:
+    tag = str(item or "").strip()
+    if not tag or tag in seen:
+      continue
+    seen.add(tag)
+    out.append(tag)
+  return out
+
+
+def _serialize_classification_tags(tags: Iterable[str]) -> str:
+  return json.dumps(list(tags), ensure_ascii=False)
+
+
+def _normalize_rating(value: Any) -> str | None:
+  if value is None:
+    return None
+  rating = str(value).strip()
+  return rating or None
 
 
 @contextmanager
@@ -51,6 +91,8 @@ def init_db() -> None:
         corrected_text TEXT,
         is_starred INTEGER DEFAULT 0,
         status TEXT DEFAULT 'new',
+        classification_tags TEXT DEFAULT '[]',
+        rating TEXT,
         created_at TEXT,
         updated_at TEXT
       )
@@ -70,6 +112,14 @@ def init_db() -> None:
       )
       """
     )
+
+    # Lightweight migration for existing databases.
+    cur.execute("PRAGMA table_info(chunks)")
+    existing_cols = {str(r["name"]) for r in cur.fetchall()}
+    if "classification_tags" not in existing_cols:
+      cur.execute("ALTER TABLE chunks ADD COLUMN classification_tags TEXT DEFAULT '[]'")
+    if "rating" not in existing_cols:
+      cur.execute("ALTER TABLE chunks ADD COLUMN rating TEXT")
 
 
 def save_chunks_with_entities(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
@@ -91,6 +141,8 @@ def save_chunks_with_entities(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], 
     labels_str = str(labels)
 
   doc_title = payload.get("doc_title") or None
+  default_classification_tags = _normalize_classification_tags(payload.get("classification_tags"))
+  default_rating = _normalize_rating(payload.get("rating"))
   now = _utc_now()
 
   # Pre-normalize entities
@@ -122,14 +174,18 @@ def save_chunks_with_entities(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], 
       chunk_index = int(c.get("index") or 0)
       original_text = c.get("original_text")
       corrected_text = c.get("corrected_text") or text_used[start:end]
+      classification_tags = _normalize_classification_tags(
+        c.get("classification_tags", default_classification_tags)
+      )
+      rating = _normalize_rating(c.get("rating", default_rating))
 
       cur.execute(
         """
         INSERT INTO chunks (
           doc_title, model, text_used, chunk_index,
           start, end, original_text, corrected_text,
-          is_starred, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'new', ?, ?)
+          is_starred, status, classification_tags, rating, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 'new', ?, ?, ?, ?)
         """,
         (
           doc_title,
@@ -140,6 +196,8 @@ def save_chunks_with_entities(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], 
           end,
           original_text,
           corrected_text,
+          _serialize_classification_tags(classification_tags),
+          rating,
           now,
           now,
         ),
@@ -188,6 +246,8 @@ def list_chunks() -> Tuple[Dict[str, Any], int]:
         corrected_text,
         is_starred,
         status,
+        classification_tags,
+        rating,
         created_at,
         updated_at
       FROM chunks
@@ -195,6 +255,10 @@ def list_chunks() -> Tuple[Dict[str, Any], int]:
       """
     )
     rows = [dict(r) for r in cur.fetchall()]
+
+  for row in rows:
+    row["classification_tags"] = _normalize_classification_tags(row.get("classification_tags"))
+    row["rating"] = _normalize_rating(row.get("rating"))
   return {"items": rows}, 200
 
 
@@ -206,6 +270,8 @@ def get_chunk_detail(chunk_id: int) -> Tuple[Dict[str, Any], int]:
     if row is None:
       return {"error": "Chunk not found"}, 404
     chunk = dict(row)
+    chunk["classification_tags"] = _normalize_classification_tags(chunk.get("classification_tags"))
+    chunk["rating"] = _normalize_rating(chunk.get("rating"))
 
     cur.execute(
       """
@@ -223,7 +289,14 @@ def get_chunk_detail(chunk_id: int) -> Tuple[Dict[str, Any], int]:
 
 
 def update_chunk(chunk_id: int, data: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
-  allowed_fields = {"doc_title", "corrected_text", "is_starred", "status"}
+  allowed_fields = {
+    "doc_title",
+    "corrected_text",
+    "is_starred",
+    "status",
+    "classification_tags",
+    "rating",
+  }
   sets: List[str] = []
   params: List[Any] = []
 
@@ -233,6 +306,10 @@ def update_chunk(chunk_id: int, data: Dict[str, Any]) -> Tuple[Dict[str, Any], i
     sets.append(f"{key} = ?")
     if key == "is_starred":
       params.append(1 if bool(value) else 0)
+    elif key == "classification_tags":
+      params.append(_serialize_classification_tags(_normalize_classification_tags(value)))
+    elif key == "rating":
+      params.append(_normalize_rating(value))
     else:
       params.append(value)
 

@@ -1,12 +1,12 @@
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogTitle,
   FormControl,
   IconButton,
   InputBase,
@@ -20,6 +20,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Tooltip,
@@ -31,7 +32,7 @@ import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined'
 import StarIcon from '@mui/icons-material/Star'
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { buildHighlightSegments, getLabelColor } from '../highlight'
 import type { NerEntity } from '../../../types/ner'
 
@@ -45,6 +46,8 @@ type SavedChunkSummary = {
   corrected_text?: string | null
   is_starred?: number | boolean
   status?: string | null
+  classification_tags?: string[] | null
+  rating?: string | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -72,6 +75,112 @@ const STATUS_LABELS: Record<string, string> = {
   done: 'Done',
 }
 
+const CLASSIFICATION_OPTIONS = [
+  { value: 'english', label: 'English' },
+  { value: 'vietnamese', label: 'Vietnamese' },
+  { value: 'agriculture', label: 'Agriculture' },
+  { value: 'other', label: 'Other' },
+] as const
+
+const CLASSIFICATION_LABELS: Record<string, string> = Object.fromEntries(
+  CLASSIFICATION_OPTIONS.map((item) => [item.value, item.label]),
+)
+
+const RATING_OPTIONS = [
+  { value: 'excellent', label: 'Excellent' },
+  { value: 'good', label: 'Good' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'needs_improvement', label: 'Needs improvement' },
+] as const
+
+const RATING_LABELS: Record<string, string> = Object.fromEntries(
+  RATING_OPTIONS.map((item) => [item.value, item.label]),
+)
+
+const TAG_COLOR_BY_KEY: Record<string, { bg: string; text: string; border: string }> = {
+  english: { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
+  vietnamese: { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+  agriculture: { bg: '#ffedd5', text: '#c2410c', border: '#fdba74' },
+  other: { bg: '#e5e7eb', text: '#374151', border: '#cbd5e1' },
+}
+
+const TAG_COLOR_FALLBACKS: Array<{ bg: string; text: string; border: string }> = [
+  { bg: '#fce7f3', text: '#9d174d', border: '#f9a8d4' },
+  { bg: '#ede9fe', text: '#5b21b6', border: '#c4b5fd' },
+  { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
+  { bg: '#dcfce7', text: '#15803d', border: '#86efac' },
+  { bg: '#fef3c7', text: '#b45309', border: '#fcd34d' },
+  { bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
+]
+
+function stableHash(value: string): number {
+  let hash = 0
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash * 31 + value.charCodeAt(i)) >>> 0
+  }
+  return hash
+}
+
+function getClassificationTagChipSx(tag: string) {
+  const key = String(tag ?? '').trim().toLowerCase()
+  const color =
+    TAG_COLOR_BY_KEY[key] ?? TAG_COLOR_FALLBACKS[stableHash(key) % TAG_COLOR_FALLBACKS.length]
+  return {
+    bgcolor: color.bg,
+    color: color.text,
+    border: '1px solid',
+    borderColor: color.border,
+    fontWeight: 600,
+  }
+}
+
+function splitTagTokens(value: string): string[] {
+  return value
+    .split(',')
+    .map((part) => part.trim().replace(/\s+/g, ' '))
+    .filter(Boolean)
+}
+
+function normalizeClassificationTags(tags: unknown): string[] {
+  if (typeof tags === 'string') {
+    return Array.from(new Set(splitTagTokens(tags).map((tag) => tag.toLowerCase())))
+  }
+  if (!Array.isArray(tags)) return []
+  return Array.from(
+    new Set(
+      tags
+        .flatMap((item) => splitTagTokens(String(item ?? '')))
+        .map((tag) => tag.toLowerCase())
+        .filter(Boolean),
+    ),
+  )
+}
+
+function formatClassificationTag(tag: string): string {
+  const key = String(tag ?? '').trim().toLowerCase()
+  return CLASSIFICATION_LABELS[key] ?? tag
+}
+
+function formatRating(rating: string | null | undefined): string {
+  if (!rating) return '—'
+  return RATING_LABELS[rating] ?? rating
+}
+
+function normalizeSearchText(value: unknown): string {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .toLowerCase()
+    .trim()
+}
+
+function escapeCsv(value: unknown): string {
+  const text = String(value ?? '')
+  if (/[,"\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+  return text
+}
+
 function formatStatus(s: string | null | undefined): string {
   if (!s) return '—'
   return STATUS_LABELS[s] ?? s
@@ -96,6 +205,7 @@ function formatCreated(s: string | null | undefined): string {
 
 type SortKey = 'id' | 'doc_title' | 'chunk_index' | 'start' | 'created_at' | null
 type SortDir = 'asc' | 'desc'
+type StarFilter = 'all' | 'starred' | 'unstarred'
 
 const EXCEL_GRID = {
   borderCollapse: 'collapse' as const,
@@ -128,6 +238,13 @@ export function SavedChunksPage() {
   const [sortKey, setSortKey] = useState<SortKey>(null)
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [selectedRowId, setSelectedRowId] = useState<number | null>(null)
+  const [searchText, setSearchText] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [ratingFilter, setRatingFilter] = useState<string>('all')
+  const [classificationFilter, setClassificationFilter] = useState<string[]>([])
+  const [starFilter, setStarFilter] = useState<StarFilter>('all')
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const [selected, setSelected] = useState<SavedChunkDetail | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
@@ -142,7 +259,13 @@ export function SavedChunksPage() {
       const r = await fetch('/api/ner/chunks')
       const data = (await r.json()) as { items?: SavedChunkSummary[]; error?: string }
       if (!r.ok) throw new Error(data?.error || `Request failed (${r.status})`)
-      setItems(data.items ?? [])
+      setItems(
+        (data.items ?? []).map((item) => ({
+          ...item,
+          classification_tags: normalizeClassificationTags(item.classification_tags),
+          rating: item.rating ? String(item.rating) : null,
+        })),
+      )
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -160,17 +283,148 @@ export function SavedChunksPage() {
     setSortKey(key)
   }
 
-  const sortedItems = (() => {
-    if (!sortKey) return items
+  const resetFilters = () => {
+    setSearchText('')
+    setStatusFilter('all')
+    setRatingFilter('all')
+    setClassificationFilter([])
+    setStarFilter('all')
+    setPage(0)
+  }
+
+  const filteredItems = useMemo(() => {
+    const query = normalizeSearchText(searchText)
+    return items.filter((item) => {
+      const tags = normalizeClassificationTags(item.classification_tags)
+      const isStarred = item.is_starred === 1 || item.is_starred === true
+
+      if (statusFilter !== 'all' && (item.status ?? 'new') !== statusFilter) {
+        return false
+      }
+      if (ratingFilter !== 'all' && (item.rating ?? '') !== ratingFilter) {
+        return false
+      }
+      if (starFilter === 'starred' && !isStarred) {
+        return false
+      }
+      if (starFilter === 'unstarred' && isStarred) {
+        return false
+      }
+      if (classificationFilter.length > 0 && !classificationFilter.every((tag) => tags.includes(tag))) {
+        return false
+      }
+      if (!query) {
+        return true
+      }
+
+      const haystack = [
+        item.id,
+        item.doc_title,
+        item.model,
+        item.corrected_text,
+        item.status,
+        item.rating,
+        tags.join(' '),
+      ]
+        .map(normalizeSearchText)
+        .join(' ')
+
+      return haystack.includes(query)
+    })
+  }, [items, searchText, statusFilter, ratingFilter, starFilter, classificationFilter])
+
+  const classificationOptions = useMemo(() => {
+    const unique = new Set<string>(CLASSIFICATION_OPTIONS.map((option) => option.value))
+    for (const item of items) {
+      for (const tag of normalizeClassificationTags(item.classification_tags)) {
+        unique.add(tag)
+      }
+    }
+    for (const tag of classificationFilter) {
+      unique.add(tag)
+    }
+    for (const tag of normalizeClassificationTags(selected?.classification_tags)) {
+      unique.add(tag)
+    }
+    return Array.from(unique).sort((a, b) =>
+      formatClassificationTag(a).localeCompare(formatClassificationTag(b), 'en'),
+    )
+  }, [classificationFilter, items, selected?.classification_tags])
+
+  const sortedItems = useMemo(() => {
+    if (!sortKey) return filteredItems
     const dir = sortDir === 'asc' ? 1 : -1
-    return [...items].sort((a, b) => {
+    return [...filteredItems].sort((a, b) => {
       const va = a[sortKey as keyof SavedChunkSummary]
       const vb = b[sortKey as keyof SavedChunkSummary]
       const na = typeof va === 'number' ? va : (va ?? '').toString()
       const nb = typeof vb === 'number' ? vb : (vb ?? '').toString()
       return dir * (na < nb ? -1 : na > nb ? 1 : 0)
     })
-  })()
+  }, [filteredItems, sortDir, sortKey])
+
+  useEffect(() => {
+    const maxPage = Math.max(0, Math.ceil(sortedItems.length / rowsPerPage) - 1)
+    if (page > maxPage) {
+      setPage(maxPage)
+    }
+  }, [page, rowsPerPage, sortedItems.length])
+
+  const pagedItems = useMemo(() => {
+    const start = page * rowsPerPage
+    return sortedItems.slice(start, start + rowsPerPage)
+  }, [page, rowsPerPage, sortedItems])
+
+  const exportCsv = () => {
+    const headers = [
+      'id',
+      'doc_title',
+      'model',
+      'chunk_index',
+      'start',
+      'end',
+      'status',
+      'classification_tags',
+      'rating',
+      'created_at',
+      'updated_at',
+      'corrected_text',
+    ]
+
+    const lines = [
+      headers.join(','),
+      ...sortedItems.map((item) =>
+        [
+          item.id,
+          item.doc_title ?? '',
+          item.model ?? '',
+          item.chunk_index ?? '',
+          item.start ?? '',
+          item.end ?? '',
+          item.status ?? '',
+          normalizeClassificationTags(item.classification_tags).join('|'),
+          item.rating ?? '',
+          item.created_at ?? '',
+          item.updated_at ?? '',
+          item.corrected_text ?? '',
+        ]
+          .map(escapeCsv)
+          .join(','),
+      ),
+    ]
+
+    const csvText = lines.join('\n')
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `saved_chunks_${timestamp}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
 
   const openDetail = async (id: number) => {
     setDetailError(null)
@@ -182,7 +436,11 @@ export function SavedChunksPage() {
       if (!Array.isArray(data.entities)) {
         data.entities = []
       }
-      setSelected(data)
+      setSelected({
+        ...data,
+        classification_tags: normalizeClassificationTags(data.classification_tags),
+        rating: data.rating ? String(data.rating) : null,
+      })
       setSelectedRowId(id)
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : String(e))
@@ -236,6 +494,8 @@ export function SavedChunksPage() {
           doc_title: selected.doc_title,
           corrected_text: selected.corrected_text,
           status: selected.status,
+          classification_tags: normalizeClassificationTags(selected.classification_tags),
+          rating: selected.rating ?? null,
         }),
       })
       setItems((prev) =>
@@ -245,6 +505,8 @@ export function SavedChunksPage() {
                 ...c,
                 doc_title: selected.doc_title,
                 status: selected.status,
+                classification_tags: normalizeClassificationTags(selected.classification_tags),
+                rating: selected.rating ?? null,
               }
             : c,
         ),
@@ -328,6 +590,111 @@ export function SavedChunksPage() {
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack spacing={2}>
           {error && <Alert severity="error">{error}</Alert>}
+          <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+            <TextField
+              size="small"
+              label="Search"
+              value={searchText}
+              onChange={(e) => {
+                setSearchText(e.target.value)
+                setPage(0)
+              }}
+              sx={{ minWidth: 220 }}
+              placeholder="Title, model, text..."
+            />
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel id="saved-status-filter-label">Status</InputLabel>
+              <Select
+                labelId="saved-status-filter-label"
+                label="Status"
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(String(e.target.value))
+                  setPage(0)
+                }}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="new">New</MenuItem>
+                <MenuItem value="in_progress">In progress</MenuItem>
+                <MenuItem value="reviewed">Reviewed</MenuItem>
+                <MenuItem value="done">Done</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel id="saved-rating-filter-label">Rating</InputLabel>
+              <Select
+                labelId="saved-rating-filter-label"
+                label="Rating"
+                value={ratingFilter}
+                onChange={(e) => {
+                  setRatingFilter(String(e.target.value))
+                  setPage(0)
+                }}
+              >
+                <MenuItem value="all">All</MenuItem>
+                {RATING_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Autocomplete
+              multiple
+              freeSolo
+              size="small"
+              options={classificationOptions}
+              value={classificationFilter}
+              onChange={(_, value) => {
+                setClassificationFilter(normalizeClassificationTags(value))
+                setPage(0)
+              }}
+              filterSelectedOptions
+              sx={{ minWidth: 240 }}
+              renderTags={(value, getTagProps) =>
+                value.map((tag, index) => (
+                  <Chip
+                    {...getTagProps({ index })}
+                    key={tag}
+                    size="small"
+                    label={formatClassificationTag(tag)}
+                    sx={getClassificationTagChipSx(tag)}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Classification"
+                  placeholder="Type or select tags"
+                />
+              )}
+            />
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel id="saved-star-filter-label">Star</InputLabel>
+              <Select
+                labelId="saved-star-filter-label"
+                label="Star"
+                value={starFilter}
+                onChange={(e) => {
+                  setStarFilter(e.target.value as StarFilter)
+                  setPage(0)
+                }}
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="starred">Starred</MenuItem>
+                <MenuItem value="unstarred">Unstarred</MenuItem>
+              </Select>
+            </FormControl>
+            <Stack direction="row" spacing={1}>
+              <Button variant="outlined" onClick={resetFilters}>
+                Clear filters
+              </Button>
+              <Button variant="contained" onClick={exportCsv} disabled={sortedItems.length === 0}>
+                Export CSV ({sortedItems.length})
+              </Button>
+            </Stack>
+          </Stack>
           <TableContainer sx={{ maxHeight: '70vh', overflow: 'auto' }}>
             <Table size="small" stickyHeader sx={EXCEL_GRID}>
               <TableHead>
@@ -349,6 +716,8 @@ export function SavedChunksPage() {
                   </TableCell>
                   <TableCell sx={{ minWidth: 200 }}>Chunk text</TableCell>
                   <TableCell sx={{ width: 80 }}>Status</TableCell>
+                  <TableCell sx={{ minWidth: 170 }}>Classification</TableCell>
+                  <TableCell sx={{ width: 130 }}>Rating</TableCell>
                   <TableCell onClick={() => handleSort('created_at')} sx={{ width: 140 }}>
                     Created {sortKey === 'created_at' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
                   </TableCell>
@@ -356,7 +725,7 @@ export function SavedChunksPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sortedItems.map((c, idx) => (
+                {pagedItems.map((c, idx) => (
                   <TableRow
                     key={c.id}
                     hover
@@ -369,7 +738,9 @@ export function SavedChunksPage() {
                       '&.Mui-selected:hover': { bgcolor: 'action.selected' },
                     }}
                   >
-                    <TableCell sx={{ textAlign: 'center', color: 'text.secondary' }}>{idx + 1}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                      {page * rowsPerPage + idx + 1}
+                    </TableCell>
                     <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ textAlign: 'center' }}>
                       <IconButton
                         size="small"
@@ -398,6 +769,23 @@ export function SavedChunksPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>{formatStatus(c.status)}</TableCell>
+                    <TableCell>
+                      {normalizeClassificationTags(c.classification_tags).length > 0 ? (
+                        <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
+                          {normalizeClassificationTags(c.classification_tags).map((tag) => (
+                            <Chip
+                              key={`${c.id}-${tag}`}
+                              size="small"
+                              label={formatClassificationTag(tag)}
+                              sx={getClassificationTagChipSx(tag)}
+                            />
+                          ))}
+                        </Stack>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                    <TableCell>{formatRating(c.rating)}</TableCell>
                     <TableCell>{formatCreated(c.created_at)}</TableCell>
                     <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ borderRight: 'none' }}>
                       <Stack direction="row" spacing={0.25}>
@@ -424,17 +812,30 @@ export function SavedChunksPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {!loading && items.length === 0 && (
+                {!loading && pagedItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} sx={{ opacity: 0.7 }}>
-                      No saved chunks yet. Run NER with chunking enabled, then click
-                      &quot;Save chunks to database&quot; on the Extracting NER page.
+                    <TableCell colSpan={13} sx={{ opacity: 0.7 }}>
+                      {items.length === 0
+                        ? 'No saved chunks yet. Run NER with chunking enabled, then click "Save chunks to database" on the Extracting NER page.'
+                        : 'No chunks match current filters.'}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePagination
+            component="div"
+            count={sortedItems.length}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(Number(e.target.value))
+              setPage(0)
+            }}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+          />
         </Stack>
       </Paper>
 
@@ -482,6 +883,62 @@ export function SavedChunksPage() {
                     <MenuItem value="in_progress">In progress</MenuItem>
                     <MenuItem value="reviewed">Reviewed</MenuItem>
                     <MenuItem value="done">Done</MenuItem>
+                  </Select>
+                </FormControl>
+                <Autocomplete
+                  multiple
+                  freeSolo
+                  size="small"
+                  options={classificationOptions}
+                  value={normalizeClassificationTags(selected.classification_tags)}
+                  onChange={(_, value) =>
+                    setSelected({
+                      ...selected,
+                      classification_tags: normalizeClassificationTags(value),
+                    })
+                  }
+                  filterSelectedOptions
+                  sx={{ minWidth: 260 }}
+                  renderTags={(value, getTagProps) =>
+                    value.map((tag, index) => (
+                      <Chip
+                        {...getTagProps({ index })}
+                        key={tag}
+                        size="small"
+                        label={formatClassificationTag(tag)}
+                        sx={getClassificationTagChipSx(tag)}
+                      />
+                    ))
+                  }
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Classification"
+                      placeholder="Type new tags..."
+                    />
+                  )}
+                />
+                <FormControl size="small" sx={{ minWidth: 170 }}>
+                  <InputLabel id="chunk-rating-label">Rating</InputLabel>
+                  <Select
+                    labelId="chunk-rating-label"
+                    label="Rating"
+                    value={selected.rating ?? ''}
+                    onChange={(e) =>
+                      setSelected({
+                        ...selected,
+                        rating: e.target.value ? String(e.target.value) : null,
+                      })
+                    }
+                  >
+                    <MenuItem value="">
+                      <em>Not selected</em>
+                    </MenuItem>
+                    {RATING_OPTIONS.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <Chip
