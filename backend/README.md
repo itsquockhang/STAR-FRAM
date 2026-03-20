@@ -50,7 +50,6 @@ Notes:
   - **Strategies** (`chunking_strategy`):
     - `semantic`: [Chonkie SemanticChunker](https://docs.chonkie.ai/oss/chunkers/semantic-chunker)
     - `token`: [Chonkie TokenChunker](https://docs.chonkie.ai/oss/chunkers/token-chunker)
-    - `sentence`: `underthesea.lang_detect` per paragraph; Vietnamese → `underthesea.sent_tokenize`, else NLTK Punkt
   - **Config** (env):
     - `CHUNK_EMBEDDING_MODEL`, `CHUNK_SIMILARITY_THRESHOLD` (semantic only)
     - `CHUNK_CHAR_THRESHOLD`, `CHUNK_SIZE_TOKENS`

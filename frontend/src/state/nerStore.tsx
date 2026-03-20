@@ -8,7 +8,7 @@ type NerStoreState = {
   text: string
   labels: string[]
   threshold: number
-  chunkingMode: 'none' | 'semantic' | 'token' | 'sentence'
+  chunkingMode: 'none' | 'semantic' | 'token'
   chunkCharThreshold: number
   chunkSizeTokens: number
   useSpellCorrection: boolean
