@@ -7,6 +7,7 @@ chonkie[all]
 sentence-transformers
 youtube-transcript-api>=1.0.0
 underthesea
+nltk>=3.8
 sentencepiece
 python-docx
 PyMuPDF

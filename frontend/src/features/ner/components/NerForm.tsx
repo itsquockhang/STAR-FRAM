@@ -33,7 +33,7 @@ export function NerForm(props: {
   text: string
   labels: string[]
   threshold: number
-  chunkingMode: 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling'
+  chunkingMode: 'none' | 'semantic' | 'token' | 'sentence'
   chunkCharThreshold: number
   chunkSizeTokens: number
   useSpellCorrection: boolean
@@ -44,7 +44,7 @@ export function NerForm(props: {
   onChangeText: (t: string) => void
   onChangeLabels: (labels: string[]) => void
   onChangeThreshold: (t: number) => void
-  onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling') => void
+  onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'sentence') => void
   onChangeChunkCharThreshold: (n: number) => void
   onChangeChunkSizeTokens: (n: number) => void
   onChangeUseSpellCorrection: (v: boolean) => void
@@ -205,7 +205,7 @@ export function NerForm(props: {
                   value={chunkingMode}
                   onChange={(e: SelectChangeEvent) =>
                     onChangeChunkingMode(
-                      e.target.value as 'none' | 'semantic' | 'token' | 'sentence' | 'text-tiling'
+                      e.target.value as 'none' | 'semantic' | 'token' | 'sentence'
                     )
                   }
                 >
@@ -213,9 +213,6 @@ export function NerForm(props: {
                   <MenuItem value="semantic">Semantic chunker (Chonkie)</MenuItem>
                   <MenuItem value="token">Token chunker (fixed-size tokens)</MenuItem>
                   <MenuItem value="sentence">Sentence chunker (Underthesea)</MenuItem>
-                  <MenuItem value="text-tiling">
-                    Text Tiling (embeddinggemma-300m)
-                  </MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -235,15 +232,14 @@ export function NerForm(props: {
               />
               <TextField
                 size="small"
-                label="Chunk size (tokens)"
+                label="Chunk size"
                 value={chunkSizeTokens}
                 onChange={(e) => {
                   const n = Number(e.target.value)
-                  if (Number.isFinite(n)) onChangeChunkSizeTokens(Math.max(16, Math.floor(n)))
+                  if (Number.isFinite(n)) onChangeChunkSizeTokens(Math.max(0, Math.floor(n)))
                 }}
                 fullWidth
                 inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
-                helperText="Used by Semantic/Token chunkers."
               />
             </Stack>
 

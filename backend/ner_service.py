@@ -93,6 +93,8 @@ def handle_ner(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
     labels = parse_labels(payload.get("labels"))
     threshold = payload.get("threshold", 0.05)
     chunking_strategy = str(payload.get("chunking_strategy") or "semantic")
+    if chunking_strategy == "text-tiling":
+        chunking_strategy = "semantic"
     use_spell_correction = bool(payload.get("use_spell_correction", False))
     spell_correction_max_tokens = int(payload.get("spell_correction_max_tokens", 160))
     use_cache = bool(payload.get("use_cache", True))
