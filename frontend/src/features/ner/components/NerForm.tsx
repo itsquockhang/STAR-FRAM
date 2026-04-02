@@ -33,7 +33,7 @@ export function NerForm(props: {
   text: string
   labels: string[]
   threshold: number
-  chunkingMode: 'none' | 'semantic' | 'token'
+  chunkingMode: 'none' | 'semantic' | 'token' | 'recursive'
   chunkCharThreshold: number
   chunkSizeTokens: number
   useSpellCorrection: boolean
@@ -44,7 +44,7 @@ export function NerForm(props: {
   onChangeText: (t: string) => void
   onChangeLabels: (labels: string[]) => void
   onChangeThreshold: (t: number) => void
-  onChangeChunkingMode: (m: 'none' | 'semantic' | 'token') => void
+  onChangeChunkingMode: (m: 'none' | 'semantic' | 'token' | 'recursive') => void
   onChangeChunkCharThreshold: (n: number) => void
   onChangeChunkSizeTokens: (n: number) => void
   onChangeUseSpellCorrection: (v: boolean) => void
@@ -105,37 +105,72 @@ export function NerForm(props: {
         fullWidth
       />
 
-      <Autocomplete<string, true, false, true>
-        multiple
-        freeSolo
-        options={LABEL_OPTIONS}
-        value={labels}
-        onChange={(_, value) => onChangeLabels(value)}
-        filterSelectedOptions
-        renderOption={(optionProps, option) => (
-          <li {...optionProps} key={option}>
-            <ListItemText primary={option} />
-          </li>
-        )}
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => (
-            <Chip
-              variant="outlined"
+      <Stack spacing={0.75}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
+          columnGap={1}
+          rowGap={0.5}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            Labels
+          </Typography>
+          <Stack direction="row" spacing={0.25} useFlexGap sx={{ flexWrap: 'wrap' }}>
+            <Button
               size="small"
-              label={option}
-              {...getTagProps({ index })}
-              key={`${option}-${index}`}
+              variant="text"
+              sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}
+              onClick={() => onChangeLabels([...LABEL_OPTIONS])}
+              disabled={loading}
+            >
+              Select all
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}
+              onClick={() => onChangeLabels([])}
+              disabled={loading}
+            >
+              Clear
+            </Button>
+          </Stack>
+        </Stack>
+        <Autocomplete<string, true, false, true>
+          multiple
+          freeSolo
+          options={LABEL_OPTIONS}
+          value={labels}
+          onChange={(_, value) => onChangeLabels(value)}
+          filterSelectedOptions
+          renderOption={(optionProps, option) => (
+            <li {...optionProps} key={option}>
+              <ListItemText primary={option} />
+            </li>
+          )}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                variant="outlined"
+                size="small"
+                label={option}
+                {...getTagProps({ index })}
+                key={`${option}-${index}`}
+              />
+            ))
+          }
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="Select from list or type custom labels…"
+              helperText="Select from the list or type to add custom labels (multiple)."
             />
-          ))
-        }
-        renderInput={(params) => (
-          <TextField
-            {...params}
-            label="Labels"
-            helperText="Select from the list or type to add custom labels (multiple)."
-          />
-        )}
-      />
+          )}
+        />
+      </Stack>
 
       {error && <Alert severity="error">{error}</Alert>}
 
@@ -205,13 +240,14 @@ export function NerForm(props: {
                   value={chunkingMode}
                   onChange={(e: SelectChangeEvent) =>
                     onChangeChunkingMode(
-                      e.target.value as 'none' | 'semantic' | 'token'
+                      e.target.value as 'none' | 'semantic' | 'token' | 'recursive'
                     )
                   }
                 >
                   <MenuItem value="none">No chunking</MenuItem>
                   <MenuItem value="semantic">Semantic chunker (Chonkie)</MenuItem>
                   <MenuItem value="token">Token chunker (fixed-size tokens)</MenuItem>
+                  <MenuItem value="recursive">Recursive chunker (Chonkie)</MenuItem>
                 </Select>
               </FormControl>
             </Box>

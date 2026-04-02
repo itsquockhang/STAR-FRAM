@@ -18,6 +18,10 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined'
 import RestoreOutlinedIcon from '@mui/icons-material/RestoreOutlined'
 import { useCallback, useState } from 'react'
 import { useNerStore } from '../../../state/nerStore'
+import {
+  splitTextForTranslation,
+  TRANSLATION_MAX_NEW_TOKENS,
+} from '../../../utils/translationChunks'
 import { HighlightedText } from '../highlight'
 import { EntitiesTable } from '../components/EntitiesTable'
 import { NerForm } from '../components/NerForm'
@@ -33,6 +37,7 @@ export function ExtractingNerPage() {
   const { state, actions } = useNerStore()
   const [translationDirection, setTranslationDirection] = useState<TranslationDirection>('vi-en')
   const [translating, setTranslating] = useState(false)
+  const [translationProgress, setTranslationProgress] = useState<number | null>(null)
   const [translationError, setTranslationError] = useState<string | null>(null)
   const [savingChunks, setSavingChunks] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -42,41 +47,57 @@ export function ExtractingNerPage() {
 
   const responseMatchesCurrentText = true
   const entities = responseMatchesCurrentText ? state.resp?.entities ?? [] : []
-  const chunks = responseMatchesCurrentText ? state.resp?.chunks ?? [] : []
   const textUsed = responseMatchesCurrentText ? state.resp?.text_used ?? state.text : state.text
 
   const onTranslate = useCallback(async () => {
+    const sourceText = state.text.trim()
+    if (!sourceText) return
+
     const sourceLangCode = translationDirection === 'vi-en' ? 'vi' : 'en'
     const targetLangCode = translationDirection === 'vi-en' ? 'en' : 'vi'
+    const chunks = splitTextForTranslation(sourceText)
+    if (!chunks.length) return
 
     setTranslationError(null)
     setPreTranslateText((prev) => prev ?? state.text)
     setTranslating(true)
+    setTranslationProgress(0)
 
     try {
-      const r = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: state.text,
-          source_lang_code: sourceLangCode,
-          target_lang_code: targetLangCode,
-          max_new_tokens: 200,
-        }),
-      })
+      const translatedChunks: string[] = []
 
-      const data = (await r.json()) as TranslateResponse
-      if (!r.ok) throw new Error(data?.error || `Request failed (${r.status})`)
+      for (let index = 0; index < chunks.length; index++) {
+        const chunk = chunks[index]
+        const r = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: chunk,
+            source_lang_code: sourceLangCode,
+            target_lang_code: targetLangCode,
+            max_new_tokens: TRANSLATION_MAX_NEW_TOKENS,
+          }),
+        })
 
-      const translatedText = (data.translated_text ?? '').trim()
-      if (!translatedText) throw new Error('Translation returned empty text.')
+        const data = (await r.json()) as TranslateResponse
+        if (!r.ok) throw new Error(data?.error || `Translation failed (${r.status})`)
 
-      // Only update the editor text; user can run NER explicitly afterward.
-      actions.setText(translatedText)
+        const translatedText = (data.translated_text ?? '').trim()
+        if (!translatedText) throw new Error('Translation returned empty text.')
+        translatedChunks.push(translatedText)
+
+        setTranslationProgress(Math.round(((index + 1) / chunks.length) * 100))
+      }
+
+      const merged = translatedChunks.join('\n\n').trim()
+      if (!merged) throw new Error('Translation returned empty text.')
+
+      actions.setText(merged)
     } catch (e) {
       setTranslationError(e instanceof Error ? e.message : String(e))
     } finally {
       setTranslating(false)
+      setTranslationProgress(null)
     }
   }, [actions, state.text, translationDirection])
 
@@ -86,6 +107,8 @@ export function ExtractingNerPage() {
     setPreTranslateText(null)
     setTranslationError(null)
   }, [actions, preTranslateText])
+
+  const chunks = responseMatchesCurrentText ? state.resp?.chunks ?? [] : []
 
   const onSaveChunksToDb = useCallback(async () => {
     setSaveError(null)
@@ -141,18 +164,30 @@ export function ExtractingNerPage() {
               useFlexGap
               sx={{ flexWrap: 'wrap', alignItems: 'center' }}
             >
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 }, flexShrink: 0 }}>
-                <InputLabel id="translation-direction-label">Translate</InputLabel>
+              <FormControl
+                size="small"
+                sx={{
+                  minWidth: { xs: '100%', sm: 118 },
+                  maxWidth: 140,
+                  flexShrink: 0,
+                  '& .MuiOutlinedInput-root': { fontSize: 13, minHeight: 32 },
+                  '& .MuiInputLabel-root': { fontSize: 12 },
+                }}
+              >
+                <InputLabel id="translation-direction-label">Lang</InputLabel>
                 <Select
                   labelId="translation-direction-label"
                   value={translationDirection}
-                  label="Translate"
+                  label="Lang"
                   onChange={(e) => setTranslationDirection(e.target.value as TranslationDirection)}
                   disabled={state.loading || translating}
-                  sx={{ minWidth: 180 }}
                 >
-                  <MenuItem value="vi-en">Vietnamese to English</MenuItem>
-                  <MenuItem value="en-vi">English to Vietnamese</MenuItem>
+                  <MenuItem value="vi-en" dense sx={{ fontSize: 13, py: 0.5 }}>
+                    VI → EN
+                  </MenuItem>
+                  <MenuItem value="en-vi" dense sx={{ fontSize: 13, py: 0.5 }}>
+                    EN → VI
+                  </MenuItem>
                 </Select>
               </FormControl>
 
@@ -167,7 +202,10 @@ export function ExtractingNerPage() {
                 {translating ? (
                   <Stack direction="row" alignItems="center" gap={1}>
                     <CircularProgress size={16} />
-                    <span>Translating</span>
+                    <span>
+                      Translating
+                      {typeof translationProgress === 'number' ? `… ${translationProgress}%` : '…'}
+                    </span>
                   </Stack>
                 ) : (
                   'Translate'
@@ -233,13 +271,7 @@ export function ExtractingNerPage() {
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack spacing={2}>
-            <HighlightedText
-              text={textUsed}
-              entities={entities}
-              chunks={chunks}
-              showBeforeAfter={state.useSpellCorrection}
-              title="Highlighted text"
-            />
+            <HighlightedText text={textUsed} entities={entities} title="Highlighted text" />
 
             <Divider />
 
@@ -247,7 +279,7 @@ export function ExtractingNerPage() {
               Entities ({entities.length})
             </Typography>
             <EntitiesTable entities={entities} />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+            <Stack spacing={0.5} sx={{ alignItems: 'flex-end', mt: 1 }}>
               <Button
                 size="small"
                 variant="outlined"
@@ -266,7 +298,10 @@ export function ExtractingNerPage() {
                   'Save chunks to database'
                 )}
               </Button>
-            </Box>
+              <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 360, textAlign: 'right', lineHeight: 1.35 }}>
+                Saving requires a <strong>document title</strong> in the left column (above the form). Run NER with chunking enabled so chunks exist.
+              </Typography>
+            </Stack>
           </Stack>
         </Paper>
       </Box>

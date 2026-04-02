@@ -50,6 +50,7 @@ Notes:
   - **Strategies** (`chunking_strategy`):
     - `semantic`: [Chonkie SemanticChunker](https://docs.chonkie.ai/oss/chunkers/semantic-chunker)
     - `token`: [Chonkie TokenChunker](https://docs.chonkie.ai/oss/chunkers/token-chunker)
+    - `recursive`: [Chonkie RecursiveChunker](https://docs.chonkie.ai/oss/chunkers/recursive-chunker)
   - **Config** (env):
     - `CHUNK_EMBEDDING_MODEL`, `CHUNK_SIMILARITY_THRESHOLD` (semantic only)
     - `CHUNK_CHAR_THRESHOLD`, `CHUNK_SIZE_TOKENS`

@@ -5,6 +5,7 @@ transformers>=4.48.0
 torch
 chonkie[all]
 sentence-transformers
+faiss-cpu>=1.7.4
 youtube-transcript-api>=1.0.0
 underthesea
 sentencepiece

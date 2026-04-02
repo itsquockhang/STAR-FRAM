@@ -3,10 +3,13 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputBase,
@@ -26,6 +29,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import StarBorderOutlinedIcon from '@mui/icons-material/StarBorderOutlined'
@@ -38,7 +42,16 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
 import AddCircleOutlineOutlinedIcon from '@mui/icons-material/AddCircleOutlineOutlined'
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined'
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined'
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined'
+import RefreshOutlinedIcon from '@mui/icons-material/RefreshOutlined'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  AgriRelationsPanel,
+  AgriRelationsResults,
+  useAgriRelations,
+  type AgriRelationsResponse,
+} from '../components/AgriRelationsPanel'
 import { buildHighlightSegments, getLabelColor } from '../highlight'
 import type { NerEntity } from '../../../types/ner'
 
@@ -54,6 +67,11 @@ type SavedChunkSummary = {
   status?: string | null
   classification_tags?: string[] | null
   rating?: string | null
+  embedding_dim?: number | null
+  embedding_model?: string | null
+  has_embedding?: boolean
+  has_agri?: boolean
+  agri_analyzed_at?: string | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -71,6 +89,9 @@ type SavedChunkDetail = SavedChunkSummary & {
   text_used?: string | null
   original_text?: string | null
   corrected_text?: string | null
+  embedding?: number[] | null
+  agri_analysis?: AgriRelationsResponse | null
+  agri_analyzed_at?: string | null
   entities: SavedEntity[]
 }
 
@@ -188,6 +209,22 @@ function formatRating(rating: string | null | undefined): string {
   return RATING_LABELS[rating] ?? rating
 }
 
+function formatEmbeddingPreview(embedding: number[] | null | undefined, max = 8): string {
+  if (!embedding?.length) return '—'
+  const head = embedding.slice(0, max).map((x) => Number(x).toFixed(4))
+  const tail = embedding.length > max ? ` … (+${embedding.length - max})` : ''
+  return `[${head.join(', ')}${tail}]`
+}
+
+function normalizeChunkDetail(data: SavedChunkDetail & { error?: string }): SavedChunkDetail {
+  return {
+    ...data,
+    classification_tags: normalizeClassificationTags(data.classification_tags),
+    rating: data.rating ? String(data.rating) : null,
+    entities: Array.isArray(data.entities) ? data.entities : [],
+  }
+}
+
 function getStatusChipSx(status: string | null | undefined) {
   const key = String(status ?? '').trim()
   const color = STATUS_COLOR_BY_KEY[key] ?? { bg: '#e5e7eb', text: '#374151', border: '#cbd5e1' }
@@ -249,7 +286,17 @@ function formatCreated(s: string | null | undefined): string {
   }
 }
 
-type SortKey = 'id' | 'doc_title' | 'chunk_index' | 'start' | 'created_at' | null
+/** Table preview only; full text via cell title tooltip. */
+function truncateChunkTextPreview(value: string | null | undefined, maxLen = 120): string {
+  const raw = String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!raw) return '—'
+  if (raw.length <= maxLen) return raw
+  return `${raw.slice(0, maxLen)}…`
+}
+
+type SortKey = 'id' | 'doc_title' | 'chunk_index' | 'created_at' | null
 type SortDir = 'asc' | 'desc'
 type StarFilter = 'all' | 'starred' | 'unstarred'
 
@@ -258,6 +305,12 @@ type TextSelectionRange = {
   end: number
   text: string
 }
+
+/** Tighter filter row (search / status / rating / tags / star). */
+const FILTER_CONTROL_SX = {
+  '& .MuiOutlinedInput-root': { fontSize: 13, minHeight: 34 },
+  '& .MuiInputLabel-root': { fontSize: 12 },
+} as const
 
 const EXCEL_GRID = {
   borderCollapse: 'collapse' as const,
@@ -299,9 +352,15 @@ export function SavedChunksPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
   const [selected, setSelected] = useState<SavedChunkDetail | null>(null)
+  const [quickAgriRow, setQuickAgriRow] = useState<SavedChunkSummary | null>(null)
+  const [quickAgriDetail, setQuickAgriDetail] = useState<SavedChunkDetail | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [detailSuccess, setDetailSuccess] = useState<string | null>(null)
   const [savingDetail, setSavingDetail] = useState(false)
+  const [embeddingRefreshing, setEmbeddingRefreshing] = useState(false)
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<number>>(() => new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkEmbedding, setBulkEmbedding] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [manualEntityLabel, setManualEntityLabel] = useState('')
   const [selectedTextRange, setSelectedTextRange] = useState<TextSelectionRange | null>(null)
@@ -329,9 +388,70 @@ export function SavedChunksPage() {
     }
   }
 
+  const handleAgriPersisted = useCallback((detail: Record<string, unknown>) => {
+    const d = detail as SavedChunkDetail
+    if (!d.id) return
+    const next = normalizeChunkDetail(d)
+    setSelected((prev) => (prev && prev.id === d.id ? next : prev))
+    setItems((prev) =>
+      prev.map((c) =>
+        c.id === d.id
+          ? { ...c, has_agri: next.has_agri, agri_analyzed_at: next.agri_analyzed_at }
+          : c,
+      ),
+    )
+  }, [])
+
+  const handleQuickAgriPersisted = useCallback((detail: Record<string, unknown>) => {
+    void loadList()
+    const d = detail as SavedChunkDetail
+    if (d.id) setQuickAgriDetail(normalizeChunkDetail(d))
+  }, [])
+
+  const agri = useAgriRelations(selected?.corrected_text ?? '', {
+    chunkId: selected?.id ?? null,
+    savedAnalysis: selected?.agri_analysis ?? null,
+    savedAnalyzedAt: selected?.agri_analyzed_at ?? null,
+    onPersisted: handleAgriPersisted,
+  })
+
   useEffect(() => {
     void loadList()
   }, [])
+
+  useEffect(() => {
+    const valid = new Set(items.map((i) => i.id))
+    setBulkSelectedIds((prev) => {
+      const next = new Set<number>()
+      prev.forEach((id) => {
+        if (valid.has(id)) next.add(id)
+      })
+      return next
+    })
+  }, [items])
+
+  useEffect(() => {
+    if (!quickAgriRow) {
+      setQuickAgriDetail(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const r = await fetch(`/api/ner/chunks/${quickAgriRow.id}`)
+        const data = (await r.json()) as SavedChunkDetail & { error?: string }
+        if (!r.ok || cancelled) return
+        setQuickAgriDetail(
+          normalizeChunkDetail({ ...data, entities: Array.isArray(data.entities) ? data.entities : [] }),
+        )
+      } catch {
+        if (!cancelled) setQuickAgriDetail(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [quickAgriRow?.id])
 
   const handleSort = (key: SortKey) => {
     if (!key) return
@@ -380,6 +500,8 @@ export function SavedChunksPage() {
         item.corrected_text,
         item.status,
         item.rating,
+        item.embedding_model,
+        item.embedding_dim,
         tags.join(' '),
       ]
         .map(normalizeSearchText)
@@ -442,17 +564,98 @@ export function SavedChunksPage() {
     return sortedItems.slice(start, start + rowsPerPage)
   }, [page, rowsPerPage, sortedItems])
 
+  const pageIds = useMemo(() => pagedItems.map((c) => c.id), [pagedItems])
+  const allOnPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => bulkSelectedIds.has(id))
+  const someOnPageSelected = pageIds.some((id) => bulkSelectedIds.has(id))
+
+  const toggleBulkSelectId = (id: number, checked: boolean) => {
+    setBulkSelectedIds((prev) => {
+      const n = new Set(prev)
+      if (checked) n.add(id)
+      else n.delete(id)
+      return n
+    })
+  }
+
+  const selectAllOnPage = () => {
+    setBulkSelectedIds((prev) => {
+      const n = new Set(prev)
+      if (allOnPageSelected) {
+        pageIds.forEach((id) => n.delete(id))
+      } else {
+        pageIds.forEach((id) => n.add(id))
+      }
+      return n
+    })
+  }
+
+  const bulkDeleteChunks = async () => {
+    const ids = [...bulkSelectedIds]
+    if (ids.length === 0) return
+    if (!window.confirm(`Delete ${ids.length} chunk(s) and their entities?`)) return
+    setBulkDeleting(true)
+    try {
+      await Promise.all(ids.map((id) => fetch(`/api/ner/chunks/${id}`, { method: 'DELETE' })))
+      setBulkSelectedIds(new Set())
+      setItems((prev) => prev.filter((c) => !ids.includes(c.id)))
+      if (selected && ids.includes(selected.id)) setSelected(null)
+      setSelectedRowId((prev) => (prev != null && ids.includes(prev) ? null : prev))
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const bulkRefreshEmbeddings = async () => {
+    const ids = [...bulkSelectedIds]
+    if (ids.length === 0) return
+    setBulkEmbedding(true)
+    setError(null)
+    try {
+      for (const id of ids) {
+        const r = await fetch(`/api/ner/chunks/${id}/embed`, { method: 'POST' })
+        const data = (await r.json()) as SavedChunkDetail & { error?: string }
+        if (!r.ok) throw new Error(data?.error || `Chunk ${id}: request failed (${r.status})`)
+        setItems((prev) =>
+          prev.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  embedding_dim: data.embedding_dim,
+                  embedding_model: data.embedding_model,
+                  has_embedding: data.has_embedding,
+                }
+              : c,
+          ),
+        )
+        if (selected?.id === id) {
+          setSelected((prev) =>
+            prev && prev.id === id
+              ? normalizeChunkDetail({ ...data, entities: prev.entities })
+              : prev,
+          )
+        }
+      }
+      setBulkSelectedIds(new Set())
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBulkEmbedding(false)
+    }
+  }
+
   const exportCsv = () => {
     const headers = [
       'id',
       'doc_title',
-      'model',
       'chunk_index',
       'start',
       'end',
       'status',
       'classification_tags',
       'rating',
+      'embedding_dim',
+      'embedding_model',
       'created_at',
       'updated_at',
       'corrected_text',
@@ -464,13 +667,14 @@ export function SavedChunksPage() {
         [
           item.id,
           item.doc_title ?? '',
-          item.model ?? '',
           item.chunk_index ?? '',
           item.start ?? '',
           item.end ?? '',
           item.status ?? '',
           normalizeClassificationTags(item.classification_tags).join('|'),
           item.rating ?? '',
+          item.embedding_dim ?? '',
+          item.embedding_model ?? '',
           item.created_at ?? '',
           item.updated_at ?? '',
           item.corrected_text ?? '',
@@ -600,11 +804,7 @@ export function SavedChunksPage() {
       if (!Array.isArray(data.entities)) {
         data.entities = []
       }
-      setSelected({
-        ...data,
-        classification_tags: normalizeClassificationTags(data.classification_tags),
-        rating: data.rating ? String(data.rating) : null,
-      })
+      setSelected(normalizeChunkDetail({ ...data, entities: data.entities ?? [] }))
       setSelectedTextRange(null)
       setSelectedRowId(id)
     } catch (e) {
@@ -638,6 +838,11 @@ export function SavedChunksPage() {
     try {
       await fetch(`/api/ner/chunks/${id}`, { method: 'DELETE' })
       setItems((prev) => prev.filter((c) => c.id !== id))
+      setBulkSelectedIds((prev) => {
+        const n = new Set(prev)
+        n.delete(id)
+        return n
+      })
       if (selected?.id === id) setSelected(null)
     } catch {
       // ignore for now
@@ -652,7 +857,7 @@ export function SavedChunksPage() {
     setDetailError(null)
     setDetailSuccess(null)
     try {
-      await fetch(`/api/ner/chunks/${selected.id}`, {
+      const r = await fetch(`/api/ner/chunks/${selected.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -663,15 +868,28 @@ export function SavedChunksPage() {
           rating: selected.rating ?? null,
         }),
       })
+      const data = (await r.json()) as SavedChunkDetail & { error?: string }
+      if (!r.ok) throw new Error(data?.error || `Request failed (${r.status})`)
+      const next = normalizeChunkDetail({
+        ...data,
+        entities: Array.isArray(data.entities) ? data.entities : [],
+      })
+      setSelected(next)
       setItems((prev) =>
         prev.map((c) =>
           c.id === selected.id
             ? {
                 ...c,
-                doc_title: selected.doc_title,
-                status: selected.status,
-                classification_tags: normalizeClassificationTags(selected.classification_tags),
-                rating: selected.rating ?? null,
+                doc_title: next.doc_title,
+                corrected_text: next.corrected_text,
+                status: next.status,
+                classification_tags: next.classification_tags,
+                rating: next.rating ?? null,
+                embedding_dim: next.embedding_dim,
+                embedding_model: next.embedding_model,
+                has_embedding: next.has_embedding,
+                has_agri: next.has_agri,
+                agri_analyzed_at: next.agri_analyzed_at,
               }
             : c,
         ),
@@ -681,6 +899,42 @@ export function SavedChunksPage() {
       setDetailError(e instanceof Error ? e.message : String(e))
     } finally {
       setSavingDetail(false)
+    }
+  }
+
+  const refreshEmbedding = async () => {
+    if (!selected) return
+    setEmbeddingRefreshing(true)
+    setDetailError(null)
+    setDetailSuccess(null)
+    try {
+      const r = await fetch(`/api/ner/chunks/${selected.id}/embed`, { method: 'POST' })
+      const data = (await r.json()) as SavedChunkDetail & { error?: string }
+      if (!r.ok) throw new Error(data?.error || `Request failed (${r.status})`)
+      const next = normalizeChunkDetail({
+        ...data,
+        entities: Array.isArray(data.entities) ? data.entities : selected.entities,
+      })
+      setSelected(next)
+      setItems((prev) =>
+        prev.map((c) =>
+          c.id === selected.id
+            ? {
+                ...c,
+                embedding_dim: next.embedding_dim,
+                embedding_model: next.embedding_model,
+                has_embedding: next.has_embedding,
+                has_agri: next.has_agri,
+                agri_analyzed_at: next.agri_analyzed_at,
+              }
+            : c,
+        ),
+      )
+      setDetailSuccess('Embedding updated.')
+    } catch (e) {
+      setDetailError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEmbeddingRefreshing(false)
     }
   }
 
@@ -752,10 +1006,20 @@ export function SavedChunksPage() {
 
   return (
     <Box sx={{ width: '100%', minWidth: 0 }}>
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Stack spacing={2}>
+      <Paper variant="outlined" sx={{ p: 1.5 }}>
+        <Stack spacing={1.25}>
           {error && <Alert severity="error">{error}</Alert>}
-          <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}>
+          <Stack
+            direction={{ xs: 'column', lg: 'row' }}
+            spacing={0.75}
+            useFlexGap
+            sx={{
+              flexWrap: 'wrap',
+              alignItems: { xs: 'stretch', lg: 'center' },
+              columnGap: 0.75,
+              rowGap: 0.75,
+            }}
+          >
             <TextField
               size="small"
               label="Search"
@@ -764,10 +1028,10 @@ export function SavedChunksPage() {
                 setSearchText(e.target.value)
                 setPage(0)
               }}
-              sx={{ minWidth: 220 }}
-              placeholder="Title, model, text..."
+              sx={{ minWidth: { xs: '100%', sm: 200 }, maxWidth: 320, ...FILTER_CONTROL_SX }}
+              placeholder="Title, text…"
             />
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small" sx={{ minWidth: 112, ...FILTER_CONTROL_SX }}>
               <InputLabel id="saved-status-filter-label">Status</InputLabel>
               <Select
                 labelId="saved-status-filter-label"
@@ -785,7 +1049,7 @@ export function SavedChunksPage() {
                 <MenuItem value="done">Done</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ minWidth: 160 }}>
+            <FormControl size="small" sx={{ minWidth: 128, ...FILTER_CONTROL_SX }}>
               <InputLabel id="saved-rating-filter-label">Rating</InputLabel>
               <Select
                 labelId="saved-rating-filter-label"
@@ -815,7 +1079,7 @@ export function SavedChunksPage() {
                 setPage(0)
               }}
               filterSelectedOptions
-              sx={{ minWidth: 240 }}
+              sx={{ minWidth: { xs: '100%', sm: 176 }, maxWidth: 280, flex: { lg: '1 1 176px' }, ...FILTER_CONTROL_SX }}
               renderTags={(value, getTagProps) =>
                 value.map((tag, index) => (
                   <Chip
@@ -823,19 +1087,15 @@ export function SavedChunksPage() {
                     key={tag}
                     size="small"
                     label={formatClassificationTag(tag)}
-                    sx={getClassificationTagChipSx(tag)}
+                    sx={{ ...getClassificationTagChipSx(tag), height: 22, '& .MuiChip-label': { px: 0.75, fontSize: 11 } }}
                   />
                 ))
               }
               renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Classification"
-                  placeholder="Type or select tags"
-                />
+                <TextField {...params} label="Tags" placeholder="Select…" />
               )}
             />
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small" sx={{ minWidth: 108, ...FILTER_CONTROL_SX }}>
               <InputLabel id="saved-star-filter-label">Star</InputLabel>
               <Select
                 labelId="saved-star-filter-label"
@@ -851,24 +1111,79 @@ export function SavedChunksPage() {
                 <MenuItem value="unstarred">Unstarred</MenuItem>
               </Select>
             </FormControl>
-            <Stack direction="row" spacing={1}>
-              <Button variant="outlined" onClick={resetFilters} startIcon={<FilterAltOffOutlinedIcon />}>
-                Clear filters
+            <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: 'wrap', ml: { lg: 'auto' } }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={resetFilters}
+                startIcon={<FilterAltOffOutlinedIcon sx={{ fontSize: 18 }} />}
+              >
+                Clear
               </Button>
               <Button
+                size="small"
                 variant="contained"
                 onClick={exportCsv}
                 disabled={sortedItems.length === 0}
-                startIcon={<DownloadOutlinedIcon />}
+                startIcon={<DownloadOutlinedIcon sx={{ fontSize: 18 }} />}
               >
-                Export CSV ({sortedItems.length})
+                CSV ({sortedItems.length})
               </Button>
             </Stack>
           </Stack>
+          {bulkSelectedIds.size > 0 && (
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              spacing={1}
+              sx={{ flexWrap: 'wrap', py: 1, px: 0.5 }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {bulkSelectedIds.size} selected
+              </Typography>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={bulkEmbedding ? <CircularProgress size={14} /> : <HubOutlinedIcon fontSize="small" />}
+                onClick={() => void bulkRefreshEmbeddings()}
+                disabled={bulkEmbedding || bulkDeleting}
+              >
+                {bulkEmbedding ? 'Embedding…' : 'Refresh embeddings'}
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                startIcon={bulkDeleting ? <CircularProgress size={14} /> : <DeleteOutlineOutlinedIcon fontSize="small" />}
+                onClick={() => void bulkDeleteChunks()}
+                disabled={bulkDeleting || bulkEmbedding}
+              >
+                {bulkDeleting ? 'Deleting…' : 'Delete'}
+              </Button>
+              <Button size="small" onClick={() => setBulkSelectedIds(new Set())} disabled={bulkDeleting || bulkEmbedding}>
+                Clear selection
+              </Button>
+            </Stack>
+          )}
           <TableContainer sx={{ maxHeight: '70vh', overflow: 'auto' }}>
             <Table size="small" stickyHeader sx={EXCEL_GRID}>
               <TableHead>
                 <TableRow>
+                  <TableCell
+                    padding="checkbox"
+                    sx={{ width: 44, cursor: 'default', bgcolor: 'grey.200' }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Tooltip title="Select rows on this page">
+                      <Checkbox
+                        size="small"
+                        indeterminate={someOnPageSelected && !allOnPageSelected}
+                        checked={allOnPageSelected}
+                        onChange={() => selectAllOnPage()}
+                        inputProps={{ 'aria-label': 'select all on page' }}
+                      />
+                    </Tooltip>
+                  </TableCell>
                   <TableCell sx={{ width: 40, textAlign: 'center' }}>#</TableCell>
                   <TableCell sx={{ width: 48, textAlign: 'center' }}>★</TableCell>
                   <TableCell onClick={() => handleSort('id')} sx={{ width: 60 }}>
@@ -877,19 +1192,23 @@ export function SavedChunksPage() {
                   <TableCell onClick={() => handleSort('doc_title')} sx={{ minWidth: 140 }}>
                     Title {sortKey === 'doc_title' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
                   </TableCell>
-                  <TableCell sx={{ minWidth: 90 }}>Model</TableCell>
                   <TableCell onClick={() => handleSort('chunk_index')} sx={{ width: 80, textAlign: 'center' }}>
                     Chunk # {sortKey === 'chunk_index' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
                   </TableCell>
-                  <TableCell onClick={() => handleSort('start')} sx={{ width: 90 }}>
-                    Span {sortKey === 'start' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
-                  </TableCell>
-                  <TableCell sx={{ minWidth: 200 }}>Chunk text</TableCell>
+                  <TableCell sx={{ minWidth: 160, maxWidth: 280 }}>Chunk text</TableCell>
                   <TableCell sx={{ width: 80 }}>Status</TableCell>
                   <TableCell sx={{ minWidth: 170 }}>Classification</TableCell>
                   <TableCell sx={{ width: 130 }}>Rating</TableCell>
                   <TableCell onClick={() => handleSort('created_at')} sx={{ width: 140 }}>
                     Created {sortKey === 'created_at' && (sortDir === 'asc' ? <ArrowUpwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} /> : <ArrowDownwardIcon sx={{ fontSize: 14, verticalAlign: 'middle', ml: 0.5 }} />)}
+                  </TableCell>
+                  <TableCell sx={{ width: 52, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    <Tooltip title="Embedding dim (sentence-transformers)">
+                      <span>Emb.</span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell sx={{ width: 52, textAlign: 'center', cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
+                    Agri
                   </TableCell>
                   <TableCell sx={{ width: 88, borderRight: 'none' }}>Actions</TableCell>
                 </TableRow>
@@ -901,13 +1220,55 @@ export function SavedChunksPage() {
                     hover
                     onClick={() => openDetail(c.id)}
                     selected={selectedRowId === c.id}
-                    sx={{
-                      cursor: 'pointer',
-                      bgcolor: selectedRowId === c.id ? 'action.selected' : undefined,
-                      '&.Mui-selected': { bgcolor: 'action.selected' },
-                      '&.Mui-selected:hover': { bgcolor: 'action.selected' },
+                    sx={(theme) => {
+                      const hasEmb =
+                        c.has_embedding === true ||
+                        (typeof c.embedding_dim === 'number' && c.embedding_dim > 0)
+                      const isOpen = selectedRowId === c.id
+                      const isBulkOnly = bulkSelectedIds.has(c.id) && !isOpen
+                      const embBg = alpha(
+                        theme.palette.success.main,
+                        theme.palette.mode === 'dark' ? 0.18 : 0.1,
+                      )
+                      const embHover = alpha(
+                        theme.palette.success.main,
+                        theme.palette.mode === 'dark' ? 0.26 : 0.16,
+                      )
+
+                      let bg: string | undefined
+                      if (isOpen) bg = theme.palette.action.selected
+                      else if (isBulkOnly) bg = theme.palette.action.hover
+                      else if (hasEmb) bg = embBg
+
+                      return {
+                        cursor: 'pointer',
+                        bgcolor: bg,
+                        '&:hover': {
+                          bgcolor: isOpen
+                            ? theme.palette.action.selected
+                            : isBulkOnly
+                              ? theme.palette.action.hover
+                              : hasEmb
+                                ? embHover
+                                : theme.palette.action.hover,
+                        },
+                        '&.Mui-selected': { bgcolor: theme.palette.action.selected },
+                        '&.Mui-selected:hover': { bgcolor: theme.palette.action.selected },
+                      }
                     }}
                   >
+                    <TableCell
+                      padding="checkbox"
+                      onClick={(ev) => ev.stopPropagation()}
+                      sx={{ bgcolor: 'inherit' }}
+                    >
+                      <Checkbox
+                        size="small"
+                        checked={bulkSelectedIds.has(c.id)}
+                        onChange={(_, checked) => toggleBulkSelectId(c.id, checked)}
+                        inputProps={{ 'aria-label': `select chunk ${c.id}` }}
+                      />
+                    </TableCell>
                     <TableCell sx={{ textAlign: 'center', color: 'text.secondary' }}>
                       {page * rowsPerPage + idx + 1}
                     </TableCell>
@@ -930,12 +1291,13 @@ export function SavedChunksPage() {
                         {c.doc_title || '—'}
                       </Typography>
                     </TableCell>
-                    <TableCell>{c.model ?? '—'}</TableCell>
                     <TableCell sx={{ textAlign: 'center' }}>{(c.chunk_index ?? 0) + 1}</TableCell>
-                    <TableCell>{`${c.start ?? 0}–${c.end ?? 0}`}</TableCell>
-                    <TableCell sx={{ maxWidth: 400, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>
+                    <TableCell
+                      sx={{ maxWidth: 260, lineHeight: 1.45 }}
+                      title={c.corrected_text?.trim() ? c.corrected_text : undefined}
+                    >
                       <Typography variant="body2" component="span" sx={{ fontSize: 12 }}>
-                        {c.corrected_text || '—'}
+                        {truncateChunkTextPreview(c.corrected_text)}
                       </Typography>
                     </TableCell>
                     <TableCell>
@@ -965,6 +1327,32 @@ export function SavedChunksPage() {
                       )}
                     </TableCell>
                     <TableCell>{formatCreated(c.created_at)}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', fontSize: 12 }}>
+                      {c.embedding_dim != null && c.embedding_dim > 0 ? (
+                        <Tooltip title={c.embedding_model ?? 'embedding'}>
+                          <span>{c.embedding_dim}</span>
+                        </Tooltip>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                    <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ textAlign: 'center' }}>
+                      <Tooltip
+                        title={
+                          c.has_agri
+                            ? 'Agri analysis saved — open to view or refresh'
+                            : 'Run agri relations analysis'
+                        }
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => setQuickAgriRow(c)}
+                          aria-label="agri analysis"
+                        >
+                          <InsightsOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell onClick={(ev) => ev.stopPropagation()} sx={{ borderRight: 'none' }}>
                       <Stack direction="row" spacing={0.25}>
                         <Tooltip title="View / edit">
@@ -992,7 +1380,7 @@ export function SavedChunksPage() {
                 ))}
                 {!loading && pagedItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={13} sx={{ opacity: 0.7 }}>
+                    <TableCell colSpan={14} sx={{ opacity: 0.7 }}>
                       {items.length === 0
                         ? 'No saved chunks yet. Run NER with chunking enabled, then click "Save chunks to database" on the Extracting NER page.'
                         : 'No chunks match current filters.'}
@@ -1023,23 +1411,24 @@ export function SavedChunksPage() {
           setSelected(null)
           setSelectedTextRange(null)
         }}
-        fullWidth
-        maxWidth={false}
-        PaperProps={{
-          sx: {
-            maxWidth: '95vw',
-            width: '95vw',
-            height: '90vh',
-            maxHeight: '90vh',
-          },
-        }}
+        fullScreen
+        PaperProps={{ sx: { display: 'flex', flexDirection: 'column' } }}
       >
-        {/* <DialogTitle>Chunk detail</DialogTitle> */}
-        <DialogContent dividers sx={{ overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <DialogContent
+          dividers
+          sx={{
+            flex: 1,
+            overflow: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            py: 2,
+          }}
+        >
           {detailError && <Alert severity="error">{detailError}</Alert>}
           {detailSuccess && <Alert severity="success">{detailSuccess}</Alert>}
           {selected && (
-            <Stack spacing={2} sx={{ mt: 1 }}>
+            <Stack spacing={1.5} sx={{ mt: 0.5 }}>
               <TextField
                 label="Title"
                 value={selected.doc_title ?? ''}
@@ -1048,9 +1437,26 @@ export function SavedChunksPage() {
                 }
                 fullWidth
                 size="small"
+                sx={{
+                  '& .MuiInputBase-root': { minHeight: 32, fontSize: 12 },
+                  '& .MuiInputLabel-root': { fontSize: 12 },
+                }}
               />
-              <Stack direction="row" spacing={1} alignItems="center">
-                <FormControl size="small" sx={{ minWidth: 140 }}>
+              <Stack
+                direction="row"
+                flexWrap="wrap"
+                alignItems="center"
+                columnGap={1}
+                rowGap={0.75}
+              >
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: 108,
+                    '& .MuiInputLabel-root': { fontSize: 12 },
+                    '& .MuiSelect-select': { fontSize: 12, py: 0.65 },
+                  }}
+                >
                   <InputLabel id="chunk-status-label">Status</InputLabel>
                   <Select
                     labelId="chunk-status-label"
@@ -1060,10 +1466,18 @@ export function SavedChunksPage() {
                       setSelected({ ...selected, status: e.target.value })
                     }
                   >
-                    <MenuItem value="new">New</MenuItem>
-                    <MenuItem value="in_progress">In progress</MenuItem>
-                    <MenuItem value="reviewed">Reviewed</MenuItem>
-                    <MenuItem value="done">Done</MenuItem>
+                    <MenuItem value="new" sx={{ fontSize: 12 }}>
+                      New
+                    </MenuItem>
+                    <MenuItem value="in_progress" sx={{ fontSize: 12 }}>
+                      In progress
+                    </MenuItem>
+                    <MenuItem value="reviewed" sx={{ fontSize: 12 }}>
+                      Reviewed
+                    </MenuItem>
+                    <MenuItem value="done" sx={{ fontSize: 12 }}>
+                      Done
+                    </MenuItem>
                   </Select>
                 </FormControl>
                 <Autocomplete
@@ -1079,7 +1493,13 @@ export function SavedChunksPage() {
                     })
                   }
                   filterSelectedOptions
-                  sx={{ minWidth: 260 }}
+                  sx={{
+                    flex: '1 1 160px',
+                    minWidth: 160,
+                    maxWidth: 360,
+                    '& .MuiInputBase-root': { minHeight: 32, fontSize: 12 },
+                    '& .MuiInputLabel-root': { fontSize: 12 },
+                  }}
                   renderTags={(value, getTagProps) =>
                     value.map((tag, index) => (
                       <Chip
@@ -1087,7 +1507,11 @@ export function SavedChunksPage() {
                         key={tag}
                         size="small"
                         label={formatClassificationTag(tag)}
-                        sx={getClassificationTagChipSx(tag)}
+                        sx={{
+                          ...getClassificationTagChipSx(tag),
+                          height: 22,
+                          '& .MuiChip-label': { fontSize: 11, px: 0.5 },
+                        }}
                       />
                     ))
                   }
@@ -1095,11 +1519,19 @@ export function SavedChunksPage() {
                     <TextField
                       {...params}
                       label="Classification"
-                      placeholder="Type new tags..."
+                      placeholder="Tags…"
+                      InputLabelProps={{ ...params.InputLabelProps, shrink: true }}
                     />
                   )}
                 />
-                <FormControl size="small" sx={{ minWidth: 170 }}>
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: 128,
+                    '& .MuiInputLabel-root': { fontSize: 12 },
+                    '& .MuiSelect-select': { fontSize: 12, py: 0.65 },
+                  }}
+                >
                   <InputLabel id="chunk-rating-label">Rating</InputLabel>
                   <Select
                     labelId="chunk-rating-label"
@@ -1112,11 +1544,11 @@ export function SavedChunksPage() {
                       })
                     }
                   >
-                    <MenuItem value="">
-                      <em>Not selected</em>
+                    <MenuItem value="" sx={{ fontSize: 12 }}>
+                      <em>—</em>
                     </MenuItem>
                     {RATING_OPTIONS.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
+                      <MenuItem key={option.value} value={option.value} sx={{ fontSize: 12 }}>
                         {option.label}
                       </MenuItem>
                     ))}
@@ -1126,15 +1558,100 @@ export function SavedChunksPage() {
                   size="small"
                   label={selected.model ?? ''}
                   variant="outlined"
-                  sx={{ alignSelf: 'center' }}
+                  sx={{
+                    alignSelf: 'center',
+                    height: 22,
+                    fontSize: 11,
+                    '& .MuiChip-label': { px: 0.75 },
+                  }}
                 />
                 <Chip
                   size="small"
-                  label={`Chunk ${(selected.chunk_index ?? 0) + 1}`}
+                  label={`Ch.${(selected.chunk_index ?? 0) + 1}`}
                   variant="outlined"
-                  sx={{ alignSelf: 'center' }}
+                  sx={{
+                    alignSelf: 'center',
+                    height: 22,
+                    fontSize: 11,
+                    '& .MuiChip-label': { px: 0.75 },
+                  }}
+                />
+                <Chip
+                  size="small"
+                  label={`${selected.start ?? 0}–${selected.end ?? 0}`}
+                  variant="outlined"
+                  sx={{
+                    alignSelf: 'center',
+                    height: 22,
+                    fontSize: 11,
+                    '& .MuiChip-label': { px: 0.75 },
+                  }}
                 />
               </Stack>
+              <Box
+                sx={{
+                  p: 1,
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  bgcolor: 'grey.50',
+                }}
+              >
+                <Stack direction="row" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={1}>
+                  <Stack direction="row" alignItems="center" spacing={0.75}>
+                    <HubOutlinedIcon sx={{ fontSize: 18, opacity: 0.8 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.85 }}>
+                      Embedding
+                    </Typography>
+                    {selected.embedding_dim != null && selected.embedding_dim > 0 ? (
+                      <Chip size="small" label={`dim ${selected.embedding_dim}`} variant="outlined" sx={{ height: 22, fontSize: 11 }} />
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        Not computed
+                      </Typography>
+                    )}
+                  </Stack>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => void refreshEmbedding()}
+                    disabled={embeddingRefreshing || !selected.corrected_text?.trim()}
+                    startIcon={
+                      embeddingRefreshing ? (
+                        <CircularProgress size={14} />
+                      ) : (
+                        <HubOutlinedIcon sx={{ fontSize: 16 }} />
+                      )
+                    }
+                    sx={{ textTransform: 'none', fontSize: 12 }}
+                  >
+                    {embeddingRefreshing ? 'Computing…' : 'Refresh embedding'}
+                  </Button>
+                </Stack>
+                {selected.embedding_model && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                    {selected.embedding_model}
+                  </Typography>
+                )}
+                <Typography
+                  variant="caption"
+                  component="div"
+                  sx={{
+                    mt: 0.75,
+                    fontFamily: 'ui-monospace, monospace',
+                    fontSize: 11,
+                    lineHeight: 1.5,
+                    wordBreak: 'break-all',
+                    maxHeight: 72,
+                    overflow: 'auto',
+                  }}
+                >
+                  {formatEmbeddingPreview(selected.embedding ?? null)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                  Saved text is embedded on save; use Refresh if you edit text without saving.
+                </Typography>
+              </Box>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.8 }}>
                   Corrected text
@@ -1151,14 +1668,16 @@ export function SavedChunksPage() {
                   inputRef={correctedTextInputRef}
                   fullWidth
                   multiline
-                  minRows={6}
+                  minRows={4}
                   sx={{ mt: 0.5 }}
                 />
                 <Stack
-                  direction={{ xs: 'column', md: 'row' }}
-                  spacing={1}
-                  alignItems={{ xs: 'stretch', md: 'center' }}
-                  sx={{ mt: 1 }}
+                  direction="row"
+                  flexWrap="wrap"
+                  alignItems="center"
+                  columnGap={1}
+                  rowGap={0.5}
+                  sx={{ mt: 1.5 }}
                 >
                   <Autocomplete
                     freeSolo
@@ -1167,27 +1686,35 @@ export function SavedChunksPage() {
                     value={manualEntityLabel}
                     onInputChange={(_, value) => setManualEntityLabel(value)}
                     onChange={(_, value) => setManualEntityLabel(typeof value === 'string' ? value : '')}
-                    sx={{ minWidth: 240 }}
+                    sx={{
+                      minWidth: 140,
+                      maxWidth: 200,
+                      '& .MuiInputBase-root': { minHeight: 30, fontSize: 12 },
+                      '& .MuiInputLabel-root': { fontSize: 12 },
+                    }}
                     renderInput={(params) => (
                       <TextField
                         {...params}
-                        label="Manual entity label"
-                        placeholder="Type label or pick suggestion"
+                        label="Label"
+                        placeholder="Type or pick"
+                        InputLabelProps={{ ...params.InputLabelProps, shrink: true }}
                       />
                     )}
                   />
-                  <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2, maxWidth: 280 }}>
                     {selectedTextRange
-                      ? `Selected range: ${selectedTextRange.start}-${selectedTextRange.end} (${selectedTextRange.text.length} chars)`
-                      : 'Select text in Corrected text to create a manual entity.'}
+                      ? `${selectedTextRange.start}–${selectedTextRange.end} · ${selectedTextRange.text.length} chars`
+                      : 'Highlight text above, set label, Add.'}
                   </Typography>
                   <Button
+                    size="small"
                     variant="outlined"
                     onClick={addEntityFromTextSelection}
                     disabled={!selectedTextRange || addingEntityFromSelection || !manualEntityLabel.trim()}
-                    startIcon={<AddCircleOutlineOutlinedIcon />}
+                    sx={{ py: 0.2, px: 1, fontSize: 12, minHeight: 28, textTransform: 'none' }}
+                    startIcon={<AddCircleOutlineOutlinedIcon sx={{ fontSize: 16 }} />}
                   >
-                    {addingEntityFromSelection ? 'Adding...' : 'Add entity from selection'}
+                    {addingEntityFromSelection ? '…' : 'Add'}
                   </Button>
                 </Stack>
                 {selected.corrected_text && (
@@ -1375,27 +1902,95 @@ export function SavedChunksPage() {
                   </Typography>
                 )}
               </Box>
+
+              <Box sx={{ mt: 1 }}>
+                <Stack direction="row" alignItems="baseline" justifyContent="space-between" flexWrap="wrap" gap={1} sx={{ mb: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                    Agri relations
+                  </Typography>
+                  {selected.agri_analyzed_at ? (
+                    <Typography variant="caption" color="text.secondary">
+                      Saved {formatCreated(selected.agri_analyzed_at)}
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      Not saved yet — run or refresh below
+                    </Typography>
+                  )}
+                </Stack>
+                <AgriRelationsResults state={agri.state} loading={agri.loading} />
+              </Box>
             </Stack>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions
+          sx={{
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 1,
+            px: 2,
+            py: 1.5,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           <Button
-            onClick={() => {
-              setSelected(null)
-              setSelectedTextRange(null)
-            }}
-            startIcon={<CloseOutlinedIcon />}
-          >
-            Close
-          </Button>
-          <Button
-            onClick={saveDetail}
             variant="contained"
-            disabled={savingDetail || !selected}
-            startIcon={<SaveOutlinedIcon />}
+            size="small"
+            startIcon={
+              agri.loading ? (
+                <CircularProgress color="inherit" size={16} />
+              ) : selected?.agri_analyzed_at ? (
+                <RefreshOutlinedIcon fontSize="small" />
+              ) : (
+                <InsightsOutlinedIcon fontSize="small" />
+              )
+            }
+            onClick={() => void agri.run()}
+            disabled={!selected?.corrected_text?.trim() || agri.loading}
           >
-            {savingDetail ? 'Saving…' : 'Save changes'}
+            {agri.loading
+              ? 'Analyzing…'
+              : selected?.agri_analyzed_at
+                ? 'Refresh analysis'
+                : 'Run analysis & save'}
           </Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              onClick={() => {
+                setSelected(null)
+                setSelectedTextRange(null)
+              }}
+              startIcon={<CloseOutlinedIcon />}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={saveDetail}
+              variant="contained"
+              disabled={savingDetail || !selected}
+              startIcon={<SaveOutlinedIcon />}
+            >
+              {savingDetail ? 'Saving…' : 'Save changes'}
+            </Button>
+          </Stack>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!quickAgriRow} onClose={() => setQuickAgriRow(null)} maxWidth="md" fullWidth>
+        <DialogTitle>Agri relations</DialogTitle>
+        <DialogContent dividers>
+          <AgriRelationsPanel
+            text={quickAgriRow?.corrected_text ?? ''}
+            chunkId={quickAgriRow?.id}
+            hasSavedAnalysis={quickAgriRow?.has_agri}
+            savedAnalysis={quickAgriDetail?.agri_analysis ?? null}
+            savedAnalyzedAt={quickAgriDetail?.agri_analyzed_at ?? null}
+            onPersisted={handleQuickAgriPersisted}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setQuickAgriRow(null)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

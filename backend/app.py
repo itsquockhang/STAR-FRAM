@@ -19,6 +19,8 @@ from chunk_db import (
     get_chunk_detail,
     init_db,
     list_chunks,
+    refresh_chunk_embedding,
+    run_chunk_agri_analysis,
     save_chunks_with_entities,
     update_chunk,
     update_entity,
@@ -67,6 +69,30 @@ def ner_chunks_list():
     return jsonify(body), status
 
 
+@app.post("/api/ner/chunks/search-knn")
+def ner_chunks_search_knn():
+    payload = request.get_json(silent=True) or {}
+    text = str(payload.get("text") or "").strip()
+    k = int(payload.get("k", 10))
+    if not text:
+        return jsonify({"error": "Missing 'text'"}), 400
+    try:
+        from chunk_faiss_store import search_knn_by_text
+
+        body, status = search_knn_by_text(text, k)
+        return jsonify(body), status
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 503
+
+
+@app.post("/api/ner/chunks/faiss/rebuild")
+def ner_chunks_faiss_rebuild():
+    from chunk_faiss_store import rebuild_from_sqlite
+
+    body = rebuild_from_sqlite()
+    return jsonify(body), 200 if body.get("ok") else 500
+
+
 @app.get("/api/ner/chunks/<int:chunk_id>")
 def ner_chunk_detail(chunk_id: int):
     body, status = get_chunk_detail(chunk_id)
@@ -77,6 +103,19 @@ def ner_chunk_detail(chunk_id: int):
 def ner_chunk_update(chunk_id: int):
     payload = request.get_json(silent=True) or {}
     body, status = update_chunk(chunk_id, payload)
+    return jsonify(body), status
+
+
+@app.post("/api/ner/chunks/<int:chunk_id>/embed")
+def ner_chunk_embed(chunk_id: int):
+    body, status = refresh_chunk_embedding(chunk_id)
+    return jsonify(body), status
+
+
+@app.post("/api/ner/chunks/<int:chunk_id>/agri")
+def ner_chunk_agri(chunk_id: int):
+    payload = request.get_json(silent=True) or {}
+    body, status = run_chunk_agri_analysis(chunk_id, payload)
     return jsonify(body), status
 
 

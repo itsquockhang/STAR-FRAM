@@ -2,7 +2,7 @@ import threading
 from typing import Any, List
 
 import torch
-from chonkie import SemanticChunker, TokenChunker
+from chonkie import RecursiveChunker, SemanticChunker, TokenChunker
 from tokenizers import Tokenizer
 
 from config import (
@@ -13,6 +13,7 @@ from config import (
 
 _semantic_chunkers: dict[int, Any] = {}
 _token_chunkers: dict[int, Any] = {}
+_recursive_chunkers: dict[int, Any] = {}
 _chunker_lock = threading.Lock()
 
 
@@ -41,12 +42,15 @@ def release_chunking_resources() -> None:
     with _chunker_lock:
         semantic_chunkers = list(_semantic_chunkers.values())
         token_chunkers = list(_token_chunkers.values())
+        recursive_chunkers = list(_recursive_chunkers.values())
         _semantic_chunkers.clear()
         _token_chunkers.clear()
+        _recursive_chunkers.clear()
 
     try:
         del semantic_chunkers
         del token_chunkers
+        del recursive_chunkers
     except Exception:
         pass
 
@@ -82,10 +86,25 @@ def get_token_chunker(chunk_size_tokens: int | None = None) -> TokenChunker:
     return ch
 
 
+def get_recursive_chunker(chunk_size_tokens: int | None = None) -> RecursiveChunker:
+    size = _clamp_chunk_size_tokens(chunk_size_tokens)
+    with _chunker_lock:
+        ch = _recursive_chunkers.get(size)
+        if ch is None:
+            ch = RecursiveChunker(
+                tokenizer=Tokenizer.from_pretrained("google/embeddinggemma-300m"),
+                chunk_size=size,
+            )
+            _recursive_chunkers[size] = ch
+    return ch
+
+
 def chunk_text(text: str, strategy: str = "semantic", *, chunk_size_tokens: int | None = None) -> List[Any]:
     if not text.strip():
         return []
 
     if strategy == "token":
         return list(get_token_chunker(chunk_size_tokens).chunk(text))
+    if strategy == "recursive":
+        return list(get_recursive_chunker(chunk_size_tokens).chunk(text))
     return list(get_semantic_chunker(chunk_size_tokens).chunk(text))

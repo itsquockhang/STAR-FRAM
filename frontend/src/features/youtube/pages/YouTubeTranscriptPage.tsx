@@ -21,6 +21,10 @@ import {
   Typography,
 } from '@mui/material'
 import { useNerStore } from '../../../state/nerStore'
+import {
+  splitTextForTranslation,
+  TRANSLATION_MAX_NEW_TOKENS,
+} from '../../../utils/translationChunks'
 
 type TranscriptResponse = {
   text?: string
@@ -41,41 +45,6 @@ type TranslateResponse = {
 }
 
 type TranslationDirection = 'vi-en' | 'en-vi'
-
-const TRANSLATION_CHUNK_MAX_CHARS = 1200
-const TRANSLATION_MAX_NEW_TOKENS = 512
-
-function splitTextForTranslation(text: string, maxChars = TRANSLATION_CHUNK_MAX_CHARS): string[] {
-  const source = text.trim()
-  if (!source) return []
-  if (source.length <= maxChars) return [source]
-
-  const chunks: string[] = []
-  let remaining = source
-
-  while (remaining.length > maxChars) {
-    const minimumSplitPoint = Math.floor(maxChars * 0.6)
-    let splitAt = remaining.lastIndexOf('\n', maxChars)
-    if (splitAt < minimumSplitPoint) {
-      splitAt = remaining.lastIndexOf(' ', maxChars)
-    }
-    if (splitAt < minimumSplitPoint) {
-      splitAt = maxChars
-    }
-
-    const chunk = remaining.slice(0, splitAt).trim()
-    if (chunk) {
-      chunks.push(chunk)
-    }
-    remaining = remaining.slice(splitAt).trimStart()
-  }
-
-  if (remaining) {
-    chunks.push(remaining)
-  }
-
-  return chunks
-}
 
 const WHISPERX_HF_MODELS: Record<string, string> = {
   'tiny.en': 'Systran/faster-whisper-tiny.en',

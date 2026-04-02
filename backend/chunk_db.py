@@ -7,6 +7,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Tuple
 
+from chunk_embedding import embed_text
+
 DB_PATH = os.getenv(
     "NER_CHUNKS_DB_PATH",
     os.path.join(os.path.dirname(__file__), "ner_chunks.sqlite3"),
@@ -15,6 +17,28 @@ DB_PATH = os.getenv(
 
 def _utc_now() -> str:
   return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+
+def _sync_faiss_chunk(chunk_id: int) -> None:
+  try:
+    import chunk_faiss_store
+
+    chunk_faiss_store.sync_chunk(chunk_id)
+  except Exception as e:
+    import logging
+
+    logging.getLogger(__name__).warning("FAISS sync failed for chunk %s: %s", chunk_id, e)
+
+
+def _sync_faiss_remove(chunk_id: int) -> None:
+  try:
+    import chunk_faiss_store
+
+    chunk_faiss_store.remove_chunk_id(chunk_id)
+  except Exception as e:
+    import logging
+
+    logging.getLogger(__name__).warning("FAISS remove failed for chunk %s: %s", chunk_id, e)
 
 
 def _ensure_dir(path: str) -> None:
@@ -120,6 +144,51 @@ def init_db() -> None:
       cur.execute("ALTER TABLE chunks ADD COLUMN classification_tags TEXT DEFAULT '[]'")
     if "rating" not in existing_cols:
       cur.execute("ALTER TABLE chunks ADD COLUMN rating TEXT")
+    if "embedding_json" not in existing_cols:
+      cur.execute("ALTER TABLE chunks ADD COLUMN embedding_json TEXT")
+    if "embedding_model" not in existing_cols:
+      cur.execute("ALTER TABLE chunks ADD COLUMN embedding_model TEXT")
+    if "embedding_dim" not in existing_cols:
+      cur.execute("ALTER TABLE chunks ADD COLUMN embedding_dim INTEGER")
+    if "agri_analysis_json" not in existing_cols:
+          cur.execute("ALTER TABLE chunks ADD COLUMN agri_analysis_json TEXT")
+    if "agri_analyzed_at" not in existing_cols:
+      cur.execute("ALTER TABLE chunks ADD COLUMN agri_analyzed_at TEXT")
+
+
+def _embedding_model_name() -> str:
+  from config import SAVED_CHUNK_EMBEDDING_MODEL
+
+  return SAVED_CHUNK_EMBEDDING_MODEL
+
+
+def _apply_embedding_to_row(
+  cur: Any,
+  chunk_id: int,
+  corrected_text: str,
+) -> None:
+  vec = embed_text(corrected_text)
+  if not vec:
+    cur.execute(
+      """
+      UPDATE chunks
+      SET embedding_json = NULL, embedding_model = NULL, embedding_dim = NULL, updated_at = ?
+      WHERE id = ?
+      """,
+      (_utc_now(), chunk_id),
+    )
+    return
+  ej = json.dumps(vec, ensure_ascii=False)
+  em = _embedding_model_name()
+  ed = len(vec)
+  cur.execute(
+    """
+    UPDATE chunks
+    SET embedding_json = ?, embedding_model = ?, embedding_dim = ?, updated_at = ?
+    WHERE id = ?
+    """,
+    (ej, em, ed, _utc_now(), chunk_id),
+  )
 
 
 def save_chunks_with_entities(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
@@ -205,6 +274,8 @@ def save_chunks_with_entities(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], 
       chunk_id = int(cur.lastrowid)
       created_ids.append(chunk_id)
 
+      _apply_embedding_to_row(cur, chunk_id, corrected_text)
+
       # Attach entities that fall inside this chunk span
       for e in norm_entities:
         es = e.get("start")
@@ -228,6 +299,9 @@ def save_chunks_with_entities(payload: Dict[str, Any]) -> Tuple[Dict[str, Any], 
             ),
           )
 
+  for cid in created_ids:
+    _sync_faiss_chunk(cid)
+
   return {"chunk_ids": created_ids}, 200
 
 
@@ -248,6 +322,9 @@ def list_chunks() -> Tuple[Dict[str, Any], int]:
         status,
         classification_tags,
         rating,
+        embedding_dim,
+        embedding_model,
+        agri_analyzed_at,
         created_at,
         updated_at
       FROM chunks
@@ -259,6 +336,8 @@ def list_chunks() -> Tuple[Dict[str, Any], int]:
   for row in rows:
     row["classification_tags"] = _normalize_classification_tags(row.get("classification_tags"))
     row["rating"] = _normalize_rating(row.get("rating"))
+    row["has_embedding"] = bool(row.get("embedding_dim"))
+    row["has_agri"] = bool(row.get("agri_analyzed_at"))
   return {"items": rows}, 200
 
 
@@ -272,6 +351,26 @@ def get_chunk_detail(chunk_id: int) -> Tuple[Dict[str, Any], int]:
     chunk = dict(row)
     chunk["classification_tags"] = _normalize_classification_tags(chunk.get("classification_tags"))
     chunk["rating"] = _normalize_rating(chunk.get("rating"))
+    raw_emb = chunk.pop("embedding_json", None)
+    chunk["embedding"] = None
+    if isinstance(raw_emb, str) and raw_emb.strip():
+      try:
+        parsed = json.loads(raw_emb)
+        if isinstance(parsed, list):
+          chunk["embedding"] = [float(x) for x in parsed]
+      except Exception:
+        chunk["embedding"] = None
+    chunk["has_embedding"] = bool(chunk.get("embedding_dim"))
+    raw_agri = chunk.pop("agri_analysis_json", None)
+    chunk["agri_analysis"] = None
+    if isinstance(raw_agri, str) and raw_agri.strip():
+      try:
+        parsed = json.loads(raw_agri)
+        if isinstance(parsed, dict):
+          chunk["agri_analysis"] = parsed
+      except Exception:
+        chunk["agri_analysis"] = None
+    chunk["has_agri"] = bool(chunk.get("agri_analyzed_at"))
 
     cur.execute(
       """
@@ -299,6 +398,7 @@ def update_chunk(chunk_id: int, data: Dict[str, Any]) -> Tuple[Dict[str, Any], i
   }
   sets: List[str] = []
   params: List[Any] = []
+  reembed = "corrected_text" in data
 
   for key, value in data.items():
     if key not in allowed_fields:
@@ -325,6 +425,70 @@ def update_chunk(chunk_id: int, data: Dict[str, Any]) -> Tuple[Dict[str, Any], i
     cur.execute(f"UPDATE chunks SET {', '.join(sets)} WHERE id = ?", params)
     if cur.rowcount == 0:
       return {"error": "Chunk not found"}, 404
+    if reembed:
+      cur.execute("SELECT corrected_text FROM chunks WHERE id = ?", (chunk_id,))
+      r = cur.fetchone()
+      ct = str(r["corrected_text"] or "") if r else ""
+      _apply_embedding_to_row(cur, chunk_id, ct)
+      cur.execute(
+        "UPDATE chunks SET agri_analysis_json = NULL, agri_analyzed_at = NULL WHERE id = ?",
+        (chunk_id,),
+      )
+
+  if reembed:
+    _sync_faiss_chunk(chunk_id)
+
+  return get_chunk_detail(chunk_id)
+
+
+def run_chunk_agri_analysis(chunk_id: int, payload: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
+  from llm_agri_service import extract_agri_relations
+
+  with get_conn() as conn:
+    cur = conn.cursor()
+    cur.execute("SELECT corrected_text FROM chunks WHERE id = ?", (chunk_id,))
+    row = cur.fetchone()
+    if row is None:
+      return {"error": "Chunk not found"}, 404
+    db_text = str(row["corrected_text"] or "")
+    override = payload.get("text")
+    text = str(override).strip() if override is not None else db_text
+    if not text.strip():
+      return {"error": "No text to analyze (empty corrected text)"}, 400
+
+  body, status = extract_agri_relations(text)
+  if status != 200 or not isinstance(body, dict):
+    return body, status
+  if not body.get("analysis"):
+    return body, status
+
+  snapshot = json.dumps(body, ensure_ascii=False)
+  now = _utc_now()
+  with get_conn() as conn:
+    cur = conn.cursor()
+    cur.execute(
+      """
+      UPDATE chunks
+      SET agri_analysis_json = ?, agri_analyzed_at = ?, updated_at = ?
+      WHERE id = ?
+      """,
+      (snapshot, now, now, chunk_id),
+    )
+
+  return get_chunk_detail(chunk_id)
+
+
+def refresh_chunk_embedding(chunk_id: int) -> Tuple[Dict[str, Any], int]:
+  with get_conn() as conn:
+    cur = conn.cursor()
+    cur.execute("SELECT corrected_text FROM chunks WHERE id = ?", (chunk_id,))
+    row = cur.fetchone()
+    if row is None:
+      return {"error": "Chunk not found"}, 404
+    ct = str(row["corrected_text"] or "")
+    _apply_embedding_to_row(cur, chunk_id, ct)
+
+  _sync_faiss_chunk(chunk_id)
 
   return get_chunk_detail(chunk_id)
 
@@ -335,6 +499,7 @@ def delete_chunk(chunk_id: int) -> Tuple[Dict[str, Any], int]:
     cur.execute("DELETE FROM chunks WHERE id = ?", (chunk_id,))
     if cur.rowcount == 0:
       return {"error": "Chunk not found"}, 404
+  _sync_faiss_remove(chunk_id)
   return {"ok": True}, 200
 
 
