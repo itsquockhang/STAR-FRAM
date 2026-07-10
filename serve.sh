@@ -12,6 +12,12 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}=== Starfarm Local Dev Environment Bootstrapper ===${NC}"
 
+# Check if ffmpeg is installed
+if ! command -v ffmpeg &> /dev/null; then
+    echo -e "${RED}Error: ffmpeg is not installed. Please install it (e.g., 'brew install ffmpeg') to run the transcription service.${NC}"
+    exit 1
+fi
+
 # 1. Start MongoDB and Redis in Docker
 echo -e "${YELLOW}1. Starting MongoDB and Redis services in Docker...${NC}"
 docker compose up -d mongodb redis

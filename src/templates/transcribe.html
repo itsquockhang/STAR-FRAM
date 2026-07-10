@@ -241,6 +241,14 @@
                     <span class="font-semibold uppercase tracking-wide">{{ device }}</span>
                   </div>
                   {% endif %}
+
+                  <!-- Duration tag -->
+                  {% if extract_duration %}
+                  <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-800 text-[11px] font-medium leading-none">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span class="font-semibold uppercase tracking-wide">{{ extract_duration }}s</span>
+                  </div>
+                  {% endif %}
                 </div>
               </div>
             </div>

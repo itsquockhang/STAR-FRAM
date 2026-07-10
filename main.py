@@ -475,6 +475,8 @@ async def transcribe_post(
     # Temporary directory for audio inside the workspace
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audio")
     audio_path = None
+    import time
+    start_time = time.time()
     try:
         # 1. Download audio from YouTube
         audio_path, video_title = download_audio_from_youtube(url, output_dir)
@@ -483,8 +485,11 @@ async def transcribe_post(
         # 2. Transcribe using Whisper
         result = transcribe_audio(audio_path, model_size, device)
         context["transcript_text"] = result.get("text", "")
-        context["success"] = "Transcription completed successfully!"
-        logger.info(f"YouTube transcription by '{session['username']}' completed successfully: {video_title}")
+        
+        elapsed_time = time.time() - start_time
+        context["extract_duration"] = f"{elapsed_time:.1f}"
+        context["success"] = f"Transcription completed successfully in {elapsed_time:.1f}s!"
+        logger.info(f"YouTube transcription by '{session['username']}' completed successfully in {elapsed_time:.2f}s: {video_title}")
     except Exception as e:
         logger.error(f"YouTube transcription failed: {e}")
         context["error"] = f"An error occurred during transcription: {str(e)}"
