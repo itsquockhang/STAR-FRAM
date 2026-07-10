@@ -327,6 +327,60 @@
         }
       });
     }
+
+    // ---- Dynamic Model size selection based on device ----
+    const deviceChoice = document.getElementById('deviceChoice');
+    const modelSize = document.getElementById('modelSize');
+    const initialModelSize = "{{ model_size or 'base' }}";
+
+    const mpsModels = [
+      { value: 'tiny', label: 'mlx-community/whisper-tiny (Fastest, ~75MB)' },
+      { value: 'base', label: 'mlx-community/whisper-base (Balanced, ~140MB - Recommended)' },
+      { value: 'small', label: 'mlx-community/whisper-small (Good accuracy, ~460MB)' },
+      { value: 'medium', label: 'mlx-community/whisper-medium (High accuracy, ~1.5GB)' },
+      { value: 'large-v3-turbo', label: 'mlx-community/whisper-large-v3-turbo (Fast large, ~1.6GB)' },
+      { value: 'large-v3', label: 'mlx-community/whisper-large-v3 (Max accuracy, ~3.0GB)' }
+    ];
+
+    const standardModels = [
+      { value: 'tiny', label: 'tiny (Fastest, ~75MB)' },
+      { value: 'base', label: 'base (Balanced, ~140MB - Recommended)' },
+      { value: 'small', label: 'small (Good accuracy, ~460MB)' },
+      { value: 'medium', label: 'medium (High accuracy, ~1.5GB)' },
+      { value: 'large-v3-turbo', label: 'large-v3-turbo (Fast large, ~1.6GB)' },
+      { value: 'large-v3', label: 'large-v3 (Max accuracy, ~3.0GB)' }
+    ];
+
+    let hasInitialized = false;
+
+    function updateModelOptions() {
+      if (!deviceChoice || !modelSize) return;
+      const selectedDevice = deviceChoice.value;
+      let currentSelectedValue = modelSize.value;
+
+      if (!hasInitialized) {
+        currentSelectedValue = initialModelSize;
+        hasInitialized = true;
+      }
+
+      modelSize.innerHTML = '';
+      const models = (selectedDevice === 'mps') ? mpsModels : standardModels;
+
+      models.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.value;
+        option.textContent = model.label;
+        if (model.value === currentSelectedValue) {
+          option.selected = true;
+        }
+        modelSize.appendChild(option);
+      });
+    }
+
+    if (deviceChoice) {
+      deviceChoice.addEventListener('change', updateModelOptions);
+      updateModelOptions();
+    }
   </script>
 </body>
 </html>
