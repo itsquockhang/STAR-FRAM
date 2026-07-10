@@ -90,7 +90,8 @@ def transcribe_audio(audio_path: str, model_size: str, device: str) -> dict:
             )
             return result
         except ImportError:
-            logger.warning("mlx_whisper is not installed. Falling back to faster-whisper on mps.")
+            logger.warning("mlx_whisper is not installed. Falling back to faster-whisper on CPU.")
+            device = "cpu"
             
     # Fallback to faster-whisper (for CPU, CUDA, or if mlx-whisper is missing on MPS)
     from faster_whisper import WhisperModel
