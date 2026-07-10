@@ -13,6 +13,9 @@
   <!-- Tailwind CSS v4 Browser Compiler -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
+  <!-- Mammoth.js for client-side .docx parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+
   <style>
     html { font-size: 17px; }
     body { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; }
@@ -144,9 +147,9 @@
               <div class="flex items-center gap-3">
                 <button type="button" id="loadFileBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-1 cursor-pointer">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  Load .txt
+                  Load File (.txt, .docx)
                 </button>
-                <input type="file" id="txtFileInput" accept=".txt" class="hidden">
+                <input type="file" id="txtFileInput" accept=".txt,.docx" class="hidden">
                 <span id="charCount" class="text-xs text-[#5f5f5d] tabular-nums">0 / 100000</span>
               </div>
             </div>
@@ -414,7 +417,7 @@
       btn.innerText = 'Extracting...';
     });
 
-    // ---- File Import (.txt) ----
+    // ---- File Import (.txt, .docx) ----
     const loadFileBtn = document.getElementById('loadFileBtn');
     const txtFileInput = document.getElementById('txtFileInput');
 
@@ -426,12 +429,31 @@
       const file = e.target.files[0];
       if (!file) return;
       
+      const fileName = file.name.toLowerCase();
       const reader = new FileReader();
-      reader.onload = (evt) => {
-        textarea.value = evt.target.result;
-        updateCharCount();
-      };
-      reader.readAsText(file);
+      
+      if (fileName.endsWith('.docx')) {
+        reader.onload = (evt) => {
+          const arrayBuffer = evt.target.result;
+          mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+            .then((result) => {
+              textarea.value = result.value;
+              updateCharCount();
+            })
+            .catch((err) => {
+              console.error(err);
+              alert("Error parsing .docx file.");
+            });
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        // Fallback for .txt
+        reader.onload = (evt) => {
+          textarea.value = evt.target.result;
+          updateCharCount();
+        };
+        reader.readAsText(file);
+      }
     });
 
     // ---- File Export (.txt) ----
