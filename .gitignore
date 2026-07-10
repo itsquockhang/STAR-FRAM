@@ -1,15 +1,17 @@
-.DS_Store
-.env
-.venv
+# Python
 __pycache__/
 *.pyc
+*.pyo
+.venv/
 
-frontend/node_modules/
-frontend/dist/
+# Data (Docker bind mounts)
+data/
 
-vaas_articles/
-ytb_videos/
+# Environment
+.env
 
-backend/ner_chunks.sqlite3
-
-battambang_data/
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

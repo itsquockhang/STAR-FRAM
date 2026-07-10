@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NER Tool | Starfarm</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS v4 Browser Compiler -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <style>
+    html { font-size: 17px; }
+    body { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; }
+
+    .ambient-glow { position: relative; }
+    .ambient-glow::before,
+    .ambient-glow::after {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -1;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .ambient-glow::before {
+      top: -100px;
+      right: -100px;
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .ambient-glow::after {
+      bottom: -150px;
+      left: -150px;
+      background: rgba(234, 179, 8, 0.08);
+    }
+
+    .btn-inset {
+      box-shadow:
+        rgba(255,255,255,0.25) 0 0.5px 0 inset,
+        rgba(0,0,0,0.2) 0 0 0 0.5px inset,
+        rgba(0,0,0,0.05) 0 1px 2px;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-down { animation: slideDown 0.3s ease forwards; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+    /* Entity highlight colors — 8 distinct hues */
+    .ner-tag-0 { background: rgba(16,185,129,0.15); color: #065f46; border-bottom: 2px solid #10b981; }
+    .ner-tag-1 { background: rgba(59,130,246,0.15); color: #1e3a5f; border-bottom: 2px solid #3b82f6; }
+    .ner-tag-2 { background: rgba(234,179,8,0.15);  color: #713f12; border-bottom: 2px solid #eab308; }
+    .ner-tag-3 { background: rgba(239,68,68,0.15);  color: #7f1d1d; border-bottom: 2px solid #ef4444; }
+    .ner-tag-4 { background: rgba(168,85,247,0.15); color: #4c1d95; border-bottom: 2px solid #a855f7; }
+    .ner-tag-5 { background: rgba(236,72,153,0.15); color: #831843; border-bottom: 2px solid #ec4899; }
+    .ner-tag-6 { background: rgba(20,184,166,0.15); color: #134e4a; border-bottom: 2px solid #14b8a6; }
+    .ner-tag-7 { background: rgba(249,115,22,0.15); color: #7c2d12; border-bottom: 2px solid #f97316; }
+
+    .ner-chip-0 { background: #10b981; } .ner-chip-1 { background: #3b82f6; }
+    .ner-chip-2 { background: #eab308; } .ner-chip-3 { background: #ef4444; }
+    .ner-chip-4 { background: #a855f7; } .ner-chip-5 { background: #ec4899; }
+    .ner-chip-6 { background: #14b8a6; } .ner-chip-7 { background: #f97316; }
+
+    .ner-entity {
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-weight: 500;
+      position: relative;
+      cursor: default;
+      transition: filter 0.15s;
+    }
+    .ner-entity:hover { filter: brightness(0.92); }
+    .ner-entity .ner-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+      margin-left: 3px;
+      vertical-align: super;
+    }
+  </style>
+</head>
+<body class="ambient-glow min-h-screen flex flex-col bg-gradient-to-br from-[#fbfaf7] to-[#f4f1e6] text-[#1c1c1c] overflow-x-hidden antialiased">
+
+  <!-- Sticky Header -->
+  <header class="sticky top-0 bg-[#fbfaf7]/85 backdrop-blur-md border-b border-[#eceae4] z-50 py-3.5">
+    <div class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer select-none" onclick="window.location.href='/dashboard'">
+        <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
+        <span class="font-semibold text-xl tracking-tight">Starfarm</span>
+      </div>
+      <div class="flex items-center gap-4 text-sm text-[#1c1c1c]/80">
+        <a href="/dashboard" class="hover:text-[#1c1c1c] transition-colors duration-200">Dashboard</a>
+        <a href="/ner" class="font-semibold text-emerald-600 border-b-2 border-emerald-500 pb-0.5">NER Tool</a>
+        <span>Hello, <strong class="text-[#1c1c1c]">{{ username }}</strong></span>
+        <form action="/logout" method="POST" class="m-0 inline">
+          <button type="submit" class="px-3 py-1.5 text-xs font-medium border border-[#1c1c1c]/40 rounded-md bg-transparent text-[#1c1c1c] cursor-pointer transition-all duration-200 hover:bg-[#1c1c1c] hover:text-white active:scale-95">Sign out</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col mt-8 mb-16">
+
+    {% if error %}
+    <div class="animate-slide-down flex items-center gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+        <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <div class="animate-fade-in grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-8 items-start">
+
+      <!-- Input Card -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <h2 class="text-xl font-semibold tracking-tight mb-1">Named Entity Recognition</h2>
+        <p class="text-xs text-[#5f5f5d] leading-relaxed mb-6">
+          Paste text and configure labels to extract named entities using <strong>GLiNER2</strong>.
+        </p>
+
+        <form action="/ner" method="POST" id="nerForm" class="space-y-5">
+          <!-- Text Input -->
+          <div class="flex flex-col gap-1.5">
+            <div class="flex justify-between items-center">
+              <label for="ner_text" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Input Text</label>
+              <span id="charCount" class="text-xs text-[#5f5f5d] tabular-nums">0 / 2048</span>
+            </div>
+            <textarea
+              id="ner_text"
+              name="text"
+              required
+              maxlength="2048"
+              rows="8"
+              placeholder="Paste your text here..."
+              class="w-full px-3.5 py-2.5 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 resize-y min-h-[120px]"
+            >{{ text if text is defined and text else 'In the Mekong Delta region of Vietnam, rice blast disease caused by the fungus Magnaporthe oryzae has severely affected over 15,000 hectares of Jasmine 85 and IR 50404 rice varieties during the 2024 wet season. The Department of Agriculture in Can Tho province reported that bacterial leaf blight, caused by Xanthomonas oryzae, was also detected in Long An and Dong Thap provinces. Farmers applied Tricyclazole and Propiconazole fungicides to control the outbreak. Dr. Nguyen Van Minh from the Southern Regional Plant Protection Center recommended integrated pest management strategies including the use of resistant varieties such as OM 18 and OM 5451.' }}</textarea>
+            <div id="charWarning" class="hidden text-xs text-amber-600 font-medium flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              <span>Approaching maximum character limit (2048)</span>
+            </div>
+          </div>
+
+          <!-- Labels -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Entity Labels</label>
+            <div id="labelChips" class="flex flex-wrap gap-2 min-h-[36px] p-2 bg-[#fbfaf7] border border-[#eceae4] rounded-lg">
+              <!-- Chips inserted here by JS -->
+            </div>
+
+            <!-- Preset dropdown -->
+            <div class="flex flex-col gap-2">
+              <select id="presetSelect" class="w-full px-3 py-2 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 cursor-pointer">
+                <option value="" disabled selected>Select a preset label...</option>
+                <optgroup label="Agriculture">
+                  <option value="crop">Crop</option>
+                  <option value="disease">Disease</option>
+                  <option value="pest">Pest</option>
+                  <option value="pesticide">Pesticide</option>
+                  <option value="fertilizer">Fertilizer</option>
+                  <option value="variety">Variety</option>
+                  <option value="symptom">Symptom</option>
+                  <option value="pathogen">Pathogen</option>
+                  <option value="season">Season</option>
+                </optgroup>
+                <optgroup label="General">
+                  <option value="person">Person</option>
+                  <option value="organization">Organization</option>
+                  <option value="location">Location</option>
+                  <option value="date">Date</option>
+                  <option value="quantity">Quantity</option>
+                </optgroup>
+              </select>
+
+              <!-- Custom label input -->
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="labelInput"
+                  placeholder="Or type a custom label..."
+                  class="flex-1 px-3 py-2 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+                >
+                <button type="button" id="addLabelBtn" class="px-3.5 py-2 text-sm font-medium border border-emerald-500 text-emerald-600 rounded-lg bg-transparent cursor-pointer transition-all duration-200 hover:bg-emerald-500 hover:text-white active:scale-95">Add</button>
+              </div>
+            </div>
+
+            <!-- Hidden input to submit labels -->
+            <input type="hidden" id="labelsHidden" name="labels" value="{{ labels_str or '' }}">
+          </div>
+
+          <button type="submit" id="submitBtn" class="btn-inset w-full py-2.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+            Extract Entities
+          </button>
+        </form>
+      </div>
+
+      <!-- Results Card -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <h2 class="text-xl font-semibold tracking-tight mb-1">Results</h2>
+        <p class="text-xs text-[#5f5f5d] leading-relaxed mb-6">
+          Extracted entities are highlighted inline below.
+        </p>
+
+        {% if results %}
+        <!-- Highlighted text -->
+        <div class="p-5 bg-white border border-[#eceae4] rounded-xl text-sm leading-7 mb-6 whitespace-pre-wrap break-words">
+          {{ highlighted_html | safe }}
+        </div>
+
+        <!-- Entity Summary Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-[#eceae4]">
+                <th class="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Label</th>
+                <th class="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Entities Found</th>
+                <th class="py-3 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#eceae4]">
+              {% for label, entities in results.items() %}
+              {% set label_idx = loop.index0 % 8 %}
+              <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150">
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full ner-chip-{{ label_idx }}"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider">{{ label }}</span>
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-sm">
+                  {% for entity in entities %}
+                    <span class="ner-entity ner-tag-{{ label_idx }} mr-1.5 mb-1 inline-block">{{ entity }}</span>
+                  {% endfor %}
+                  {% if not entities %}
+                    <span class="text-xs text-[#5f5f5d] italic">None found</span>
+                  {% endif %}
+                </td>
+                <td class="py-3 px-4 text-sm text-right font-medium tabular-nums">{{ entities | length }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-16 text-center">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-[#eceae4] mb-4">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <line x1="10" y1="9" x2="8" y2="9"></line>
+          </svg>
+          <p class="text-sm text-[#5f5f5d]">No results yet. Enter text and labels, then click <strong>Extract Entities</strong>.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center py-6 border-t border-[#eceae4] text-xs text-[#5f5f5d]">
+    <p>&copy; 2026 Starfarm. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // ---- Label Chip Management ----
+    const chipColors = [
+      'bg-emerald-500', 'bg-blue-500', 'bg-yellow-500', 'bg-red-500',
+      'bg-purple-500', 'bg-pink-500', 'bg-teal-500', 'bg-orange-500'
+    ];
+    let labels = [];
+
+    const chipContainer = document.getElementById('labelChips');
+    const labelInput = document.getElementById('labelInput');
+    const addLabelBtn = document.getElementById('addLabelBtn');
+    const labelsHidden = document.getElementById('labelsHidden');
+
+    // Initialize from server-side value
+    const initialLabels = labelsHidden.value.trim();
+    if (initialLabels) {
+      initialLabels.split(',').forEach(l => { if (l.trim()) addLabel(l.trim()); });
+    }
+
+    function addLabel(name) {
+      name = name.trim().toLowerCase();
+      if (!name || labels.includes(name)) return;
+      labels.push(name);
+      renderChips();
+      syncHidden();
+    }
+
+    function removeLabel(name) {
+      labels = labels.filter(l => l !== name);
+      renderChips();
+      syncHidden();
+    }
+
+    function renderChips() {
+      chipContainer.innerHTML = '';
+      labels.forEach((label, i) => {
+        const chip = document.createElement('span');
+        chip.className = `inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-white rounded-full cursor-default ${chipColors[i % chipColors.length]} transition-all duration-150 hover:opacity-80`;
+        chip.innerHTML = `${escapeHtml(label)} <button type="button" class="ml-0.5 text-white/80 hover:text-white font-bold text-sm leading-none" data-label="${escapeHtml(label)}">&times;</button>`;
+        chip.querySelector('button').addEventListener('click', () => removeLabel(label));
+        chipContainer.appendChild(chip);
+      });
+    }
+
+    function syncHidden() {
+      labelsHidden.value = labels.join(',');
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Preset dropdown
+    const presetSelect = document.getElementById('presetSelect');
+    presetSelect.addEventListener('change', () => {
+      if (presetSelect.value) {
+        addLabel(presetSelect.value);
+        presetSelect.selectedIndex = 0;
+      }
+    });
+
+    // Custom label input
+    addLabelBtn.addEventListener('click', () => {
+      addLabel(labelInput.value);
+      labelInput.value = '';
+      labelInput.focus();
+    });
+
+    labelInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addLabel(labelInput.value);
+        labelInput.value = '';
+      }
+    });
+
+    // ---- Character Counter ----
+    const textarea = document.getElementById('ner_text');
+    const charCount = document.getElementById('charCount');
+    const charWarning = document.getElementById('charWarning');
+
+    function updateCharCount() {
+      const len = textarea.value.length;
+      charCount.textContent = `${len} / 2048`;
+      if (len >= 1800) {
+        charCount.classList.add('text-amber-600', 'font-semibold');
+        charCount.classList.remove('text-[#5f5f5d]');
+        charWarning.classList.remove('hidden');
+      } else {
+        charCount.classList.remove('text-amber-600', 'font-semibold');
+        charCount.classList.add('text-[#5f5f5d]');
+        charWarning.classList.add('hidden');
+      }
+      if (len >= 2048) {
+        charCount.classList.add('text-red-600');
+        charCount.classList.remove('text-amber-600');
+      } else {
+        charCount.classList.remove('text-red-600');
+      }
+    }
+    textarea.addEventListener('input', updateCharCount);
+    updateCharCount();
+
+    // ---- Form Submission ----
+    const nerForm = document.getElementById('nerForm');
+    nerForm.addEventListener('submit', (e) => {
+      if (labels.length === 0) {
+        e.preventDefault();
+        alert('Please add at least one entity label before extracting.');
+        return;
+      }
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerText = 'Extracting...';
+    });
+  </script>
+</body>
+</html>

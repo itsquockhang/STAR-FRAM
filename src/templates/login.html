@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Starfarm</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS v4 Browser Compiler -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <style>
+    html { font-size: 17px; }
+    body { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; }
+
+    /* Ambient background glows */
+    .ambient-glow { position: relative; }
+    .ambient-glow::before,
+    .ambient-glow::after {
+      content: "";
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      border-radius: 50%;
+      filter: blur(100px);
+      z-index: -1;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .ambient-glow::before {
+      top: -100px;
+      right: -100px;
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .ambient-glow::after {
+      bottom: -150px;
+      left: -150px;
+      background: rgba(234, 179, 8, 0.08);
+    }
+
+    /* Signature dark button inset shadow */
+    .btn-inset {
+      box-shadow:
+        rgba(255,255,255,0.25) 0 0.5px 0 inset,
+        rgba(0,0,0,0.2) 0 0 0 0.5px inset,
+        rgba(0,0,0,0.05) 0 1px 2px;
+    }
+
+    /* Slide-down animation for alerts */
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-down { animation: slideDown 0.3s ease forwards; }
+
+    /* Fade-in animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+  </style>
+</head>
+<body class="ambient-glow min-h-screen flex flex-col bg-gradient-to-br from-[#fbfaf7] to-[#f4f1e6] text-[#1c1c1c] overflow-x-hidden antialiased">
+
+  <div class="flex-grow flex items-center justify-center px-6 py-12">
+    <div class="animate-fade-in max-w-[440px] w-full bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-8 lg:p-10 shadow-[0_4px_24px_rgba(28,28,28,0.03)] relative overflow-hidden">
+      <!-- Top gradient strip -->
+      <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-amber-400"></div>
+
+      <div class="text-center mb-8">
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
+          <span class="font-semibold text-2xl tracking-tight">Starfarm</span>
+        </div>
+        <p class="text-[#5f5f5d] text-sm tracking-wide">Sign in to access the agricultural console</p>
+      </div>
+
+      {% if error %}
+      <div class="animate-slide-down flex items-center gap-3 p-3.5 mb-6 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form action="/login" method="POST" class="space-y-5">
+        <div class="flex flex-col gap-1.5">
+          <label for="username" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            autocomplete="username"
+            required
+            placeholder="Enter username"
+            minlength="3"
+            class="w-full px-3.5 py-2.5 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+          >
+        </div>
+
+        <div class="flex flex-col gap-1.5">
+          <label for="password" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            required
+            placeholder="Enter password"
+            class="w-full px-3.5 py-2.5 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+          >
+        </div>
+
+        <button type="submit" class="btn-inset w-full py-2.5 mt-2 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+          Sign in
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="text-center py-6 border-t border-[#eceae4] text-xs text-[#5f5f5d]">
+    <p>&copy; 2026 Starfarm. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', () => {
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.innerText = 'Processing...'; }
+      });
+    }
+  </script>
+</body>
+</html>

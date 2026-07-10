@@ -1,0 +1,51 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_db
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./data/qdrant:/qdrant/storage:z
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongodb:/data/db:z
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data:z
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: starfarm_app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+      - mongodb
+      - redis
+    environment:
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+      - QDRANT_GRPC_PORT=6334
+      - QDRANT_PREFER_GRPC=false
+      - MONGO_URI=mongodb://mongodb:27017/starfarm
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=adminpassword
+    restart: on-failure

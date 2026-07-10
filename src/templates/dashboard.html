@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Starfarm</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS v4 Browser Compiler -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <style>
+    html { font-size: 17px; }
+    body { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; }
+
+    .ambient-glow { position: relative; }
+    .ambient-glow::before,
+    .ambient-glow::after {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -1;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .ambient-glow::before {
+      top: -100px;
+      right: -100px;
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .ambient-glow::after {
+      bottom: -150px;
+      left: -150px;
+      background: rgba(234, 179, 8, 0.08);
+    }
+
+    .btn-inset {
+      box-shadow:
+        rgba(255,255,255,0.25) 0 0.5px 0 inset,
+        rgba(0,0,0,0.2) 0 0 0 0.5px inset,
+        rgba(0,0,0,0.05) 0 1px 2px;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-down { animation: slideDown 0.3s ease forwards; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+    /* App card hover lift */
+    .app-card {
+      transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s;
+    }
+    .app-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(28,28,28,0.08);
+    }
+  </style>
+</head>
+<body class="ambient-glow min-h-screen flex flex-col bg-gradient-to-br from-[#fbfaf7] to-[#f4f1e6] text-[#1c1c1c] overflow-x-hidden antialiased">
+
+  <!-- Sticky Header -->
+  <header class="sticky top-0 bg-[#fbfaf7]/85 backdrop-blur-md border-b border-[#eceae4] z-50 py-3.5">
+    <div class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer select-none" onclick="window.location.href='/dashboard'">
+        <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
+        <span class="font-semibold text-xl tracking-tight">Starfarm</span>
+      </div>
+      <div class="flex items-center gap-4 text-sm text-[#1c1c1c]/80">
+        {% if is_admin %}
+          <!-- Admin View Toggle -->
+          {% if view == 'admin' %}
+            <a href="/dashboard?view=apps" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-emerald-500 text-emerald-600 rounded-md bg-transparent cursor-pointer transition-all duration-200 hover:bg-emerald-500 hover:text-white active:scale-95">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+              Apps
+            </a>
+          {% else %}
+            <a href="/dashboard?view=admin" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[#1c1c1c]/40 text-[#1c1c1c] rounded-md bg-transparent cursor-pointer transition-all duration-200 hover:bg-[#1c1c1c] hover:text-white active:scale-95">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              Admin Panel
+            </a>
+          {% endif %}
+        {% endif %}
+
+        <span>Hello, <strong class="text-[#1c1c1c]">{{ username }}</strong></span>
+        {% if is_admin %}
+          <span class="bg-[#1c1c1c] text-white text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">Admin</span>
+        {% else %}
+          <span class="border border-[#eceae4] text-[#1c1c1c]/70 text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">User</span>
+        {% endif %}
+        <form action="/logout" method="POST" class="m-0 inline">
+          <button type="submit" class="px-3 py-1.5 text-xs font-medium border border-[#1c1c1c]/40 rounded-md bg-transparent text-[#1c1c1c] cursor-pointer transition-all duration-200 hover:bg-[#1c1c1c] hover:text-white active:scale-95">Sign out</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col">
+
+    {% if success %}
+    <div class="animate-slide-down flex items-center gap-3 p-4 mt-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm" role="alert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+      <span>{{ success }}</span>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="animate-slide-down flex items-center gap-3 p-4 mt-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- ============================================================ -->
+    <!-- ADMIN VIEW: User Management Panel                            -->
+    <!-- ============================================================ -->
+    {% if is_admin and view == 'admin' %}
+    <div class="animate-fade-in grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 mt-8 mb-16 items-start">
+
+      <!-- Create User Card -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <h2 class="text-xl font-semibold tracking-tight mb-1">Create User</h2>
+        <p class="text-xs text-[#5f5f5d] leading-relaxed mb-6">
+          Create a new account for staff. Public registration is currently disabled.
+        </p>
+
+        <form action="/create-user" method="POST" class="space-y-4">
+          <div class="flex flex-col gap-1">
+            <label for="new_username" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Username</label>
+            <input
+              type="text"
+              id="new_username"
+              name="username"
+              required
+              placeholder="Enter username"
+              minlength="3"
+              autocomplete="off"
+              class="w-full px-3.5 py-2.5 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+            >
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label for="new_password" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Password</label>
+            <input
+              type="password"
+              id="new_password"
+              name="password"
+              required
+              placeholder="Enter password"
+              minlength="6"
+              autocomplete="new-password"
+              class="w-full px-3.5 py-2.5 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+            >
+          </div>
+
+          <div class="flex items-center gap-2.5 py-2">
+            <input type="checkbox" id="is_admin" name="is_admin" value="true" class="w-4 h-4 cursor-pointer accent-emerald-500 rounded">
+            <label for="is_admin" class="text-xs font-medium text-[#1c1c1c]/80 cursor-pointer select-none">Grant administrator privileges (Admin)</label>
+          </div>
+
+          <button type="submit" class="btn-inset w-full py-2.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+            Create account
+          </button>
+        </form>
+      </div>
+
+      <!-- User List Card -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <h2 class="text-xl font-semibold tracking-tight mb-1">User List</h2>
+        <p class="text-xs text-[#5f5f5d] leading-relaxed mb-6">
+          All users registered in the system database.
+        </p>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-[#eceae4]">
+                <th class="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Username</th>
+                <th class="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Role</th>
+                <th class="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#eceae4]">
+              {% for u in users %}
+              <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150">
+                <td class="py-3.5 px-4 text-sm font-medium">{{ u.username }}</td>
+                <td class="py-3.5 px-4">
+                  {% if u.is_admin %}
+                    <span class="inline-block bg-[#1c1c1c] text-white text-[9px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">Admin</span>
+                  {% else %}
+                    <span class="inline-block border border-[#eceae4] text-[#1c1c1c]/70 text-[9px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">User</span>
+                  {% endif %}
+                </td>
+                <td class="py-3.5 px-4 text-right">
+                  {% if u.username != username %}
+                    <form action="/delete-user/{{ u.username }}" method="POST" class="delete-user-form m-0 inline-block" data-username="{{ u.username }}">
+                      <button type="submit" class="px-2.5 py-1 text-xs font-medium border border-red-300 text-red-600 rounded cursor-pointer bg-transparent transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95">Delete</button>
+                    </form>
+                  {% else %}
+                    <span class="text-xs text-[#5f5f5d] italic">Current User</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- APPS VIEW: App Grid (for standard users OR admin in apps mode) -->
+    <!-- ============================================================ -->
+    {% else %}
+    <div class="animate-fade-in mt-8 mb-16">
+      <div class="mb-8">
+        <h1 class="text-2xl font-semibold tracking-tight mb-1">Apps</h1>
+        <p class="text-sm text-[#5f5f5d]">Select a tool to get started with your agricultural data analysis.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- NER Tool Card -->
+        <a href="/ner" class="app-card block bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.03)] no-underline text-inherit cursor-pointer">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <line x1="10" y1="9" x2="8" y2="9"></line>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-base font-semibold tracking-tight">NER Tool</h3>
+              <p class="text-[10px] uppercase font-bold tracking-widest text-emerald-600">Named Entity Recognition</p>
+            </div>
+          </div>
+          <p class="text-xs text-[#5f5f5d] leading-relaxed">
+            Extract named entities from text using the GLiNER2 model. Configure custom labels like person, location, crop, disease, and more.
+          </p>
+          <div class="mt-4 flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+            <span>Open tool</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </div>
+        </a>
+
+        <!-- Placeholder: More tools coming soon -->
+        <div class="app-card block bg-[#fcfbf9]/60 border border-dashed border-[#eceae4] rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[180px]">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-[#eceae4] mb-3">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+          <p class="text-xs text-[#5f5f5d]">More tools coming soon</p>
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
+  </main>
+
+  <footer class="text-center py-6 border-t border-[#eceae4] text-xs text-[#5f5f5d]">
+    <p>&copy; 2026 Starfarm. All rights reserved.</p>
+  </footer>
+
+  <script>
+    // Prevent double form submissions
+    const createForm = document.querySelector('form[action="/create-user"]');
+    if (createForm) {
+      createForm.addEventListener('submit', () => {
+        const btn = createForm.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.innerText = 'Creating...'; }
+      });
+    }
+
+    // Safe delete user confirmation
+    document.querySelectorAll('.delete-user-form').forEach(form => {
+      form.addEventListener('submit', (e) => {
+        const username = form.getAttribute('data-username');
+        if (!confirm(`Are you sure you want to delete user "${username}"?`)) {
+          e.preventDefault();
+        } else {
+          const btn = form.querySelector('button[type="submit"]');
+          if (btn) { btn.disabled = true; btn.innerText = 'Deleting...'; }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
