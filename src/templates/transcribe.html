@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Transcriber | Starfarm</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS v4 Browser Compiler -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+  <style>
+    html { font-size: 17px; }
+    body { font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif; }
+
+    .ambient-glow { position: relative; }
+    .ambient-glow::before,
+    .ambient-glow::after {
+      content: "";
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(120px);
+      z-index: -1;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .ambient-glow::before {
+      top: -100px;
+      right: -100px;
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .ambient-glow::after {
+      bottom: -150px;
+      left: -150px;
+      background: rgba(234, 179, 8, 0.08);
+    }
+
+    .btn-inset {
+      box-shadow:
+        rgba(255,255,255,0.25) 0 0.5px 0 inset,
+        rgba(0,0,0,0.2) 0 0 0 0.5px inset,
+        rgba(0,0,0,0.05) 0 1px 2px;
+    }
+
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-slide-down { animation: slideDown 0.3s ease forwards; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+  </style>
+</head>
+<body class="ambient-glow min-h-screen flex flex-col bg-gradient-to-br from-[#fbfaf7] to-[#f4f1e6] text-[#1c1c1c] overflow-x-hidden antialiased">
+
+  <!-- Sticky Header -->
+  <header class="sticky top-0 bg-[#fbfaf7]/85 backdrop-blur-md border-b border-[#eceae4] z-50 py-3.5">
+    <div class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer select-none" onclick="window.location.href='/dashboard'">
+        <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
+        <span class="font-semibold text-xl tracking-tight">Starfarm</span>
+      </div>
+      <div class="flex items-center gap-4 text-sm text-[#1c1c1c]/80">
+        <a href="/dashboard" class="text-xs font-semibold hover:text-[#1c1c1c] transition-colors">Back to Dashboard</a>
+        <span>Hello, <strong class="text-[#1c1c1c]">{{ username }}</strong></span>
+        {% if is_admin %}
+          <span class="bg-[#1c1c1c] text-white text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">Admin</span>
+        {% else %}
+          <span class="border border-[#eceae4] text-[#1c1c1c]/70 text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">User</span>
+        {% endif %}
+        <form action="/logout" method="POST" class="m-0 inline">
+          <button type="submit" class="px-3 py-1.5 text-xs font-medium border border-[#1c1c1c]/40 rounded-md bg-transparent text-[#1c1c1c] cursor-pointer transition-all duration-200 hover:bg-[#1c1c1c] hover:text-white active:scale-95">Sign out</button>
+        </form>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col mb-16">
+    <!-- Breadcrumb & Title -->
+    <div class="mt-8 mb-6">
+      <div class="flex items-center gap-2 text-xs text-[#5f5f5d] mb-1.5">
+        <a href="/dashboard" class="hover:underline">Dashboard</a>
+        <span>&middot;</span>
+        <span class="text-[#1c1c1c] font-medium">YouTube Transcriber</span>
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight mb-2">YouTube Caption Extractor</h1>
+      <p class="text-sm text-[#5f5f5d] max-w-2xl leading-relaxed">
+        Download audio from YouTube and generate accurate transcripts using GPU-accelerated OpenAI Whisper or Apple Silicon MLX-Whisper.
+      </p>
+    </div>
+
+    <!-- Feedback alerts -->
+    {% if success %}
+    <div class="animate-slide-down flex items-center gap-3 p-4 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm" role="alert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+      <span>{{ success }}</span>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="animate-slide-down flex items-center gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span>{{ error }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Split Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-8 items-start">
+      
+      <!-- Input Panel Card -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <h2 class="text-xl font-semibold tracking-tight mb-4">Transcription Settings</h2>
+        
+        <form action="/transcribe" method="POST" id="transcribeForm" class="space-y-5">
+          <!-- Youtube URL -->
+          <div class="flex flex-col gap-1.5">
+            <label for="ytUrl" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">YouTube Video URL</label>
+            <input
+              type="url"
+              id="ytUrl"
+              name="url"
+              required
+              placeholder="https://www.youtube.com/watch?v=..."
+              value="{{ url or 'https://www.youtube.com/watch?v=OEEQDry5T40' }}"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
+            >
+          </div>
+
+          <!-- Whisper Model size -->
+          <div class="flex flex-col gap-1.5">
+            <label for="modelSize" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Whisper Model size</label>
+            <select
+              id="modelSize"
+              name="model_size"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-[#eceae4] rounded-lg cursor-pointer transition-all duration-200 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
+            >
+              <option value="tiny" {% if model_size == 'tiny' %}selected{% endif %}>tiny (Fastest, low resource)</option>
+              <option value="base" {% if model_size == 'base' or not model_size %}selected{% endif %}>base (Balanced speed/accuracy - Recommended)</option>
+              <option value="small" {% if model_size == 'small' %}selected{% endif %}>small (Better multilingual accuracy)</option>
+              <option value="medium" {% if model_size == 'medium' %}selected{% endif %}>medium (High accuracy, slower)</option>
+              <option value="large-v3-turbo" {% if model_size == 'large-v3-turbo' %}selected{% endif %}>large-v3-turbo (State-of-the-art fast large model)</option>
+              <option value="large-v3" {% if model_size == 'large-v3' %}selected{% endif %}>large-v3 (Maximum accuracy, heaviest)</option>
+            </select>
+          </div>
+
+          <!-- Execution Device -->
+          <div class="flex flex-col gap-1.5">
+            <label for="deviceChoice" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Device / Accelerator</label>
+            <select
+              id="deviceChoice"
+              name="device"
+              class="w-full px-3.5 py-2.5 text-sm bg-white border border-[#eceae4] rounded-lg cursor-pointer transition-all duration-200 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
+            >
+              {% for d in devices %}
+                <option value="{{ d }}" {% if device == d or (not device and loop.first) %}selected{% endif %}>
+                  {% if d == 'mps' %}
+                    Apple Silicon GPU (MLX Optimized)
+                  {% elif d == 'cuda' %}
+                    Nvidia GPU (CUDA Accelerated)
+                  {% else %}
+                    CPU Core (Standard fallback)
+                  {% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" id="submitBtn" class="btn-inset w-full py-2.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
+            Extract Caption
+          </button>
+        </form>
+      </div>
+
+      <!-- Results Card -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)] min-h-[300px] flex flex-col">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold tracking-tight">Transcript Output</h2>
+          {% if transcript_text %}
+          <div class="flex items-center gap-3">
+            <button type="button" id="copyBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Text
+            </button>
+            <button type="button" id="downloadBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download .txt
+            </button>
+          </div>
+          {% endif %}
+        </div>
+
+        <div id="resultsContainer" class="flex-grow flex flex-col">
+          {% if transcript_text %}
+            <!-- Video Title Info -->
+            <div class="mb-4 p-3.5 bg-white border border-[#eceae4] rounded-xl text-xs flex flex-col gap-1">
+              <div><span class="font-semibold text-[#5f5f5d]">Source Video:</span> <span class="font-medium text-[#1c1c1c]">{{ video_title }}</span></div>
+              <div><span class="font-semibold text-[#5f5f5d]">Model Used:</span> <span class="font-medium capitalize text-[#1c1c1c]">{{ model_size }}</span></div>
+              {% if device %}
+              <div><span class="font-semibold text-[#5f5f5d]">Device Used:</span> <span class="font-medium uppercase text-[#1c1c1c]">{{ device }}</span></div>
+              {% endif %}
+            </div>
+
+            <!-- Scrollable Output Text Box -->
+            <div id="transcriptBox" class="p-5 flex-grow bg-white border border-[#eceae4] rounded-xl text-sm leading-7 mb-2 whitespace-pre-wrap break-words max-h-[500px] overflow-y-auto selection:bg-emerald-500/20">
+              {{ transcript_text }}
+            </div>
+          {% else %}
+            <!-- No results placeholder -->
+            <div class="flex-grow flex flex-col items-center justify-center py-20 text-center">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-[#eceae4] mb-4">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+              <p class="text-sm text-[#5f5f5d]">No transcriptions yet. Paste a YouTube link and click <strong>Extract Caption</strong>.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="text-center py-6 border-t border-[#eceae4] text-xs text-[#5f5f5d]">
+    <p>&copy; 2026 Starfarm. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const transcribeForm = document.getElementById('transcribeForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const ytUrlInput = document.getElementById('ytUrl');
+
+    transcribeForm.addEventListener('submit', (e) => {
+      const urlValue = ytUrlInput.value.trim();
+      if (!urlValue) {
+        e.preventDefault();
+        alert('Please enter a YouTube video URL.');
+        return;
+      }
+
+      // Update button to loading state
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <span class="flex items-center justify-center gap-2">
+          <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Transcribing...
+        </span>
+      `;
+
+      // Update Results container to loading state
+      if (resultsContainer) {
+        resultsContainer.innerHTML = `
+          <div class="flex-grow flex flex-col items-center justify-center py-24 text-center animate-fade-in">
+            <svg class="animate-spin h-10 w-10 text-emerald-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-sm font-semibold text-[#1c1c1c]/80">Extracting YouTube captions...</p>
+            <p class="text-xs text-[#5f5f5d] mt-1.5 max-w-[320px] leading-relaxed">
+              Downloading audio and transcribing using Whisper. This may take 1-2 minutes depending on the video length.
+            </p>
+          </div>
+        `;
+      }
+    });
+
+    // Copy to Clipboard Action
+    const copyBtn = document.getElementById('copyBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const transcriptBox = document.getElementById('transcriptBox');
+        if (transcriptBox) {
+          navigator.clipboard.writeText(transcriptBox.innerText)
+            .then(() => {
+              const originalHTML = copyBtn.innerHTML;
+              copyBtn.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Copied!
+              `;
+              setTimeout(() => {
+                copyBtn.innerHTML = originalHTML;
+              }, 2000);
+            })
+            .catch(err => {
+              console.error('Could not copy transcript: ', err);
+            });
+        }
+      });
+    }
+
+    // Export/Download Report Action
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        const transcriptBox = document.getElementById('transcriptBox');
+        if (transcriptBox) {
+          const textContent = transcriptBox.innerText;
+          const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          
+          // Clean filename
+          const sourceTitle = "{{ video_title | safe }}".replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 50);
+          a.href = url;
+          a.download = `starfarm_transcript_${sourceTitle || 'youtube'}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

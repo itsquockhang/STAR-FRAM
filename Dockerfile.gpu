@@ -1,8 +1,8 @@
 # Use official GPU-optimized PyTorch image as base
 FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime
 
-# Install git for pulling the GLiNER2 git repository
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+# Install git and ffmpeg for audio extraction and transcription
+RUN apt-get update && apt-get install -y --no-install-recommends git ffmpeg && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -22,7 +22,10 @@ RUN pip install --no-cache-dir \
     "redis>=8.0.1" \
     "uvicorn[standard]>=0.51.0" \
     "tqdm" \
-    "mammoth"
+    "mammoth" \
+    "yt-dlp" \
+    "openai-whisper" \
+    "soundfile"
 
 # Copy the application code
 COPY src/ ./src

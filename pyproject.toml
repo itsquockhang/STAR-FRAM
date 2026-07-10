@@ -16,4 +16,9 @@ dependencies = [
     "qdrant-client>=1.18.0",
     "redis>=8.0.1",
     "uvicorn[standard]>=0.51.0",
+    "yt-dlp",
+    "openai-whisper",
+    "mlx-whisper; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "mlx; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "soundfile",
 ]

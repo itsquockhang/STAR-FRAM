@@ -11,7 +11,7 @@ WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1
 
 # Install git since we have a git dependency in pyproject.toml
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends git ffmpeg && rm -rf /var/lib/apt/lists/*
 
 # Copy pyproject.toml to install dependencies
 COPY pyproject.toml ./
@@ -28,6 +28,9 @@ FROM python:3.12-slim
 
 # Install uv binary in the final stage
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Install ffmpeg for runtime audio processing
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 

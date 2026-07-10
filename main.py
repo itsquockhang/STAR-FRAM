@@ -15,6 +15,7 @@ logger = logging.getLogger("starfarm.main")
 from src.database import init_db, close_db, get_db
 from src.auth import hash_password, verify_password, create_session, get_session, delete_session
 from src.ner import load_model as load_ner_model, extract_entities
+from src.transcribe import get_available_devices, download_audio_from_youtube, transcribe_audio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -402,3 +403,98 @@ async def ner_extract(
         context["error"] = "An error occurred during entity extraction. Please try again."
 
     return templates.TemplateResponse(request=request, name="ner.html", context=context)
+
+
+# ── Transcribe Routes ────────────────────────────────────────────────
+
+@app.get("/transcribe", response_class=HTMLResponse)
+async def transcribe_page(
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session:
+        response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        response.delete_cookie(key="session_id")
+        return response
+
+    devices = get_available_devices()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="transcribe.html",
+        context={
+            "username": session["username"],
+            "is_admin": session["is_admin"],
+            "devices": devices,
+        }
+    )
+
+
+@app.post("/transcribe", response_class=HTMLResponse)
+async def transcribe_post(
+    request: Request,
+    url: str = Form(...),
+    model_size: str = Form("base"),
+    device: str = Form(None),
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session:
+        response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        response.delete_cookie(key="session_id")
+        return response
+
+    devices = get_available_devices()
+    if not device or device not in devices:
+        device = devices[0]
+
+    context = {
+        "username": session["username"],
+        "is_admin": session["is_admin"],
+        "devices": devices,
+        "url": url,
+        "model_size": model_size,
+        "device": device,
+    }
+
+    # Validate YouTube URL
+    youtube_regex = (
+        r'(https?://)?(www\.)?'
+        '(youtube|youtu|youtube-nocookie)\.(com|be)/'
+        '(watch\?v=|embed/|v/|.+\?v=)?([^&=%\?]{11})'
+    )
+    if not re.match(youtube_regex, url):
+        context["error"] = "Invalid YouTube URL format. Please provide a valid YouTube link."
+        return templates.TemplateResponse(request=request, name="transcribe.html", context=context)
+
+    # Temporary directory for audio inside the workspace
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "audio")
+    audio_path = None
+    try:
+        # 1. Download audio from YouTube
+        audio_path, video_title = download_audio_from_youtube(url, output_dir)
+        context["video_title"] = video_title
+
+        # 2. Transcribe using Whisper
+        result = transcribe_audio(audio_path, model_size, device)
+        context["transcript_text"] = result.get("text", "")
+        context["success"] = "Transcription completed successfully!"
+        logger.info(f"YouTube transcription by '{session['username']}' completed successfully: {video_title}")
+    except Exception as e:
+        logger.error(f"YouTube transcription failed: {e}")
+        context["error"] = f"An error occurred during transcription: {str(e)}"
+    finally:
+        # Clean up temporary audio file to prevent leaks
+        if audio_path and os.path.exists(audio_path):
+            try:
+                os.remove(audio_path)
+                logger.info(f"Cleaned up temporary audio file: {audio_path}")
+            except Exception as cleanup_err:
+                logger.warning(f"Failed to delete temporary audio file {audio_path}: {cleanup_err}")
+
+    return templates.TemplateResponse(request=request, name="transcribe.html", context=context)
