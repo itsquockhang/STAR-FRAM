@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir \
     "tqdm" \
     "mammoth" \
     "yt-dlp" \
-    "openai-whisper" \
+    "faster-whisper" \
     "soundfile"
 
 # Copy the application code

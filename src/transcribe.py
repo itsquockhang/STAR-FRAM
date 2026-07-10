@@ -88,11 +88,21 @@ def transcribe_audio(audio_path: str, model_size: str, device: str) -> dict:
             )
             return result
         except ImportError:
-            logger.warning("mlx_whisper is not installed. Falling back to openai-whisper on mps.")
+            logger.warning("mlx_whisper is not installed. Falling back to faster-whisper on mps.")
             
-    # Fallback to standard openai-whisper (for CPU, CUDA, or if mlx-whisper is missing on MPS)
-    import whisper
-    logger.info(f"Using openai-whisper with device: {device}")
-    model = whisper.load_model(model_size, device=device)
-    result = model.transcribe(audio_path)
-    return result
+    # Fallback to faster-whisper (for CPU, CUDA, or if mlx-whisper is missing on MPS)
+    from faster_whisper import WhisperModel
+    
+    # Select optimal compute type
+    if device == "cuda":
+        compute_type = "float16"
+    else:
+        compute_type = "int8"  # int8 is extremely fast on CPU
+        
+    logger.info(f"Using faster-whisper with device: {device} (compute_type: {compute_type})")
+    model = WhisperModel(model_size, device=device, compute_type=compute_type)
+    segments, info = model.transcribe(audio_path, beam_size=5)
+    
+    # Reconstruct text by joining segments
+    text = "".join([segment.text for segment in segments])
+    return {"text": text}
