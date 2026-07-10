@@ -51,17 +51,26 @@ def _extract_entities_long(
             break
         start_idx += step
 
+    from tqdm import tqdm
+
     chunk_texts = [c["text"] for c in chunks]
-    batch_results = self.batch_extract_entities(
-        chunk_texts,
-        labels,
-        batch_size=8,
-        threshold=threshold,
-        format_results=True,
-        include_confidence=include_confidence,
-        include_spans=include_spans,
-        **kwargs
-    )
+    batch_size = kwargs.pop("batch_size", 8)
+    
+    batch_results = []
+    # Process chunks in batches with tqdm progress bar
+    for i in tqdm(range(0, len(chunk_texts), batch_size), desc="Extracting NER chunks"):
+        batch = chunk_texts[i:i + batch_size]
+        batch_res = self.batch_extract_entities(
+            batch,
+            labels,
+            batch_size=batch_size,
+            threshold=threshold,
+            format_results=True,
+            include_confidence=include_confidence,
+            include_spans=include_spans,
+            **kwargs
+        )
+        batch_results.extend(batch_res)
 
     all_entities = {}
     for chunk, res in zip(chunks, batch_results):
