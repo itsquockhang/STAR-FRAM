@@ -75,9 +75,16 @@
   <!-- Sticky Header -->
   <header class="sticky top-0 bg-[#fbfaf7]/85 backdrop-blur-md border-b border-[#eceae4] z-50 py-3.5">
     <div class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex justify-between items-center">
-      <div class="flex items-center gap-3 cursor-pointer select-none" onclick="window.location.href='/dashboard'">
-        <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
-        <span class="font-semibold text-xl tracking-tight">Starfarm</span>
+      <div class="flex items-center gap-6">
+        <div class="flex items-center gap-3 cursor-pointer select-none" onclick="window.location.href='/dashboard'">
+          <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
+          <span class="font-semibold text-xl tracking-tight">Starfarm</span>
+        </div>
+        <nav class="hidden md:flex items-center gap-5 text-xs font-semibold uppercase tracking-wider">
+          <a href="/dashboard" class="transition-colors duration-200 text-emerald-600 border-b-2 border-emerald-500 pb-0.5">Dashboard</a>
+          <a href="/ner" class="transition-colors duration-200 text-[#5f5f5d] hover:text-[#1c1c1c]">Entity Extractor</a>
+          <a href="/transcribe" class="transition-colors duration-200 text-[#5f5f5d] hover:text-[#1c1c1c]">YouTube Transcriber</a>
+        </nav>
       </div>
       <div class="flex items-center gap-4 text-sm text-[#1c1c1c]/80">
         {% if is_admin %}
