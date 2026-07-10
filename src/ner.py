@@ -36,13 +36,13 @@ def load_model():
     
     if device_type == "cuda":
         quantize = True
-        compile_model = True
+        # compile_model = True
     elif device_type == "mps":
         quantize = True
-        compile_model = False  # torch.compile fails on MPS for GLiNER2 due to Metal shading compiler bugs
+        # compile_model = False  # torch.compile fails on MPS for GLiNER2 due to Metal shading compiler bugs
     else:  # cpu
         quantize = False  # CPU fp16 is slow or unsupported for many ops
-        compile_model = True  # compile works on CPU
+        # compile_model = True  # compile works on CPU
         
     logger.info(f"Loading GLiNER2 model 'fastino/gliner2-multi-v1' on {device_type} (quantize={quantize}, compile={compile_model})...")
     
