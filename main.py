@@ -274,7 +274,7 @@ async def delete_user(
 
 # ── NER Routes ──────────────────────────────────────────────────────
 
-MAX_NER_CHARS = 2048
+MAX_NER_CHARS = 100000
 
 # Color classes matching ner.html CSS
 NER_TAG_CLASSES = [
@@ -283,17 +283,23 @@ NER_TAG_CLASSES = [
 ]
 
 def build_highlighted_html(text: str, entities_by_label: dict, labels: list[str]) -> str:
-    """Build HTML string with inline entity highlights."""
-    # Build a list of (start, end, entity_text, label, color_idx) spans
+    """Build HTML string with inline entity highlights using direct spans."""
     spans = []
     label_index = {label: i for i, label in enumerate(labels)}
     for label, entities in entities_by_label.items():
         idx = label_index.get(label, 0) % 8
-        for entity_text in entities:
-            # Find all occurrences of this entity in the text (case-insensitive)
-            pattern = re.compile(re.escape(entity_text), re.IGNORECASE)
-            for m in pattern.finditer(text):
-                spans.append((m.start(), m.end(), m.group(), label, idx))
+        for entity in entities:
+            if isinstance(entity, dict):
+                start = entity.get("start")
+                end = entity.get("end")
+                matched = entity.get("text")
+                if start is not None and end is not None and matched is not None:
+                    spans.append((start, end, matched, label, idx))
+            elif isinstance(entity, str):
+                # Fallback in case a raw string is passed
+                pattern = re.compile(re.escape(entity), re.IGNORECASE)
+                for m in pattern.finditer(text):
+                    spans.append((m.start(), m.end(), m.group(), label, idx))
 
     if not spans:
         return str(escape(text))
@@ -327,6 +333,7 @@ def build_highlighted_html(text: str, entities_by_label: dict, labels: list[str]
         parts.append(str(escape(text[cursor:])))
 
     return Markup(''.join(parts))
+
 
 
 @app.get("/ner", response_class=HTMLResponse)

@@ -141,20 +141,20 @@
           <div class="flex flex-col gap-1.5">
             <div class="flex justify-between items-center">
               <label for="ner_text" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Input Text</label>
-              <span id="charCount" class="text-xs text-[#5f5f5d] tabular-nums">0 / 2048</span>
+              <span id="charCount" class="text-xs text-[#5f5f5d] tabular-nums">0 / 100000</span>
             </div>
             <textarea
               id="ner_text"
               name="text"
               required
-              maxlength="2048"
+              maxlength="100000"
               rows="8"
               placeholder="Paste your text here..."
               class="w-full px-3.5 py-2.5 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 resize-y min-h-[120px]"
             >{{ text if text is defined and text else 'In the Mekong Delta region of Vietnam, rice blast disease caused by the fungus Magnaporthe oryzae has severely affected over 15,000 hectares of Jasmine 85 and IR 50404 rice varieties during the 2024 wet season. The Department of Agriculture in Can Tho province reported that bacterial leaf blight, caused by Xanthomonas oryzae, was also detected in Long An and Dong Thap provinces. Farmers applied Tricyclazole and Propiconazole fungicides to control the outbreak. Dr. Nguyen Van Minh from the Southern Regional Plant Protection Center recommended integrated pest management strategies including the use of resistant varieties such as OM 18 and OM 5451.' }}</textarea>
             <div id="charWarning" class="hidden text-xs text-amber-600 font-medium flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-              <span>Approaching maximum character limit (2048)</span>
+              <span>Approaching maximum character limit (100000)</span>
             </div>
           </div>
 
@@ -246,7 +246,9 @@
                 </td>
                 <td class="py-3 px-4 text-sm">
                   {% for entity in entities %}
-                    <span class="ner-entity ner-tag-{{ label_idx }} mr-1.5 mb-1 inline-block">{{ entity }}</span>
+                    <span class="ner-entity ner-tag-{{ label_idx }} mr-1.5 mb-1 inline-block" title="Confidence: {{ (entity.confidence * 100) | round(1) if entity.confidence is defined else 'N/A' }}%">
+                      {{ entity.text if entity.text is defined else entity }}
+                    </span>
                   {% endfor %}
                   {% if not entities %}
                     <span class="text-xs text-[#5f5f5d] italic">None found</span>
@@ -363,8 +365,8 @@
 
     function updateCharCount() {
       const len = textarea.value.length;
-      charCount.textContent = `${len} / 2048`;
-      if (len >= 1800) {
+      charCount.textContent = `${len} / 100000`;
+      if (len >= 90000) {
         charCount.classList.add('text-amber-600', 'font-semibold');
         charCount.classList.remove('text-[#5f5f5d]');
         charWarning.classList.remove('hidden');
@@ -373,7 +375,7 @@
         charCount.classList.add('text-[#5f5f5d]');
         charWarning.classList.add('hidden');
       }
-      if (len >= 2048) {
+      if (len >= 100000) {
         charCount.classList.add('text-red-600');
         charCount.classList.remove('text-amber-600');
       } else {

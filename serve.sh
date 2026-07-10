@@ -14,11 +14,11 @@ echo -e "${BLUE}=== Starfarm Local Dev Environment Bootstrapper ===${NC}"
 
 # 1. Start MongoDB and Redis in Docker
 echo -e "${YELLOW}1. Starting MongoDB and Redis services in Docker...${NC}"
-docker-compose up -d mongodb redis
+docker compose up -d mongodb redis
 
 # 2. Check if Docker services are running
 echo -e "${GREEN}2. Verifying database container statuses...${NC}"
-docker-compose ps mongodb redis
+docker compose ps mongodb redis
 
 # 3. Export Environment Variables for local run
 echo -e "${YELLOW}3. Configuring environment variables...${NC}"
