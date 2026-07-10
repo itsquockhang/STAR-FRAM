@@ -224,6 +224,7 @@
       <!-- Results Card -->
       <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
         <h2 class="text-xl font-semibold tracking-tight mb-1">Results</h2>
+        <div id="resultsContainer">
         <div class="flex justify-between items-center mb-6">
           <p class="text-xs text-[#5f5f5d] leading-relaxed">
             Extracted entities are highlighted inline below.
@@ -290,6 +291,7 @@
           <p class="text-sm text-[#5f5f5d]">No results yet. Enter text and labels, then click <strong>Extract Entities</strong>.</p>
         </div>
         {% endif %}
+        </div>
       </div>
     </div>
   </main>
@@ -423,6 +425,21 @@
           Extracting...
         </span>
       `;
+
+      // Show loading spinner in Results Card
+      const resultsContainer = document.getElementById('resultsContainer');
+      if (resultsContainer) {
+        resultsContainer.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-24 text-center animate-fade-in">
+            <svg class="animate-spin h-10 w-10 text-emerald-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-sm font-semibold text-[#1c1c1c]/80">Extracting entities with GLiNER2...</p>
+            <p class="text-xs text-[#5f5f5d] mt-1.5 max-w-[280px] leading-relaxed">Please wait while the model processes your text. This may take a moment for longer documents.</p>
+          </div>
+        `;
+      }
     });
 
     // ---- File Import (.txt, .docx) ----
