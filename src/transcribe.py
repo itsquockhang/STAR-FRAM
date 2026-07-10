@@ -7,10 +7,10 @@ logger = logging.getLogger("starfarm.transcribe")
 
 MLX_MODEL_MAPPING = {
     "tiny": "mlx-community/whisper-tiny",
-    "base": "mlx-community/whisper-base",
-    "small": "mlx-community/whisper-small",
+    "base": "mlx-community/whisper-base-mlx",
+    "small": "mlx-community/whisper-small-mlx",
     "medium": "mlx-community/whisper-medium",
-    "large-v3": "mlx-community/whisper-large-v3",
+    "large-v3": "mlx-community/whisper-large-v3-mlx",
     "large-v3-turbo": "mlx-community/whisper-large-v3-turbo"
 }
 
