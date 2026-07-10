@@ -154,27 +154,8 @@
             </select>
           </div>
 
-          <!-- Execution Device -->
-          <div class="flex flex-col gap-1.5">
-            <label for="deviceChoice" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Device / Accelerator</label>
-            <select
-              id="deviceChoice"
-              name="device"
-              class="w-full px-3.5 py-2.5 text-sm bg-white border border-[#eceae4] rounded-lg cursor-pointer transition-all duration-200 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
-            >
-              {% for d in devices %}
-                <option value="{{ d }}" {% if device == d or (not device and loop.first) %}selected{% endif %}>
-                  {% if d == 'mps' %}
-                    Apple Silicon GPU (MLX Optimized)
-                  {% elif d == 'cuda' %}
-                    Nvidia GPU (CUDA Accelerated)
-                  {% else %}
-                    CPU Core (Standard fallback)
-                  {% endif %}
-                </option>
-              {% endfor %}
-            </select>
-          </div>
+          <!-- Best device is automatically selected and hidden -->
+          <input type="hidden" id="deviceChoice" name="device" value="{{ device or devices[0] }}">
 
           <!-- Submit Button -->
           <button type="submit" id="submitBtn" class="btn-inset w-full py-2.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
