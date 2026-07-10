@@ -3,19 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube Transcriber | Starfarm</title>
+  <title>URL Content Extractor | Starfarm</title>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS v4 Browser Compiler -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Marked.js Markdown Parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
   <style>
     html { font-size: 17px; }
     body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+    .mono-font { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 
     .ambient-glow { position: relative; }
     .ambient-glow::before,
@@ -38,7 +41,7 @@
     .ambient-glow::after {
       bottom: -150px;
       left: -150px;
-      background: rgba(234, 179, 8, 0.08);
+      background: rgba(59, 130, 246, 0.08);
     }
 
     .btn-inset {
@@ -59,6 +62,22 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+    /* Markdown Previewer styles */
+    #previewBox h1 { font-size: 1.6rem; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid #eceae4; padding-bottom: 0.25rem; }
+    #previewBox h2 { font-size: 1.35rem; font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.5rem; }
+    #previewBox h3 { font-size: 1.15rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
+    #previewBox p { margin-bottom: 0.85rem; line-height: 1.75; color: #2e2e2e; }
+    #previewBox a { color: #10b981; font-weight: 600; text-decoration: underline; transition: color 0.15s; }
+    #previewBox a:hover { color: #047857; }
+    #previewBox ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.85rem; }
+    #previewBox ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.85rem; }
+    #previewBox li { margin-bottom: 0.25rem; line-height: 1.75; }
+    #previewBox blockquote { border-left: 4px solid #10b981; padding-left: 1rem; color: #5f5f5d; font-style: italic; margin-bottom: 0.85rem; background: #fdfdfc; padding-top: 0.25rem; padding-bottom: 0.25rem; }
+    #previewBox img { max-width: 100%; height: auto; border-radius: 0.75rem; margin-top: 0.75rem; margin-bottom: 0.75rem; border: 1px solid #eceae4; }
+    #previewBox table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; font-size: 0.85rem; }
+    #previewBox th, #previewBox td { border: 1px solid #eceae4; padding: 0.5rem 0.75rem; }
+    #previewBox th { background: #fbfaf7; font-weight: 600; }
   </style>
 </head>
 <body class="ambient-glow min-h-screen flex flex-col bg-gradient-to-br from-[#fbfaf7] to-[#f4f1e6] text-[#1c1c1c] overflow-x-hidden antialiased">
@@ -105,7 +124,7 @@
               </a>
               <a
                 href="/extract"
-                class="flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-[#5f5f5d] hover:bg-[#f4f1e6]/30 hover:text-[#1c1c1c] transition-colors border-t border-[#eceae4]/45"
+                class="flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-emerald-600 bg-[#f4f1e6]/40 transition-colors border-t border-[#eceae4]/45"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                 URL Extractor
@@ -158,55 +177,35 @@
       
       <!-- Input Panel Card -->
       <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-        <h2 class="text-xl font-semibold tracking-tight mb-4">Transcription Settings</h2>
+        <h2 class="text-xl font-semibold tracking-tight mb-4">Content Extraction</h2>
         
-        <form action="/transcribe" method="POST" id="transcribeForm" class="space-y-5">
-          <!-- Youtube URL -->
+        <form action="/extract" method="POST" id="extractForm" class="space-y-5">
+          <!-- Web URL -->
           <div class="flex flex-col gap-1.5">
-            <label for="ytUrl" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">YouTube Video URL</label>
+            <label for="webUrl" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Target URL</label>
             <input
               type="url"
-              id="ytUrl"
+              id="webUrl"
               name="url"
               required
-              placeholder="https://www.youtube.com/watch?v=..."
-              value="{{ url or 'https://www.youtube.com/watch?v=OEEQDry5T40' }}"
+              placeholder="https://example.com/article"
+              value="{{ url or 'https://vaas.vn/vi/nong-nghiep-trong-nuoc/phat-trien-nong-nghiep-thich-ung-bien-doi-khi-hau-tu-3-tru-cot' }}"
               class="w-full px-3.5 py-2.5 text-sm bg-white border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
             >
           </div>
 
-          <!-- Whisper Model size -->
-          <div class="flex flex-col gap-1.5">
-            <label for="modelSize" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Whisper Model size</label>
-            <select
-              id="modelSize"
-              name="model_size"
-              class="w-full px-3.5 py-2.5 text-sm bg-white border border-[#eceae4] rounded-lg cursor-pointer transition-all duration-200 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
-            >
-              <option value="tiny" {% if model_size == 'tiny' %}selected{% endif %}>tiny (Fastest, low resource)</option>
-              <option value="base" {% if model_size == 'base' or not model_size %}selected{% endif %}>base (Balanced speed/accuracy - Recommended)</option>
-              <option value="small" {% if model_size == 'small' %}selected{% endif %}>small (Better multilingual accuracy)</option>
-              <option value="medium" {% if model_size == 'medium' %}selected{% endif %}>medium (High accuracy, slower)</option>
-              <option value="large-v3-turbo" {% if model_size == 'large-v3-turbo' %}selected{% endif %}>large-v3-turbo (State-of-the-art fast large model)</option>
-              <option value="large-v3" {% if model_size == 'large-v3' %}selected{% endif %}>large-v3 (Maximum accuracy, heaviest)</option>
-            </select>
-          </div>
-
-          <!-- Best device is automatically selected and hidden -->
-          <input type="hidden" id="deviceChoice" name="device" value="{{ device or devices[0] }}">
-
           <!-- Submit Button -->
           <button type="submit" id="submitBtn" class="btn-inset w-full py-2.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30">
-            Extract Caption
+            Extract Content
           </button>
         </form>
       </div>
 
       <!-- Results Card -->
       <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)] min-h-[300px] flex flex-col">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-semibold tracking-tight">Transcript Output</h2>
-          {% if transcript_text %}
+        <div class="flex justify-between items-center mb-4 border-b border-[#eceae4]/45 pb-3">
+          <h2 class="text-xl font-semibold tracking-tight">Extraction Result</h2>
+          {% if markdown or text %}
           <div class="flex items-center gap-4">
             <button type="button" id="sendToNerBtn" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1 cursor-pointer">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
@@ -214,66 +213,85 @@
             </button>
             <button type="button" id="copyBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              Copy Text
+              Copy
             </button>
             <button type="button" id="downloadBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              Download .txt
+              Download
             </button>
           </div>
           {% endif %}
         </div>
 
         <div id="resultsContainer" class="flex-grow flex flex-col">
-          {% if transcript_text %}
-            <!-- Video Title Info -->
-            <div class="mb-5 p-4.5 bg-[#fdfdfc] border border-[#eceae4] rounded-xl shadow-[0_2px_8px_rgba(28,28,28,0.01)]">
-              <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-center">
-                <div class="space-y-1.5">
-                  <div class="text-[10px] font-semibold uppercase tracking-wider text-[#5f5f5d]/85">Source Video</div>
-                  <h3 class="text-sm font-semibold text-[#1c1c1c] leading-snug">{{ video_title }}</h3>
-                </div>
-                
-                <div class="flex flex-wrap gap-2 items-center md:border-l md:border-[#eceae4] md:pl-5">
-                  <!-- Model tag -->
-                  <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-800 text-[11px] font-medium leading-none">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    <span class="font-semibold uppercase tracking-wide">{{ model_size }}</span>
+          {% if markdown or text %}
+            <!-- Metadata & Details -->
+            <div class="mb-5 p-4.5 bg-[#fdfdfc] border border-[#eceae4] rounded-xl shadow-[0_2px_8px_rgba(28,28,28,0.01)] space-y-4">
+              {% if metadata %}
+                <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6">
+                  <div class="space-y-2">
+                    <div class="flex flex-wrap gap-2 items-center">
+                      {% if metadata.sitename or metadata.hostname %}
+                        <span class="px-2 py-0.5 text-[9px] uppercase font-bold tracking-widest bg-emerald-50 border border-emerald-100 text-emerald-800 rounded">
+                          {{ metadata.sitename or metadata.hostname }}
+                        </span>
+                      {% endif %}
+                      {% if metadata.date %}
+                        <span class="text-xs text-[#5f5f5d] font-medium">{{ metadata.date }}</span>
+                      {% endif %}
+                      {% if metadata.author %}
+                        <span class="text-xs text-[#5f5f5d] font-medium">• By {{ metadata.author }}</span>
+                      {% endif %}
+                    </div>
+                    <h3 class="text-lg font-bold text-[#1c1c1c] leading-snug">{{ metadata.title or 'No Title Found' }}</h3>
+                    {% if metadata.description %}
+                      <p class="text-xs text-[#5f5f5d] leading-relaxed">{{ metadata.description }}</p>
+                    {% endif %}
                   </div>
-
-                  <!-- Device tag -->
-                  {% if device %}
-                  <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-800 text-[11px] font-medium leading-none">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-                    <span class="font-semibold uppercase tracking-wide">{{ device }}</span>
+                  
+                  {% if metadata.image %}
+                  <div class="shrink-0">
+                    <img src="{{ metadata.image }}" alt="Article Preview" class="w-32 h-20 rounded-lg object-cover border border-[#eceae4] shadow-sm" onerror="this.style.display='none'">
                   </div>
                   {% endif %}
-
-                  <!-- Duration tag -->
-                  {% if extract_duration %}
-                  <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-800 text-[11px] font-medium leading-none">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    <span class="font-semibold uppercase tracking-wide">{{ extract_duration }}s</span>
-                  </div>
-                  {% endif %}
                 </div>
-              </div>
+              {% else %}
+                <div class="text-xs text-[#5f5f5d]">No article metadata found, showing extracted content below.</div>
+              {% endif %}
             </div>
 
-            <!-- Scrollable Output Text Box -->
-            <div id="transcriptBox" class="p-5 flex-grow bg-white border border-[#eceae4] rounded-xl text-sm leading-7 mb-2 whitespace-pre-wrap break-words max-h-[500px] overflow-y-auto selection:bg-emerald-500/20">
-              {{ transcript_text }}
+            <!-- Tab Toggles for Preview/Markdown/Text -->
+            <div class="flex border-b border-[#eceae4]/45 mb-4">
+              <button type="button" id="tabPreview" class="px-4 py-2 text-xs font-semibold border-b-2 border-emerald-500 text-emerald-600 focus:outline-none cursor-pointer">
+                Preview
+              </button>
+              <button type="button" id="tabMarkdown" class="px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer">
+                Markdown
+              </button>
+              <button type="button" id="tabText" class="px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer">
+                Plain Text
+              </button>
             </div>
+
+            <!-- Output Boxes -->
+            <div id="previewBox" class="p-5 flex-grow bg-white border border-[#eceae4] rounded-xl text-sm leading-7 mb-2 overflow-y-auto max-h-[500px] selection:bg-emerald-500/20">
+              <!-- Rendered Markdown goes here -->
+            </div>
+            <div id="markdownBox" class="hidden p-5 flex-grow bg-white border border-[#eceae4] rounded-xl text-sm leading-7 mb-2 whitespace-pre-wrap break-words max-h-[500px] overflow-y-auto selection:bg-emerald-500/20 mono-font text-[#2e2e2e]">
+              {{- markdown -}}
+            </div>
+            <div id="textBox" class="hidden p-5 flex-grow bg-white border border-[#eceae4] rounded-xl text-sm leading-7 mb-2 whitespace-pre-wrap break-words max-h-[500px] overflow-y-auto selection:bg-emerald-500/20">
+              {{- text -}}
+            </div>
+
           {% else %}
             <!-- No results placeholder -->
             <div class="flex-grow flex flex-col items-center justify-center py-20 text-center">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-[#eceae4] mb-4">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                <path d="M19 10v1a7 7 0 0 1-14 0v-1"></path>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-                <line x1="8" y1="23" x2="16" y2="23"></line>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-[#eceae4] mb-4">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
               </svg>
-              <p class="text-sm text-[#5f5f5d]">No transcriptions yet. Paste a YouTube link and click <strong>Extract Caption</strong>.</p>
+              <p class="text-sm text-[#5f5f5d]">No content extracted yet. Paste a link and click <strong>Extract Content</strong>.</p>
             </div>
           {% endif %}
         </div>
@@ -287,16 +305,16 @@
   </footer>
 
   <script>
-    const transcribeForm = document.getElementById('transcribeForm');
+    const extractForm = document.getElementById('extractForm');
     const submitBtn = document.getElementById('submitBtn');
     const resultsContainer = document.getElementById('resultsContainer');
-    const ytUrlInput = document.getElementById('ytUrl');
+    const webUrlInput = document.getElementById('webUrl');
 
-    transcribeForm.addEventListener('submit', (e) => {
-      const urlValue = ytUrlInput.value.trim();
+    extractForm.addEventListener('submit', (e) => {
+      const urlValue = webUrlInput.value.trim();
       if (!urlValue) {
         e.preventDefault();
-        alert('Please enter a YouTube video URL.');
+        alert('Please enter a URL.');
         return;
       }
 
@@ -308,7 +326,7 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          Transcribing...
+          Extracting...
         </span>
       `;
 
@@ -320,22 +338,71 @@
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p class="text-sm font-semibold text-[#1c1c1c]/80">Extracting YouTube captions...</p>
+            <p class="text-sm font-semibold text-[#1c1c1c]/80">Fetching URL and extracting content...</p>
             <p class="text-xs text-[#5f5f5d] mt-1.5 max-w-[320px] leading-relaxed">
-              Downloading audio and transcribing using Whisper. This may take 1-2 minutes depending on the video length.
+              Downloading webpage content and parsing main article with trafilatura. This usually takes just a few seconds.
             </p>
           </div>
         `;
       }
     });
 
+    // Tab toggling logic
+    const tabPreview = document.getElementById('tabPreview');
+    const tabMarkdown = document.getElementById('tabMarkdown');
+    const tabText = document.getElementById('tabText');
+    const previewBox = document.getElementById('previewBox');
+    const markdownBox = document.getElementById('markdownBox');
+    const textBox = document.getElementById('textBox');
+    let activeTab = 'preview'; // 'preview', 'markdown', or 'text'
+
+    // Render Markdown preview on load if content is present
+    if (markdownBox && previewBox && typeof marked !== 'undefined') {
+      const rawMarkdown = markdownBox.textContent.trim();
+      if (rawMarkdown) {
+        previewBox.innerHTML = marked.parse(rawMarkdown);
+      }
+    }
+
+    if (tabPreview && tabMarkdown && tabText && previewBox && markdownBox && textBox) {
+      tabPreview.addEventListener('click', () => {
+        activeTab = 'preview';
+        tabPreview.className = "px-4 py-2 text-xs font-semibold border-b-2 border-emerald-500 text-emerald-600 focus:outline-none cursor-pointer";
+        tabMarkdown.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer";
+        tabText.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer";
+        previewBox.classList.remove('hidden');
+        markdownBox.classList.add('hidden');
+        textBox.classList.add('hidden');
+      });
+
+      tabMarkdown.addEventListener('click', () => {
+        activeTab = 'markdown';
+        tabMarkdown.className = "px-4 py-2 text-xs font-semibold border-b-2 border-emerald-500 text-emerald-600 focus:outline-none cursor-pointer";
+        tabPreview.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer";
+        tabText.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer";
+        markdownBox.classList.remove('hidden');
+        previewBox.classList.add('hidden');
+        textBox.classList.add('hidden');
+      });
+
+      tabText.addEventListener('click', () => {
+        activeTab = 'text';
+        tabText.className = "px-4 py-2 text-xs font-semibold border-b-2 border-emerald-500 text-emerald-600 focus:outline-none cursor-pointer";
+        tabPreview.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer";
+        tabMarkdown.className = "px-4 py-2 text-xs font-semibold border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] focus:outline-none cursor-pointer";
+        textBox.classList.remove('hidden');
+        previewBox.classList.add('hidden');
+        markdownBox.classList.add('hidden');
+      });
+    }
+
     // Copy to Clipboard Action
     const copyBtn = document.getElementById('copyBtn');
     if (copyBtn) {
       copyBtn.addEventListener('click', () => {
-        const transcriptBox = document.getElementById('transcriptBox');
-        if (transcriptBox) {
-          navigator.clipboard.writeText(transcriptBox.innerText)
+        const box = (activeTab === 'text') ? textBox : markdownBox;
+        if (box) {
+          navigator.clipboard.writeText(box.innerText)
             .then(() => {
               const originalHTML = copyBtn.innerHTML;
               copyBtn.innerHTML = `
@@ -347,27 +414,29 @@
               }, 2000);
             })
             .catch(err => {
-              console.error('Could not copy transcript: ', err);
+              console.error('Could not copy content: ', err);
             });
         }
       });
     }
 
-    // Export/Download Report Action
+    // Export/Download Action
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) {
       downloadBtn.addEventListener('click', () => {
-        const transcriptBox = document.getElementById('transcriptBox');
-        if (transcriptBox) {
-          const textContent = transcriptBox.innerText;
-          const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+        const box = (activeTab === 'text') ? textBox : markdownBox;
+        if (box) {
+          const content = box.innerText;
+          const ext = (activeTab === 'text') ? 'txt' : 'md';
+          const mime = (activeTab === 'text') ? 'text/plain' : 'text/markdown';
+          const blob = new Blob([content], { type: `${mime};charset=utf-8` });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           
           // Clean filename
-          const sourceTitle = "{{ video_title | safe }}".replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 50);
+          const titleText = "{{ metadata.title if metadata else 'content' }}".replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 50);
           a.href = url;
-          a.download = `starfarm_transcript_${sourceTitle || 'youtube'}.txt`;
+          a.download = `extracted_${titleText || 'article'}.${ext}`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -380,67 +449,14 @@
     const sendToNerBtn = document.getElementById('sendToNerBtn');
     if (sendToNerBtn) {
       sendToNerBtn.addEventListener('click', () => {
-        const transcriptBox = document.getElementById('transcriptBox');
-        if (transcriptBox) {
-          const textContent = transcriptBox.innerText;
+        // Prefer plain text for NER processing
+        const box = textBox || markdownBox;
+        if (box) {
+          const textContent = box.innerText;
           sessionStorage.setItem('ner_carry_text', textContent);
           window.location.href = '/ner';
         }
       });
-    }
-
-    // ---- Dynamic Model size selection based on device ----
-    const deviceChoice = document.getElementById('deviceChoice');
-    const modelSize = document.getElementById('modelSize');
-    const initialModelSize = "{{ model_size or 'base' }}";
-
-    const mpsModels = [
-      { value: 'tiny', label: 'mlx-community/whisper-tiny (Fastest, ~75MB)' },
-      { value: 'base', label: 'mlx-community/whisper-base (Balanced, ~140MB - Recommended)' },
-      { value: 'small', label: 'mlx-community/whisper-small (Good accuracy, ~460MB)' },
-      { value: 'medium', label: 'mlx-community/whisper-medium (High accuracy, ~1.5GB)' },
-      { value: 'large-v3-turbo', label: 'mlx-community/whisper-large-v3-turbo (Fast large, ~1.6GB)' },
-      { value: 'large-v3', label: 'mlx-community/whisper-large-v3 (Max accuracy, ~3.0GB)' }
-    ];
-
-    const standardModels = [
-      { value: 'tiny', label: 'tiny (Fastest, ~75MB)' },
-      { value: 'base', label: 'base (Balanced, ~140MB - Recommended)' },
-      { value: 'small', label: 'small (Good accuracy, ~460MB)' },
-      { value: 'medium', label: 'medium (High accuracy, ~1.5GB)' },
-      { value: 'large-v3-turbo', label: 'large-v3-turbo (Fast large, ~1.6GB)' },
-      { value: 'large-v3', label: 'large-v3 (Max accuracy, ~3.0GB)' }
-    ];
-
-    let hasInitialized = false;
-
-    function updateModelOptions() {
-      if (!deviceChoice || !modelSize) return;
-      const selectedDevice = deviceChoice.value;
-      let currentSelectedValue = modelSize.value;
-
-      if (!hasInitialized) {
-        currentSelectedValue = initialModelSize;
-        hasInitialized = true;
-      }
-
-      modelSize.innerHTML = '';
-      const models = (selectedDevice === 'mps') ? mpsModels : standardModels;
-
-      models.forEach(model => {
-        const option = document.createElement('option');
-        option.value = model.value;
-        option.textContent = model.label;
-        if (model.value === currentSelectedValue) {
-          option.selected = true;
-        }
-        modelSize.appendChild(option);
-      });
-    }
-
-    if (deviceChoice) {
-      deviceChoice.addEventListener('change', updateModelOptions);
-      updateModelOptions();
     }
 
     // Apps Dropdown Toggle

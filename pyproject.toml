@@ -21,4 +21,5 @@ dependencies = [
     "mlx-whisper; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "mlx; sys_platform == 'darwin' and platform_machine == 'arm64'",
     "soundfile",
+    "trafilatura>=2.1.0",
 ]

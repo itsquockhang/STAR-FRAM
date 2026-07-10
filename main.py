@@ -16,6 +16,7 @@ from src.database import init_db, close_db, get_db
 from src.auth import hash_password, verify_password, create_session, get_session, delete_session
 from src.ner import load_model as load_ner_model, extract_entities
 from src.transcribe import get_available_devices, download_audio_from_youtube, transcribe_audio
+from src.extractor import extract_url_content
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -503,3 +504,62 @@ async def transcribe_post(
                 logger.warning(f"Failed to delete temporary audio file {audio_path}: {cleanup_err}")
 
     return templates.TemplateResponse(request=request, name="transcribe.html", context=context)
+
+
+# ── Extract Routes ───────────────────────────────────────────────────
+
+@app.get("/extract", response_class=HTMLResponse)
+async def extract_page(
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session:
+        response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        response.delete_cookie(key="session_id")
+        return response
+
+    return templates.TemplateResponse(
+        request=request,
+        name="extract.html",
+        context={
+            "username": session["username"],
+            "is_admin": session["is_admin"],
+        }
+    )
+
+
+@app.post("/extract", response_class=HTMLResponse)
+async def extract_post(
+    request: Request,
+    url: str = Form(...),
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session:
+        response = RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+        response.delete_cookie(key="session_id")
+        return response
+
+    context = {
+        "username": session["username"],
+        "is_admin": session["is_admin"],
+        "url": url,
+    }
+
+    try:
+        result = extract_url_content(url)
+        context["markdown"] = result.get("markdown", "")
+        context["text"] = result.get("text", "")
+        context["metadata"] = result.get("metadata", {})
+        context["success"] = "Content extracted successfully!"
+        logger.info(f"URL extraction by '{session['username']}' completed successfully: {url}")
+    except Exception as e:
+        logger.error(f"URL extraction failed: {e}")
+        context["error"] = f"Extraction failed: {str(e)}"
+
+    return templates.TemplateResponse(request=request, name="extract.html", context=context)
