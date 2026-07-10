@@ -451,6 +451,14 @@
       }
     }
     textarea.addEventListener('input', updateCharCount);
+    
+    // Check for carry-over text from YouTube Transcriber tool
+    const carryText = sessionStorage.getItem('ner_carry_text');
+    if (carryText) {
+      textarea.value = carryText;
+      sessionStorage.removeItem('ner_carry_text');
+    }
+    
     updateCharCount();
 
     // ---- Form Submission ----
