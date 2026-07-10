@@ -18,12 +18,14 @@ MLX_MODEL_MAPPING = {
 def get_available_devices() -> list[str]:
     """
     Returns the list of available execution devices on the current host.
+    Ordered by priority (best accelerator first).
     """
-    devices = ["cpu"]
-    if torch.cuda.is_available():
-        devices.append("cuda")
+    devices = []
     if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
         devices.append("mps")
+    if torch.cuda.is_available():
+        devices.append("cuda")
+    devices.append("cpu")
     return devices
 
 
