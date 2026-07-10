@@ -108,10 +108,40 @@
           <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
           <span class="font-semibold text-xl tracking-tight">Starfarm</span>
         </div>
-        <nav class="hidden md:flex items-center gap-5 text-xs font-semibold uppercase tracking-wider">
-          <a href="/dashboard" class="transition-colors duration-200 text-[#5f5f5d] hover:text-[#1c1c1c]">Dashboard</a>
-          <a href="/ner" class="transition-colors duration-200 text-emerald-600 border-b-2 border-emerald-500 pb-0.5">Entity Extractor</a>
-          <a href="/transcribe" class="transition-colors duration-200 text-[#5f5f5d] hover:text-[#1c1c1c]">YouTube Transcriber</a>
+        <nav class="hidden md:flex items-center gap-6">
+          <a href="/dashboard" class="text-xs font-semibold uppercase tracking-wider transition-colors duration-200 text-[#5f5f5d] hover:text-[#1c1c1c]">Dashboard</a>
+          
+          <!-- Apps Dropdown -->
+          <div class="relative inline-block text-left" id="appsDropdown">
+            <button
+              type="button"
+              class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-emerald-600 transition-all duration-200 focus:outline-none"
+              id="appsDropdownBtn"
+            >
+              Apps
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-200" id="appsDropdownIcon"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            
+            <div
+              class="absolute left-0 mt-2.5 w-56 rounded-xl bg-[#fcfbf9] border border-[#eceae4] shadow-[0_12px_32px_rgba(28,28,28,0.08)] py-1.5 z-50 transition-all duration-200 opacity-0 invisible scale-95 origin-top-left"
+              id="appsDropdownMenu"
+            >
+              <a
+                href="/ner"
+                class="flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-emerald-600 bg-[#f4f1e6]/40 font-semibold transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                Entity Extractor (GLiNER2)
+              </a>
+              <a
+                href="/transcribe"
+                class="flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-[#5f5f5d] hover:bg-[#f4f1e6]/30 hover:text-[#1c1c1c] transition-colors border-t border-[#eceae4]/45"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                YouTube Transcriber (Whisper)
+              </a>
+            </div>
+          </div>
         </nav>
       </div>
       <div class="flex items-center gap-4 text-sm text-[#1c1c1c]/80">
@@ -537,6 +567,33 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      });
+    }
+
+    // Apps Dropdown Toggle
+    const appsDropdownBtn = document.getElementById('appsDropdownBtn');
+    const appsDropdownMenu = document.getElementById('appsDropdownMenu');
+    const appsDropdownIcon = document.getElementById('appsDropdownIcon');
+
+    if (appsDropdownBtn && appsDropdownMenu) {
+      appsDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = appsDropdownMenu.classList.contains('opacity-100');
+        if (isVisible) {
+          appsDropdownMenu.classList.remove('opacity-100', 'visible', 'scale-100');
+          appsDropdownMenu.classList.add('opacity-0', 'invisible', 'scale-95');
+          appsDropdownIcon.style.transform = 'rotate(0deg)';
+        } else {
+          appsDropdownMenu.classList.remove('opacity-0', 'invisible', 'scale-95');
+          appsDropdownMenu.classList.add('opacity-100', 'visible', 'scale-100');
+          appsDropdownIcon.style.transform = 'rotate(180deg)';
+        }
+      });
+
+      document.addEventListener('click', () => {
+        appsDropdownMenu.classList.remove('opacity-100', 'visible', 'scale-100');
+        appsDropdownMenu.classList.add('opacity-0', 'invisible', 'scale-95');
+        appsDropdownIcon.style.transform = 'rotate(0deg)';
       });
     }
   </script>
