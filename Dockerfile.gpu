@@ -1,0 +1,32 @@
+# Use official GPU-optimized PyTorch image as base
+FROM pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime
+
+# Install git for pulling the GLiNER2 git repository
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install dependencies.
+# Since PyTorch is already pre-installed in this image, we install the other packages directly.
+# This prevents downloading a new PyTorch package and saves gigabytes of download size.
+RUN pip install --no-cache-dir \
+    "gliner2 @ git+https://github.com/fastino-ai/GLiNER2.git" \
+    "bcrypt>=5.0.0" \
+    "fastapi>=0.139.0" \
+    "jinja2>=3.1.6" \
+    "motor>=3.7.1" \
+    "pyjwt>=2.13.0" \
+    "python-dotenv>=1.2.2" \
+    "python-multipart>=0.0.32" \
+    "qdrant-client>=1.18.0" \
+    "redis>=8.0.1" \
+    "uvicorn[standard]>=0.51.0" \
+    "tqdm" \
+    "mammoth"
+
+# Copy the application code
+COPY src/ ./src
+COPY main.py ./
+
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

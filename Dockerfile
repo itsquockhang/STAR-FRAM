@@ -10,12 +10,18 @@ WORKDIR /app
 # Enable bytecode compilation
 ENV UV_COMPILE_BYTECODE=1
 
-# Copy pyproject.toml and uv.lock to install dependencies
-COPY pyproject.toml uv.lock ./
+# Install git since we have a git dependency in pyproject.toml
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies using uv sync without installing the project itself
+# Copy pyproject.toml to install dependencies
+COPY pyproject.toml ./
+
+# Create virtual environment and install CPU dependencies using uv pip
+RUN uv venv /app/.venv
+ENV PATH="/app/.venv/bin:$PATH"
+
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev
+    uv pip install --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple -r pyproject.toml
 
 # Final runtime image
 FROM python:3.12-slim
