@@ -185,12 +185,29 @@
         <div id="resultsContainer" class="flex-grow flex flex-col">
           {% if transcript_text %}
             <!-- Video Title Info -->
-            <div class="mb-4 p-3.5 bg-white border border-[#eceae4] rounded-xl text-xs flex flex-col gap-1">
-              <div><span class="font-semibold text-[#5f5f5d]">Source Video:</span> <span class="font-medium text-[#1c1c1c]">{{ video_title }}</span></div>
-              <div><span class="font-semibold text-[#5f5f5d]">Model Used:</span> <span class="font-medium capitalize text-[#1c1c1c]">{{ model_size }}</span></div>
-              {% if device %}
-              <div><span class="font-semibold text-[#5f5f5d]">Device Used:</span> <span class="font-medium uppercase text-[#1c1c1c]">{{ device }}</span></div>
-              {% endif %}
+            <div class="mb-5 p-4.5 bg-[#fdfdfc] border border-[#eceae4] rounded-xl shadow-[0_2px_8px_rgba(28,28,28,0.01)]">
+              <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-center">
+                <div class="space-y-1.5">
+                  <div class="text-[10px] font-semibold uppercase tracking-wider text-[#5f5f5d]/85">Source Video</div>
+                  <h3 class="text-sm font-semibold text-[#1c1c1c] leading-snug">{{ video_title }}</h3>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 items-center md:border-l md:border-[#eceae4] md:pl-5">
+                  <!-- Model tag -->
+                  <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-800 text-[11px] font-medium leading-none">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    <span class="font-semibold uppercase tracking-wide">{{ model_size }}</span>
+                  </div>
+
+                  <!-- Device tag -->
+                  {% if device %}
+                  <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-800 text-[11px] font-medium leading-none">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                    <span class="font-semibold uppercase tracking-wide">{{ device }}</span>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
             </div>
 
             <!-- Scrollable Output Text Box -->
