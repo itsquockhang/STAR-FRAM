@@ -1,72 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login | Starfarm</title>
+{% extends "base.html" %}
+{% set active_page = "login" %}
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% block title %}Login | Starfarm{% endblock %}
 
-  <!-- Tailwind CSS v4 Browser Compiler -->
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-
-  <style>
-    html { font-size: 17px; }
-    body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
-
-    /* Ambient background glows */
-    .ambient-glow { position: relative; }
-    .ambient-glow::before,
-    .ambient-glow::after {
-      content: "";
-      position: absolute;
-      width: 450px;
-      height: 450px;
-      border-radius: 50%;
-      filter: blur(100px);
-      z-index: -1;
-      opacity: 0.35;
-      pointer-events: none;
-    }
-    .ambient-glow::before {
-      top: -100px;
-      right: -100px;
-      background: rgba(16, 185, 129, 0.12);
-    }
-    .ambient-glow::after {
-      bottom: -150px;
-      left: -150px;
-      background: rgba(234, 179, 8, 0.08);
-    }
-
-    /* Signature dark button inset shadow */
-    .btn-inset {
-      box-shadow:
-        rgba(255,255,255,0.25) 0 0.5px 0 inset,
-        rgba(0,0,0,0.2) 0 0 0 0.5px inset,
-        rgba(0,0,0,0.05) 0 1px 2px;
-    }
-
-    /* Slide-down animation for alerts */
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .animate-slide-down { animation: slideDown 0.3s ease forwards; }
-
-    /* Fade-in animation */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
-  </style>
-</head>
-<body class="ambient-glow min-h-screen flex flex-col bg-gradient-to-br from-[#fbfaf7] to-[#f4f1e6] text-[#1c1c1c] overflow-x-hidden antialiased">
-
+{% block content %}
   <div class="flex-grow flex items-center justify-center px-6 py-12">
     <div class="animate-fade-in max-w-[440px] w-full bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-8 lg:p-10 shadow-[0_4px_24px_rgba(28,28,28,0.03)] relative overflow-hidden">
       <!-- Top gradient strip -->
@@ -125,11 +62,9 @@
       </form>
     </div>
   </div>
+{% endblock %}
 
-  <footer class="text-center py-6 border-t border-[#eceae4] text-xs text-[#5f5f5d]">
-    <p>&copy; 2026 Starfarm. All rights reserved.</p>
-  </footer>
-
+{% block scripts %}
   <script>
     const form = document.querySelector('form');
     if (form) {
@@ -139,5 +74,4 @@
       });
     }
   </script>
-</body>
-</html>
+{% endblock %}

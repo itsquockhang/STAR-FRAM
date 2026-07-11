@@ -1,68 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NER Tool | Starfarm</title>
+{% extends "base.html" %}
+{% set active_page = "ner" %}
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+{% block title %}NER Tool | Starfarm{% endblock %}
 
-  <!-- Tailwind CSS v4 Browser Compiler -->
-  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-
+{% block extra_head %}
   <!-- Mammoth.js for client-side .docx parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+{% endblock %}
 
-  <style>
-    html { font-size: 17px; }
-    body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
-
-    .ambient-glow { position: relative; }
-    .ambient-glow::before,
-    .ambient-glow::after {
-      content: "";
-      position: absolute;
-      width: 500px;
-      height: 500px;
-      border-radius: 50%;
-      filter: blur(120px);
-      z-index: -1;
-      opacity: 0.35;
-      pointer-events: none;
-    }
-    .ambient-glow::before {
-      top: -100px;
-      right: -100px;
-      background: rgba(16, 185, 129, 0.12);
-    }
-    .ambient-glow::after {
-      bottom: -150px;
-      left: -150px;
-      background: rgba(234, 179, 8, 0.08);
-    }
-
-    .btn-inset {
-      box-shadow:
-        rgba(255,255,255,0.25) 0 0.5px 0 inset,
-        rgba(0,0,0,0.2) 0 0 0 0.5px inset,
-        rgba(0,0,0,0.05) 0 1px 2px;
-    }
-
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .animate-slide-down { animation: slideDown 0.3s ease forwards; }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards; }
-
+{% block extra_styles %}
     /* Entity highlight colors — 8 distinct hues */
     .ner-tag-0 { background: rgba(16,185,129,0.15); color: #065f46; border-bottom: 2px solid #10b981; }
     .ner-tag-1 { background: rgba(59,130,246,0.15); color: #1e3a5f; border-bottom: 2px solid #3b82f6; }
@@ -96,84 +42,11 @@
       margin-left: 3px;
       vertical-align: super;
     }
-  </style>
-</head>
-<body class="ambient-glow min-h-screen flex flex-col bg-gradient-to-br from-[#fbfaf7] to-[#f4f1e6] text-[#1c1c1c] overflow-x-hidden antialiased">
+{% endblock %}
 
-  <!-- Sticky Header -->
-  <header class="sticky top-0 bg-[#fbfaf7]/85 backdrop-blur-md border-b border-[#eceae4] z-50 py-3.5">
-    <div class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex justify-between items-center">
-      <div class="flex items-center gap-6">
-        <div class="flex items-center gap-3 cursor-pointer select-none" onclick="window.location.href='/dashboard'">
-          <img src="/static/logo.svg" alt="Starfarm Logo" class="w-8 h-8 transition-transform duration-300 hover:rotate-12 hover:scale-110">
-          <span class="font-semibold text-xl tracking-tight">Starfarm</span>
-        </div>
-        <nav class="hidden md:flex items-center gap-6">
-          <a href="/dashboard" class="text-xs font-semibold uppercase tracking-wider transition-colors duration-200 text-[#5f5f5d] hover:text-[#1c1c1c]">Dashboard</a>
-          
-          <!-- Apps Dropdown -->
-          <div class="relative inline-block text-left" id="appsDropdown">
-            <button
-              type="button"
-              class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-emerald-600 transition-all duration-200 focus:outline-none"
-              id="appsDropdownBtn"
-            >
-              Apps
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform duration-200" id="appsDropdownIcon"><polyline points="6 9 12 15 18 9"></polyline></svg>
-            </button>
-            
-            <div
-              class="absolute left-0 mt-2.5 w-56 rounded-xl bg-[#fcfbf9] border border-[#eceae4] shadow-[0_12px_32px_rgba(28,28,28,0.08)] py-1.5 z-50 transition-all duration-200 opacity-0 invisible scale-95 origin-top-left"
-              id="appsDropdownMenu"
-            >
-              <a
-                href="/ner"
-                class="flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-emerald-600 bg-[#f4f1e6]/40 font-semibold transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                Entity Extractor
-              </a>
-              <a
-                href="/transcribe"
-                class="flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-[#5f5f5d] hover:bg-[#f4f1e6]/30 hover:text-[#1c1c1c] transition-colors border-t border-[#eceae4]/45"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                YouTube Transcriber
-              </a>
-              <a
-                href="/extract"
-                class="flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-[#5f5f5d] hover:bg-[#f4f1e6]/30 hover:text-[#1c1c1c] transition-colors border-t border-[#eceae4]/45"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                URL Extractor
-              </a>
-            </div>
-          </div>
-        </nav>
-      </div>
-      <div class="flex items-center gap-4 text-sm text-[#1c1c1c]/80">
-        {% if is_admin %}
-          <a href="/dashboard?view=admin" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[#1c1c1c]/40 text-[#1c1c1c] rounded-md bg-transparent cursor-pointer transition-all duration-200 hover:bg-[#1c1c1c] hover:text-white active:scale-95">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-            Admin Panel
-          </a>
-        {% endif %}
-
-        <span>Hello, <strong class="text-[#1c1c1c]">{{ username }}</strong></span>
-        {% if is_admin %}
-          <span class="bg-[#1c1c1c] text-white text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">Admin</span>
-        {% else %}
-          <span class="border border-[#eceae4] text-[#1c1c1c]/70 text-[10px] uppercase font-bold tracking-widest px-2.5 py-0.5 rounded-full">User</span>
-        {% endif %}
-        <form action="/logout" method="POST" class="m-0 inline">
-          <button type="submit" class="px-3 py-1.5 text-xs font-medium border border-[#1c1c1c]/40 rounded-md bg-transparent text-[#1c1c1c] cursor-pointer transition-all duration-200 hover:bg-[#1c1c1c] hover:text-white active:scale-95">Sign out</button>
-        </form>
-      </div>
-    </div>
-  </header>
-
+{% block content %}
   <!-- Main Content -->
-  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col mt-8 mb-16">
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
 
     {% if error %}
     <div class="animate-slide-down flex items-center gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
@@ -349,11 +222,9 @@
       </div>
     </div>
   </main>
+{% endblock %}
 
-  <footer class="text-center py-6 border-t border-[#eceae4] text-xs text-[#5f5f5d]">
-    <p>&copy; 2026 Starfarm. All rights reserved.</p>
-  </footer>
-
+{% block scripts %}
   <script>
     const extractionResults = {{ results | tojson | safe if results is defined and results else 'null' }};
     // ---- Label Chip Management ----
@@ -584,33 +455,5 @@
         URL.revokeObjectURL(url);
       });
     }
-
-    // Apps Dropdown Toggle
-    const appsDropdownBtn = document.getElementById('appsDropdownBtn');
-    const appsDropdownMenu = document.getElementById('appsDropdownMenu');
-    const appsDropdownIcon = document.getElementById('appsDropdownIcon');
-
-    if (appsDropdownBtn && appsDropdownMenu) {
-      appsDropdownBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isVisible = appsDropdownMenu.classList.contains('opacity-100');
-        if (isVisible) {
-          appsDropdownMenu.classList.remove('opacity-100', 'visible', 'scale-100');
-          appsDropdownMenu.classList.add('opacity-0', 'invisible', 'scale-95');
-          appsDropdownIcon.style.transform = 'rotate(0deg)';
-        } else {
-          appsDropdownMenu.classList.remove('opacity-0', 'invisible', 'scale-95');
-          appsDropdownMenu.classList.add('opacity-100', 'visible', 'scale-100');
-          appsDropdownIcon.style.transform = 'rotate(180deg)';
-        }
-      });
-
-      document.addEventListener('click', () => {
-        appsDropdownMenu.classList.remove('opacity-100', 'visible', 'scale-100');
-        appsDropdownMenu.classList.add('opacity-0', 'invisible', 'scale-95');
-        appsDropdownIcon.style.transform = 'rotate(0deg)';
-      });
-    }
   </script>
-</body>
-</html>
+{% endblock %}
