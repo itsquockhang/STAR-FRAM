@@ -291,11 +291,29 @@
 
       </div>
 
-      <!-- Right Column: Labels & Predicates -->
+      <!-- Right Column: Combined Tabbed List -->
       <div class="space-y-6">
-        <!-- Labels List -->
-        <div class="settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
-        <div class="flex justify-between items-center mb-6">
+        <!-- Tabs Header -->
+        <div class="flex items-center gap-2 border-b border-[#eceae4] pb-px">
+          <button
+            onclick="switchSettingsTab('labels-tab')"
+            id="btn-labels-tab"
+            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-emerald-500 text-emerald-600 transition-all cursor-pointer outline-none"
+          >
+            Entity Labels
+          </button>
+          <button
+            onclick="switchSettingsTab('predicates-tab')"
+            id="btn-predicates-tab"
+            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none"
+          >
+            Relationship Predicates
+          </button>
+        </div>
+
+        <!-- Tab Panel 1: Entity Labels -->
+        <div id="panel-labels-tab" class="settings-tab-panel bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+          <div class="flex justify-between items-center mb-6">
           <div>
             <h2 class="text-xl font-semibold tracking-tight">Entity Labels List</h2>
             <p class="text-xs text-[#5f5f5d] leading-relaxed">
@@ -370,8 +388,8 @@
         </div>
       </div>
 
-        <!-- Predicates Card -->
-        <div class="settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+        <!-- Tab Panel 2: Relationship Predicates -->
+        <div id="panel-predicates-tab" class="settings-tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
           <div class="flex justify-between items-center mb-6">
             <div>
               <h2 class="text-xl font-semibold tracking-tight">Relationship Predicates List</h2>
@@ -811,7 +829,25 @@
         labelViInput.placeholder = 'e.g. được trồng ở';
         descEnInput.placeholder = 'Explain relationship logic in English...';
         descViInput.placeholder = 'Giải thích logic mối quan hệ bằng Tiếng Việt...';
-      }
+    }
+
+    function switchSettingsTab(tabId) {
+      // Hide all panels
+      document.querySelectorAll('.settings-tab-panel').forEach(p => p.classList.add('hidden'));
+      // Show chosen panel
+      document.getElementById('panel-' + tabId).classList.remove('hidden');
+
+      // Update button styles
+      document.querySelectorAll('[id^="btn-"]').forEach(btn => {
+        if (btn.id === 'btn-labels-tab' || btn.id === 'btn-predicates-tab') {
+          btn.classList.remove('border-emerald-500', 'text-emerald-600');
+          btn.classList.add('border-transparent', 'text-[#5f5f5d]');
+        }
+      });
+
+      const activeBtn = document.getElementById('btn-' + tabId);
+      activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
+      activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
     }
 
     function escapeHtml(str) {
