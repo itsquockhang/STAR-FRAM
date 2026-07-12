@@ -4,7 +4,7 @@ import json
 import datetime
 import bcrypt
 import jwt
-from src.database import get_redis
+from src.core.database import get_redis
 
 SECRET_KEY = os.getenv("SECRET_KEY", "starfarm-super-secret-key-123456")
 ALGORITHM = "HS256"

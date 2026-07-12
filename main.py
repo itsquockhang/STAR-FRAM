@@ -12,11 +12,11 @@ from markupsafe import escape, Markup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("starfarm.main")
 
-from src.database import init_db, close_db, get_db
-from src.auth import hash_password, verify_password, create_session, get_session, delete_session
-from src.ner import load_model as load_ner_model, extract_entities
-from src.transcribe import get_available_devices, download_audio_from_youtube, transcribe_audio
-from src.extractor import extract_url_content
+from src.core.database import init_db, close_db, get_db
+from src.core.auth import hash_password, verify_password, create_session, get_session, delete_session
+from src.services.ner import load_model as load_ner_model, extract_entities
+from src.services.transcribe import get_available_devices, download_audio_from_youtube, transcribe_audio
+from src.services.extractor import extract_url_content
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -262,7 +262,7 @@ async def delete_user(
             return RedirectResponse(url="/dashboard?error=User not found.", status_code=status.HTTP_303_SEE_OTHER)
             
         # Invalidate deleted user's sessions in Redis using direct prefix matching
-        from src.database import get_redis
+        from src.core.database import get_redis
         redis_client = get_redis()
         async for key in redis_client.scan_iter(f"session:{username_to_delete}:*"):
             await redis_client.delete(key)

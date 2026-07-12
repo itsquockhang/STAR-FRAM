@@ -1,6 +1,6 @@
 import logging
 from gliner2 import GLiNER2
-from src.utils import get_device
+from src.core.utils import get_device
 from torch.utils.data import DataLoader as OrigDataLoader
 from tqdm import tqdm
 import gliner2.inference.engine
