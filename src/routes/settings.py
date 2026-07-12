@@ -221,9 +221,31 @@ async def enhance_label_queries(
         name = data.get("name", "")
         desc_en = data.get("desc_en", "")
         desc_vi = data.get("desc_vi", "")
+        force_regen = data.get("force_regen", False)
         
         if not name:
             return {"success": False, "error": "Label name is required."}
+            
+        username = session["username"]
+        db = get_db()
+        
+        # Check cache if not forcing regeneration
+        if not force_regen:
+            user = await db.users.find_one({"username": username})
+            if user:
+                labels = user.get("settings", {}).get("labels", [])
+                for l in labels:
+                    if l.get("name") == name:
+                        cached_vi = l.get("queries_vi")
+                        cached_en = l.get("queries_en")
+                        if cached_vi and cached_en and len(cached_vi) == 5 and len(cached_en) == 5:
+                            logger.info(f"Returning cached enhanced queries for label '{name}'")
+                            return {
+                                "success": True, 
+                                "queries_vi": cached_vi, 
+                                "queries_en": cached_en, 
+                                "cached": True
+                            }
             
         model_id = await get_conductor_model()
         
@@ -267,9 +289,25 @@ async def enhance_label_queries(
             
         queries_vi = parse_queries(queries_vi_text, f"Truy vấn tài liệu liên quan đến nhãn {name}")
         queries_en = parse_queries(queries_en_text, f"Retrieve documents related to label {name}")
+        
+        # Save generated queries to label document inside users collection
+        await db.users.update_one(
+            {"username": username, "settings.labels.name": name},
+            {
+                "$set": {
+                    "settings.labels.$.queries_vi": queries_vi,
+                    "settings.labels.$.queries_en": queries_en
+                }
+            }
+        )
             
-        logger.info(f"Bilingual query enhancement completed for label '{name}' using model '{model_id}'")
-        return {"success": True, "queries_vi": queries_vi, "queries_en": queries_en}
+        logger.info(f"Bilingual query enhancement completed and saved for label '{name}' using model '{model_id}'")
+        return {
+            "success": True, 
+            "queries_vi": queries_vi, 
+            "queries_en": queries_en,
+            "cached": False
+        }
     except Exception as e:
         logger.error(f"Query enhancement failed: {e}")
         return {"success": False, "error": str(e)}
