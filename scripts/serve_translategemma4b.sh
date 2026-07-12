@@ -26,4 +26,5 @@ docker run -itd --name google-translategemma-4b-it \
         --host 0.0.0.0 \
         --port 8128 \
         --max-model-len 4096 \
+        --swap-space 4 \
         --gpu-memory-utilization 0.75

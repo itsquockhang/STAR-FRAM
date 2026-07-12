@@ -8,6 +8,7 @@
 #   }'
 
 ## Tested on RTX 3060 12GB VRAM
+
 docker run -itd --name gemma-4-E2B-it-qat-w4a16-ct \
     --ipc=host \
     --network host \
@@ -23,5 +24,6 @@ docker run -itd --name gemma-4-E2B-it-qat-w4a16-ct \
         --gpu-memory-utilization 0.92 \
         --max-num-batched-tokens 2048 \
         --enforce-eager \
+        --swap-space 4 \
         --host 0.0.0.0 \
         --port 8129
