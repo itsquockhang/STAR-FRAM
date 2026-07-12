@@ -308,7 +308,7 @@ async def enhance_label_queries(
             }
         )
             
-        logger.info(f"Bilingual query enhancement completed and saved for label '{name}' using model '{model_id}'")
+        logger.info(f"Bilingual query enhancement completed and saved for label '{name}' using model '{lm.model}'")
         return {
             "success": True, 
             "queries_vi": queries_vi, 
@@ -359,7 +359,7 @@ async def suggest_label_definition(
         desc_en = result.definition_en.strip() if result.definition_en else ""
         desc_vi = result.definition_vi.strip() if result.definition_vi else ""
         
-        logger.info(f"Label definition generated for '{name}' using model '{model_id}'")
+        logger.info(f"Label definition generated for '{name}' using model '{lm.model}'")
         return {"success": True, "desc_en": desc_en, "desc_vi": desc_vi}
     except Exception as e:
         logger.error(f"Label definition generation failed: {e}")
