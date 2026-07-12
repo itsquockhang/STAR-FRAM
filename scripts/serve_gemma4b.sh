@@ -14,4 +14,4 @@ docker run -itd --name gemma-4-E2B-it-qat-w4a16-ct \
         --max-model-len 16384 \
         --gpu-memory-utilization 0.85 \
         --host 0.0.0.0 \
-        --port 8124
+        --port 8129
