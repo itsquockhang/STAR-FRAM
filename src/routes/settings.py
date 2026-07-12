@@ -207,14 +207,15 @@ async def enhance_label_queries(
         
         class GenerateRAGQueries(dspy.Signature):
             """
-            Generate exactly 5 diverse and effective search queries (in Vietnamese) for a search engine in a Retrieval-Augmented Generation (RAG) system.
+            Generate diverse and effective search queries for a search engine in a Retrieval-Augmented Generation (RAG) system.
+            Generate exactly 5 queries in Vietnamese (queries_vi) and 5 queries in English (queries_en).
             The queries must be designed to retrieve documents relevant to the entity label and its definitions.
-            Return ONLY the numbered list of 5 queries.
             """
             label_name = dspy.InputField(desc="The name of the entity label")
             definition_en = dspy.InputField(desc="The definition of the entity label in English")
             definition_vi = dspy.InputField(desc="The definition of the entity label in Vietnamese")
-            queries = dspy.OutputField(desc="Exactly 5 search queries, numbered 1 to 5, one per line")
+            queries_vi = dspy.OutputField(desc="Exactly 5 Vietnamese search queries, numbered 1 to 5, one per line")
+            queries_en = dspy.OutputField(desc="Exactly 5 English search queries, numbered 1 to 5, one per line")
             
         data = await request.json()
         name = data.get("name", "")
@@ -243,26 +244,32 @@ async def enhance_label_queries(
                 definition_vi=desc_vi
             )
             
-        queries_text = result.queries
+        queries_vi_text = result.queries_vi
+        queries_en_text = result.queries_en
         
         import re
-        queries = []
-        for line in queries_text.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-            # Remove leading numbers/bullets like "1.", "- ", "2) " or "1. "
-            cleaned = re.sub(r'^[\d\-\*\.\)\s]+', '', line).strip()
-            if cleaned:
-                queries.append(cleaned)
-                
-        # Slice to 5 and ensure fallback if fewer
-        queries = queries[:5]
-        while len(queries) < 5:
-            queries.append(f"Truy vấn tài liệu liên quan đến nhãn {name}")
+        
+        def parse_queries(text, default_query):
+            parsed = []
+            if text:
+                for line in text.split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    # Remove leading numbers/bullets like "1.", "- ", "2) " or "1. "
+                    cleaned = re.sub(r'^[\d\-\*\.\)\s]+', '', line).strip()
+                    if cleaned:
+                        parsed.append(cleaned)
+            parsed = parsed[:5]
+            while len(parsed) < 5:
+                parsed.append(default_query)
+            return parsed
             
-        logger.info(f"Query enhancement completed for label '{name}' using model '{model_id}'")
-        return {"success": True, "queries": queries}
+        queries_vi = parse_queries(queries_vi_text, f"Truy vấn tài liệu liên quan đến nhãn {name}")
+        queries_en = parse_queries(queries_en_text, f"Retrieve documents related to label {name}")
+            
+        logger.info(f"Bilingual query enhancement completed for label '{name}' using model '{model_id}'")
+        return {"success": True, "queries_vi": queries_vi, "queries_en": queries_en}
     except Exception as e:
         logger.error(f"Query enhancement failed: {e}")
         return {"success": False, "error": str(e)}
