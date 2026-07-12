@@ -134,6 +134,51 @@ async def space_document_detail(
     
     highlighted_html = build_highlighted_html(text, entities, labels)
     
+    # Fetch predicates
+    predicates_cursor = db.predicates.find({})
+    predicates = await predicates_cursor.to_list(length=100)
+    if not predicates:
+        default_preds = [
+            {
+                "name": "cultivated_in", 
+                "label_en": "is grown in", 
+                "label_vi": "được trồng ở", 
+                "desc_en": "Which crop is grown in which region/location", 
+                "desc_vi": "Cây trồng nào được trồng ở vùng miền/vị trí nào"
+            },
+            {
+                "name": "affected_by", 
+                "label_en": "is affected by", 
+                "label_vi": "bị bệnh", 
+                "desc_en": "Which crop is affected by which disease", 
+                "desc_vi": "Cây trồng nào bị mắc bệnh hại gì"
+            },
+            {
+                "name": "has_yield", 
+                "label_en": "has yield", 
+                "label_vi": "có năng suất", 
+                "desc_en": "The average or peak yield of a crop", 
+                "desc_vi": "Năng suất trung bình hoặc tối đa của cây trồng"
+            },
+            {
+                "name": "grown_in_season", 
+                "label_en": "is grown in season", 
+                "label_vi": "trồng vào mùa", 
+                "desc_en": "Which season or time of year the crop is grown", 
+                "desc_vi": "Mùa vụ gieo trồng của cây trong năm"
+            },
+            {
+                "name": "solution_for", 
+                "label_en": "is remedy/solution for", 
+                "label_vi": "giải pháp cho", 
+                "desc_en": "Remedy or control solution for a crop disease", 
+                "desc_vi": "Giải pháp phòng trừ hoặc chữa trị cho bệnh hại cây trồng"
+            }
+        ]
+        await db.predicates.insert_many(default_preds)
+        predicates = default_preds
+    predicates = sorted(predicates, key=lambda x: x["name"])
+    
     return templates.TemplateResponse(
         request=request,
         name="space_detail.html",
@@ -142,6 +187,7 @@ async def space_document_detail(
             "is_admin": session["is_admin"],
             "doc": doc,
             "highlighted_html": highlighted_html,
+            "predicates": predicates,
             "active_page": "spaces"
         }
     )
@@ -182,3 +228,205 @@ async def delete_space_document(
     except Exception as e:
         logger.error(f"Failed to delete document {doc_id}: {e}")
         return RedirectResponse(url=f"/spaces?error=Failed to delete document: {str(e)}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/spaces/{doc_id}/relations/add")
+async def add_relation(
+    doc_id: str,
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        data = await request.json()
+        subject = data.get("subject", "").strip()
+        predicate = data.get("predicate", "").strip()
+        obj = data.get("object", "").strip()
+
+        if not subject or not predicate or not obj:
+            return {"success": False, "error": "Subject, predicate, and object are required."}
+
+        # Add to document relations array
+        res = await db.spaces_documents.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$push": {"relations": {"subject": subject, "predicate": predicate, "object": obj}}}
+        )
+        if res.matched_count == 0:
+            return {"success": False, "error": "Document not found."}
+
+        logger.info(f"Relation ({subject} - {predicate} - {obj}) added to document {doc_id} by user {session['username']}")
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Failed to add relation to doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/spaces/{doc_id}/relations/delete")
+async def delete_relation(
+    doc_id: str,
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        data = await request.json()
+        subject = data.get("subject", "").strip()
+        predicate = data.get("predicate", "").strip()
+        obj = data.get("object", "").strip()
+
+        # Remove from document relations array
+        res = await db.spaces_documents.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$pull": {"relations": {"subject": subject, "predicate": predicate, "object": obj}}}
+        )
+        if res.matched_count == 0:
+            return {"success": False, "error": "Document not found."}
+
+        logger.info(f"Relation ({subject} - {predicate} - {obj}) deleted from document {doc_id} by user {session['username']}")
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Failed to delete relation from doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/spaces/{doc_id}/relations/auto-extract")
+async def auto_extract_relations(
+    doc_id: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        doc = await db.spaces_documents.find_one({"_id": ObjectId(doc_id)})
+        if not doc:
+            return {"success": False, "error": "Document not found."}
+
+        # Get active language for descriptions
+        user = await db.users.find_one({"username": session["username"]})
+        user_settings = user.get("settings", {}) if user else {}
+        lang = user_settings.get("language", "en")
+
+        # Fetch registered predicates
+        predicates_cursor = db.predicates.find({})
+        predicates = await predicates_cursor.to_list(length=100)
+        if not predicates:
+            predicates = [
+                {
+                    "name": "cultivated_in", 
+                    "label_en": "is grown in", 
+                    "label_vi": "được trồng ở", 
+                    "desc_en": "Which crop is grown in which region/location", 
+                    "desc_vi": "Cây trồng nào được trồng ở vùng miền/vị trí nào"
+                },
+                {
+                    "name": "affected_by", 
+                    "label_en": "is affected by", 
+                    "label_vi": "bị bệnh", 
+                    "desc_en": "Which crop is affected by which disease", 
+                    "desc_vi": "Cây trồng nào bị mắc bệnh hại gì"
+                },
+                {
+                    "name": "has_yield", 
+                    "label_en": "has yield", 
+                    "label_vi": "có năng suất", 
+                    "desc_en": "The average or peak yield of a crop", 
+                    "desc_vi": "Năng suất trung bình hoặc tối đa của cây trồng"
+                },
+                {
+                    "name": "grown_in_season", 
+                    "label_en": "is grown in season", 
+                    "label_vi": "trồng vào mùa", 
+                    "desc_en": "Which season or time of year the crop is grown", 
+                    "desc_vi": "Mùa vụ gieo trồng của cây trong năm"
+                },
+                {
+                    "name": "solution_for", 
+                    "label_en": "is remedy/solution for", 
+                    "label_vi": "giải pháp cho", 
+                    "desc_en": "Remedy or control solution for a crop disease", 
+                    "desc_vi": "Giải pháp phòng trừ hoặc chữa trị cho bệnh hại cây trồng"
+                }
+            ]
+
+        labels = doc.get("labels", [])
+        text = doc.get("text", "")
+        model_id = doc.get("model", "gliner2-multi-v1")
+
+        if not labels or not text:
+            return {"success": True, "relations": []}
+
+        # Load GLiNER2 model & build extraction schema
+        from src.services.ner import get_model
+        model = get_model(model_id)
+
+        schema = model.create_schema()
+        schema.entities(labels)
+
+        # Build relations dictionary for GLiNER2
+        relations_map = {}
+        for pred in predicates:
+            desc = pred.get(f"desc_{lang}") or pred.get("desc_en") or pred.get("desc_vi") or f"{pred.get('label_vi')} / {pred.get('label_en')}"
+            relations_map[pred["name"]] = desc
+        schema.relations(relations_map)
+
+        # Extract
+        results = model.extract(text, schema)
+        relation_extraction = results.get("relation_extraction", {})
+
+        extracted_relations = []
+        for rel_name, triples in relation_extraction.items():
+            # Match relation key with its label corresponding to active language
+            pred_obj = next((p for p in predicates if p["name"] == rel_name), None)
+            if pred_obj:
+                pred_label = pred_obj.get(f"label_{lang}") or pred_obj.get("label_vi") or pred_obj.get("label_en") or rel_name
+            else:
+                pred_label = rel_name
+            for s, o in triples:
+                extracted_relations.append({
+                    "subject": s.strip(),
+                    "predicate": pred_label,
+                    "object": o.strip()
+                })
+
+        # Save to DB, avoiding duplicate relations
+        existing_relations = doc.get("relations", [])
+        existing_set = {(r["subject"], r["predicate"], r["object"]) for r in existing_relations}
+
+        new_to_add = []
+        for r in extracted_relations:
+            triple_tuple = (r["subject"], r["predicate"], r["object"])
+            if triple_tuple not in existing_set:
+                new_to_add.append(r)
+                existing_set.add(triple_tuple)
+
+        if new_to_add:
+            await db.spaces_documents.update_one(
+                {"_id": ObjectId(doc_id)},
+                {"$push": {"relations": {"$each": new_to_add}}}
+            )
+
+        logger.info(f"GLiNER2 auto-extracted {len(new_to_add)} new relations for doc {doc_id}")
+        
+        # Return complete updated relations list
+        updated_doc = await db.spaces_documents.find_one({"_id": ObjectId(doc_id)})
+        return {"success": True, "relations": updated_doc.get("relations", [])}
+    except Exception as e:
+        logger.error(f"Failed to auto-extract relations for doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}

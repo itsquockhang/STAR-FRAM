@@ -68,6 +68,54 @@ async def settings_page(
         "labels": sorted(user_settings.get("labels", []), key=lambda x: x["name"])
     }
 
+    # Fetch predicates from db.predicates
+    predicates_cursor = db.predicates.find({})
+    predicates = await predicates_cursor.to_list(length=100)
+    
+    # Seed default agricultural predicates if empty
+    if not predicates:
+        default_preds = [
+            {
+                "name": "cultivated_in", 
+                "label_en": "is grown in", 
+                "label_vi": "được trồng ở", 
+                "desc_en": "Which crop is grown in which region/location", 
+                "desc_vi": "Cây trồng nào được trồng ở vùng miền/vị trí nào"
+            },
+            {
+                "name": "affected_by", 
+                "label_en": "is affected by", 
+                "label_vi": "bị bệnh", 
+                "desc_en": "Which crop is affected by which disease", 
+                "desc_vi": "Cây trồng nào bị mắc bệnh hại gì"
+            },
+            {
+                "name": "has_yield", 
+                "label_en": "has yield", 
+                "label_vi": "có năng suất", 
+                "desc_en": "The average or peak yield of a crop", 
+                "desc_vi": "Năng suất trung bình hoặc tối đa của cây trồng"
+            },
+            {
+                "name": "grown_in_season", 
+                "label_en": "is grown in season", 
+                "label_vi": "trồng vào mùa", 
+                "desc_en": "Which season or time of year the crop is grown", 
+                "desc_vi": "Mùa vụ gieo trồng của cây trong năm"
+            },
+            {
+                "name": "solution_for", 
+                "label_en": "is remedy/solution for", 
+                "label_vi": "giải pháp cho", 
+                "desc_en": "Remedy or control solution for a crop disease", 
+                "desc_vi": "Giải pháp phòng trừ hoặc chữa trị cho bệnh hại cây trồng"
+            }
+        ]
+        await db.predicates.insert_many(default_preds)
+        predicates = default_preds
+
+    predicates = sorted(predicates, key=lambda x: x["name"])
+
     from fastapi.responses import HTMLResponse
     return templates.TemplateResponse(
         request=request,
@@ -76,6 +124,7 @@ async def settings_page(
             "username": username,
             "is_admin": session["is_admin"],
             "settings": sorted_settings,
+            "predicates": predicates,
             "active_page": "settings",
             "success": success,
             "error": error
@@ -364,3 +413,60 @@ async def suggest_label_definition(
     except Exception as e:
         logger.error(f"Label definition generation failed: {e}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/settings/predicates/add")
+async def add_predicate(
+    name: str = Form(...),
+    label_en: str = Form(...),
+    label_vi: str = Form(...),
+    desc_en: str = Form(""),
+    desc_vi: str = Form(""),
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse(url="/dashboard?error=Unauthorized action.", status_code=status.HTTP_303_SEE_OTHER)
+
+    import datetime
+    name = name.strip().lower().replace(" ", "_")
+    db = get_db()
+    
+    # Check if predicate already exists
+    existing = await db.predicates.find_one({"name": name})
+    if existing:
+        return RedirectResponse(url="/settings?error=Predicate name already exists.", status_code=status.HTTP_303_SEE_OTHER)
+        
+    new_pred = {
+        "name": name,
+        "label_en": label_en.strip(),
+        "label_vi": label_vi.strip(),
+        "desc_en": desc_en.strip(),
+        "desc_vi": desc_vi.strip(),
+        "created_at": datetime.datetime.now(datetime.timezone.utc)
+    }
+    await db.predicates.insert_one(new_pred)
+    logger.info(f"Predicate '{name}' added successfully by admin '{session['username']}'.")
+    return RedirectResponse(url="/settings?success=Predicate added successfully.", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/settings/predicates/delete/{name}")
+async def delete_predicate(
+    name: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse(url="/dashboard?error=Unauthorized action.", status_code=status.HTTP_303_SEE_OTHER)
+
+    db = get_db()
+    result = await db.predicates.delete_one({"name": name})
+    if result.deleted_count == 0:
+        return RedirectResponse(url="/settings?error=Predicate not found.", status_code=status.HTTP_303_SEE_OTHER)
+        
+    logger.info(f"Predicate '{name}' deleted successfully by admin '{session['username']}'.")
+    return RedirectResponse(url="/settings?success=Predicate deleted successfully.", status_code=status.HTTP_303_SEE_OTHER)

@@ -54,28 +54,196 @@
     <!-- Main Detail Layout -->
     <div class="animate-fade-in grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8 items-start">
       
-      <!-- Highlighted Text Content -->
-      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
-          <div>
-            <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">
-              {{ doc.title }}
-            </h2>
-            <!-- Metadata -->
-            <p class="text-xs text-[#5f5f5d]">
-              Saved by <strong class="text-[#1c1c1c]">{{ doc.author }}</strong> on {{ doc.created_at.strftime('%d/%m/%Y %H:%M') if doc.created_at else 'N/A' }}
-            </p>
+      <!-- Left Column: Tabs & Main Content -->
+      <div class="space-y-6">
+        <!-- Tabs Header -->
+        <div class="flex items-center gap-2 border-b border-[#eceae4] pb-px">
+          <button
+            onclick="switchTab('annotated-tab')"
+            id="btn-annotated-tab"
+            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-emerald-500 text-emerald-600 transition-all cursor-pointer outline-none"
+          >
+            Annotated Document
+          </button>
+          <button
+            onclick="switchTab('kg-builder-tab')"
+            id="btn-kg-builder-tab"
+            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none"
+          >
+            KG Builder (Drag & Drop)
+          </button>
+          <button
+            onclick="switchTab('graph-tab')"
+            id="btn-graph-tab"
+            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none"
+          >
+            Visual Graph
+          </button>
+        </div>
+
+        <!-- Tab 1: Annotated Document -->
+        <div id="panel-annotated-tab" class="tab-panel bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
+            <div>
+              <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">
+                {{ doc.title }}
+              </h2>
+              <!-- Metadata -->
+              <p class="text-xs text-[#5f5f5d]">
+                Saved by <strong class="text-[#1c1c1c]">{{ doc.author }}</strong> on {{ doc.created_at.strftime('%d/%m/%Y %H:%M') if doc.created_at else 'N/A' }}
+              </p>
+            </div>
+            <div class="shrink-0 flex items-center gap-3">
+              <span class="inline-block px-2.5 py-1 text-xs font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100 rounded">
+                Model: {{ doc.model }}
+              </span>
+            </div>
           </div>
-          <div class="shrink-0 flex items-center gap-3">
-            <span class="inline-block px-2.5 py-1 text-xs font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100 rounded">
-              Model: {{ doc.model }}
-            </span>
+
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70 mb-3">Annotated Document Text</h3>
+          <div class="p-6 bg-white border border-[#eceae4] rounded-xl text-sm leading-8 whitespace-pre-wrap break-words">
+            {{ highlighted_html | safe }}
           </div>
         </div>
 
-        <h3 class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70 mb-3">Annotated Document Text</h3>
-        <div class="p-6 bg-white border border-[#eceae4] rounded-xl text-sm leading-8 whitespace-pre-wrap break-words">
-          {{ highlighted_html | safe }}
+        <!-- Tab 2: KG Builder -->
+        <div id="panel-kg-builder-tab" class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
+            <div>
+              <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Construction</h2>
+              <p class="text-xs text-[#5f5f5d]">Drag entities from the sidebar and drop them here to define agricultural relationships, or use automatic extraction.</p>
+            </div>
+            <div class="shrink-0">
+              <button
+                type="button"
+                id="btnAutoExtract"
+                onclick="autoExtractRelations()"
+                class="btn-inset px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] flex items-center gap-1.5"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg>
+                Auto-Extract KGs (GliNER2)
+              </button>
+            </div>
+          </div>
+
+          <!-- Drag and Drop Workspace -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center bg-[#fbfaf7] border border-[#eceae4] p-5 rounded-xl mb-6">
+            <!-- Subject slot -->
+            <div class="flex flex-col gap-1.5 text-center">
+              <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Subject</span>
+              <div 
+                id="slot-subject"
+                ondragover="allowDrop(event)"
+                ondrop="handleDrop(event, 'subject')"
+                class="h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300"
+              >
+                Drop Subject here
+              </div>
+            </div>
+
+            <!-- Predicate dropdown -->
+            <div class="flex flex-col gap-1.5 text-center">
+              <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Relationship Predicate</span>
+              <select
+                id="select-predicate"
+                class="w-full px-3 py-2.5 text-xs bg-white border border-[#eceae4] rounded-lg transition-all focus:outline-none focus:border-emerald-500 font-medium"
+              >
+                <option value="" disabled selected>Select Predicate...</option>
+                {% for pred in predicates %}
+                  <option value="{{ pred.label_vi }}">{{ pred.label_vi }} ({{ pred.name }})</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Object slot -->
+            <div class="flex flex-col gap-1.5 text-center">
+              <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Object</span>
+              <div 
+                id="slot-object"
+                ondragover="allowDrop(event)"
+                ondrop="handleDrop(event, 'object')"
+                class="h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300"
+              >
+                Drop Object here
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 mb-6">
+            <button
+              type="button"
+              onclick="clearSlots()"
+              class="px-4 py-1.5 border border-[#eceae4] bg-transparent text-[#1c1c1c] font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#eceae4] active:scale-95"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onclick="saveRelationTriple()"
+              class="px-4 py-1.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98]"
+            >
+              Add Relation
+            </button>
+          </div>
+
+          <!-- Relations Table -->
+          <h3 class="text-xs font-bold uppercase tracking-wider text-[#1c1c1c] mb-3">Relations Table</h3>
+          <div class="overflow-x-auto border border-[#eceae4] rounded-xl bg-white">
+            <table class="w-full text-left border-collapse" id="relationsTable">
+              <thead>
+                <tr class="bg-[#fbfaf7] border-b border-[#eceae4]">
+                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Subject</th>
+                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Predicate</th>
+                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Object</th>
+                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right w-16">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-[#eceae4]" id="relationsTableBody">
+                {% for rel in doc.get('relations', []) %}
+                <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150 text-xs">
+                  <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">{{ rel.subject }}</td>
+                  <td class="py-2.5 px-4 text-emerald-700 font-medium bg-emerald-50/20 px-2 py-0.5 rounded border border-emerald-100 inline-block mt-1">{{ rel.predicate }}</td>
+                  <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">{{ rel.object }}</td>
+                  <td class="py-2.5 px-4 text-right">
+                    <button 
+                      type="button" 
+                      onclick="deleteRelation('{{ rel.subject | escape }}', '{{ rel.predicate | escape }}', '{{ rel.object | escape }}', this)"
+                      class="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded-lg transition-colors hover:bg-red-50"
+                      title="Delete relation"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+                {% if not doc.get('relations', []) %}
+                <tr id="noRelationsRow">
+                  <td colspan="4" class="py-6 text-center text-xs text-[#5f5f5d] italic">No relations built yet. Drag and drop to add, or auto-extract!</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Visual Graph -->
+        <div id="panel-graph-tab" class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+          <div class="border-b border-[#eceae4]/60 pb-4 mb-6">
+            <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Visualization</h2>
+            <p class="text-xs text-[#5f5f5d]">Zoom, pan, and drag nodes to explore the generated entity relationships.</p>
+          </div>
+          
+          <div id="graphContainer" class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative">
+            <!-- Loading state / instructions -->
+            <div id="graphEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-white/95 z-10 transition-opacity duration-200">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#5f5f5d] mb-2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <p class="text-xs font-semibold text-[#1c1c1c]">No graph data found</p>
+              <p class="text-[10px] text-[#5f5f5d] max-w-[280px]">Build relations in the KG Builder tab first to visualize the graph.</p>
+            </div>
+            
+            <!-- Vis network container -->
+            <div id="networkCanvas" class="w-full h-full"></div>
+          </div>
         </div>
       </div>
 
@@ -109,7 +277,13 @@
                 <td class="py-2.5 px-3 text-xs leading-relaxed">
                   {% set label_entities = doc.entities.get(label, []) %}
                   {% for entity in label_entities %}
-                    <span class="ner-entity ner-tag-{{ label_idx }} mr-1 mb-1.5 inline-block" title="Confidence: {{ (entity.confidence * 100) | round(1) if entity.confidence is defined else 'N/A' }}%">
+                    <span
+                      draggable="true"
+                      ondragstart="dragEntity(event)"
+                      data-entity="{{ entity.text if entity.text is defined else entity }}"
+                      class="ner-entity ner-tag-{{ label_idx }} mr-1 mb-1.5 inline-block cursor-grab active:cursor-grabbing hover:scale-105 transform transition-all duration-150"
+                      title="Drag to Subject or Object slot. Confidence: {{ (entity.confidence * 100) | round(1) if entity.confidence is defined else 'N/A' }}%"
+                    >
                       {{ entity.text if entity.text is defined else entity }}
                     </span>
                   {% endfor %}
@@ -150,8 +324,331 @@
 {% endblock %}
 
 {% block scripts %}
-  {% if doc.author == username %}
+  <!-- Load Vis-Network standing JS package via CDN -->
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
   <script>
+    // Document details reference
+    const docId = "{{ doc._id }}";
+
+    // 1. Tab Navigation Logic
+    function switchTab(tabId) {
+      // Hide all panels
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      // Show chosen panel
+      document.getElementById('panel-' + tabId).classList.remove('hidden');
+
+      // Update button styles
+      document.querySelectorAll('[id^="btn-"]').forEach(btn => {
+        btn.classList.remove('border-emerald-500', 'text-emerald-600');
+        btn.classList.add('border-transparent', 'text-[#5f5f5d]');
+      });
+
+      const activeBtn = document.getElementById('btn-' + tabId);
+      activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
+      activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
+
+      // If active tab is graph-tab, initialize/redraw the graph
+      if (tabId === 'graph-tab') {
+        drawGraph();
+      }
+    }
+
+    // 2. HTML5 Drag and Drop Handlers
+    let draggedEntity = null;
+
+    function dragEntity(ev) {
+      draggedEntity = ev.target.getAttribute('data-entity');
+      ev.dataTransfer.setData("text/plain", draggedEntity);
+      ev.dataTransfer.effectAllowed = "copy";
+    }
+
+    function allowDrop(ev) {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "copy";
+    }
+
+    function handleDrop(ev, slotType) {
+      ev.preventDefault();
+      const entity = ev.dataTransfer.getData("text/plain") || draggedEntity;
+      if (!entity) return;
+
+      const slot = document.getElementById('slot-' + slotType);
+      slot.textContent = entity;
+      slot.className = "h-16 border-2 border-solid border-emerald-500 bg-emerald-50/20 rounded-lg flex items-center justify-center text-xs text-[#1c1c1c] font-semibold transition-all duration-200 select-all cursor-default";
+    }
+
+    function clearSlots() {
+      const subjectSlot = document.getElementById('slot-subject');
+      subjectSlot.textContent = "Drop Subject here";
+      subjectSlot.className = "h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300";
+
+      const objectSlot = document.getElementById('slot-object');
+      objectSlot.textContent = "Drop Object here";
+      objectSlot.className = "h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300";
+
+      document.getElementById('select-predicate').selectedIndex = 0;
+    }
+
+    // 3. AJAX KG Triples Persistence Logic
+    async function saveRelationTriple() {
+      const subjectSlot = document.getElementById('slot-subject');
+      const objectSlot = document.getElementById('slot-object');
+      const selectPredicate = document.getElementById('select-predicate');
+
+      const subject = subjectSlot.textContent.trim();
+      const object = objectSlot.textContent.trim();
+      const predicate = selectPredicate.value;
+
+      if (subject === "Drop Subject here" || !subject) {
+        alert("Please drag and drop a Subject entity.");
+        return;
+      }
+      if (!predicate) {
+        alert("Please select a relationship predicate.");
+        return;
+      }
+      if (object === "Drop Object here" || !object) {
+        alert("Please drag and drop an Object entity.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/spaces/${docId}/relations/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject, predicate, object })
+        });
+        const data = await response.json();
+        if (data.success) {
+          addRelationToTable(subject, predicate, object);
+          clearSlots();
+        } else {
+          alert("Failed to save relation: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Connection error occurred while saving relation.");
+      }
+    }
+
+    async function deleteRelation(subject, predicate, object, btn) {
+      if (!confirm(`Are you sure you want to delete this relation: "${subject} ${predicate} ${object}"?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/spaces/${docId}/relations/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject, predicate, object })
+        });
+        const data = await response.json();
+        if (data.success) {
+          const row = btn.closest('tr');
+          row.remove();
+          checkTableEmpty();
+        } else {
+          alert("Failed to delete relation: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Connection error occurred while deleting relation.");
+      }
+    }
+
+    async function autoExtractRelations() {
+      const btn = document.getElementById('btnAutoExtract');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Extracting...
+      `;
+
+      try {
+        const response = await fetch(`/spaces/${docId}/relations/auto-extract`, {
+          method: 'POST'
+        });
+        const data = await response.json();
+        if (data.success) {
+          repopulateRelationsTable(data.relations);
+        } else {
+          alert("Failed to auto-extract relations: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Connection error occurred during auto-extraction.");
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+
+    // 4. Table Helpers
+    function addRelationToTable(subject, predicate, object) {
+      const tbody = document.getElementById('relationsTableBody');
+      const noRelationsRow = document.getElementById('noRelationsRow');
+      if (noRelationsRow) {
+        noRelationsRow.remove();
+      }
+
+      const escSub = escapeHtmlString(subject);
+      const escPred = escapeHtmlString(predicate);
+      const escObj = escapeHtmlString(object);
+
+      const tr = document.createElement('tr');
+      tr.className = "hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150 text-xs";
+      tr.innerHTML = `
+        <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">${escSub}</td>
+        <td class="py-2.5 px-4"><span class="text-emerald-700 font-medium bg-emerald-50/20 px-2 py-0.5 rounded border border-emerald-100 inline-block">${escPred}</span></td>
+        <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">${escObj}</td>
+        <td class="py-2.5 px-4 text-right">
+          <button 
+            type="button" 
+            onclick="deleteRelation('${escSub.replace(/'/g, "\\'")}', '${escPred.replace(/'/g, "\\'")}', '${escObj.replace(/'/g, "\\'")}', this)"
+            class="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded-lg transition-colors hover:bg-red-50"
+            title="Delete relation"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    function repopulateRelationsTable(relations) {
+      const tbody = document.getElementById('relationsTableBody');
+      tbody.innerHTML = '';
+
+      if (!relations || relations.length === 0) {
+        tbody.innerHTML = `
+          <tr id="noRelationsRow">
+            <td colspan="4" class="py-6 text-center text-xs text-[#5f5f5d] italic">No relations built yet. Drag and drop to add, or auto-extract!</td>
+          </tr>
+        `;
+        return;
+      }
+
+      relations.forEach(rel => {
+        addRelationToTable(rel.subject, rel.predicate, rel.object);
+      });
+    }
+
+    function checkTableEmpty() {
+      const tbody = document.getElementById('relationsTableBody');
+      if (tbody.children.length === 0) {
+        tbody.innerHTML = `
+          <tr id="noRelationsRow">
+            <td colspan="4" class="py-6 text-center text-xs text-[#5f5f5d] italic">No relations built yet. Drag and drop to add, or auto-extract!</td>
+          </tr>
+        `;
+      }
+    }
+
+    function escapeHtmlString(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // 5. Vis-network drawing logic
+    let networkInstance = null;
+
+    function drawGraph() {
+      const rows = document.querySelectorAll('#relationsTableBody tr');
+      const edges = [];
+      const nodeSet = new Set();
+
+      rows.forEach(row => {
+        if (row.id === 'noRelationsRow') return;
+        const cols = row.querySelectorAll('td');
+        if (cols.length < 3) return;
+
+        const subject = cols[0].textContent.trim();
+        const predicate = cols[1].textContent.trim();
+        const object = cols[2].textContent.trim();
+
+        nodeSet.add(subject);
+        nodeSet.add(object);
+
+        edges.push({
+          from: subject,
+          to: object,
+          label: predicate,
+          arrows: 'to',
+          font: { align: 'horizontal', size: 10, color: '#065f46', background: '#f0fdf4' },
+          color: { color: '#059669', hover: '#047857', highlight: '#10b981' }
+        });
+      });
+
+      const emptyState = document.getElementById('graphEmptyState');
+      if (nodeSet.size === 0) {
+        emptyState.classList.remove('opacity-0', 'invisible');
+        if (networkInstance) {
+          networkInstance.destroy();
+          networkInstance = null;
+        }
+        return;
+      }
+
+      emptyState.classList.add('opacity-0', 'invisible');
+
+      const nodes = Array.from(nodeSet).map(name => {
+        return {
+          id: name,
+          label: name,
+          shape: 'box',
+          color: {
+            background: '#ffffff',
+            border: '#eceae4',
+            hover: { background: '#f0fdf4', border: '#10b981' },
+            highlight: { background: '#ecfdf5', border: '#10b981' }
+          },
+          borderWidth: 1.5,
+          font: { size: 12, color: '#1c1c1c', face: 'Outfit, Inter, sans-serif' },
+          margin: 10,
+          shadow: {
+            enabled: true,
+            color: 'rgba(28,28,28,0.03)',
+            size: 4,
+            x: 0,
+            y: 2
+          }
+        };
+      });
+
+      const container = document.getElementById('networkCanvas');
+      const data = {
+        nodes: new vis.DataSet(nodes),
+        edges: new vis.DataSet(edges)
+      };
+
+      const options = {
+        physics: {
+          stabilization: true,
+          barnesHut: {
+            gravitationalConstant: -2000,
+            centralGravity: 0.3,
+            springLength: 120,
+            springConstant: 0.04
+          }
+        },
+        interaction: {
+          hover: true
+        }
+      };
+
+      if (networkInstance) {
+        networkInstance.destroy();
+      }
+      networkInstance = new vis.Network(container, data, options);
+    }
+
+    // 6. Delete document confirmation listener
     const deleteForm = document.getElementById('deleteDocForm');
     if (deleteForm) {
       deleteForm.addEventListener('submit', (e) => {
@@ -164,5 +661,4 @@
       });
     }
   </script>
-  {% endif %}
 {% endblock %}
