@@ -29,6 +29,21 @@ async def get_conductor_model() -> str:
     return "google/gemma-4-E2B-it-qat-w4a16-ct"
 
 
+async def get_dspy_lm():
+    import dspy
+    model_id = await get_conductor_model()
+    conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
+    return dspy.LM(
+        model=f"openai/{model_id}",
+        api_base=conductor_api_base,
+        api_key="dummy",
+        # Config parameters tuned for google/gemma-4-E2B-it-qat-w4a16-ct
+        temperature=1.0,
+        top_p=0.95,
+        top_k=64
+    )
+
+
 @router.get("/settings", response_class=RedirectResponse)
 async def settings_page(
     request: Request,
@@ -247,20 +262,8 @@ async def enhance_label_queries(
                                 "cached": True
                             }
             
-        model_id = await get_conductor_model()
-        
-        conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
-        
         # Configure DSPy LM
-        lm = dspy.LM(
-            model=f"openai/{model_id}",
-            api_base=conductor_api_base,
-            api_key="dummy",
-            # google/gemma-4-E2B-it-qat-w4a16-ct
-            temperature=1.0,
-            top_p=0.95,
-            top_k=64
-        )
+        lm = await get_dspy_lm()
         
         with dspy.context(lm=lm):
             predictor = dspy.Predict(GenerateRAGQueries)
@@ -346,18 +349,8 @@ async def suggest_label_definition(
         if not name:
             return {"success": False, "error": "Label name is required."}
             
-        model_id = await get_conductor_model()
-        conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
-        
         # Configure DSPy LM
-        lm = dspy.LM(
-            model=f"openai/{model_id}",
-            api_base=conductor_api_base,
-            api_key="dummy",
-            temperature=1.0,
-            top_p=0.95,
-            top_k=64
-        )
+        lm = await get_dspy_lm()
         
         with dspy.context(lm=lm):
             predictor = dspy.Predict(GenerateLabelDefinition)
