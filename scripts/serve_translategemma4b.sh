@@ -19,8 +19,9 @@ docker run -itd --name google-translategemma-4b-it \
     --gpus all \
     -v ~/.cache/huggingface:/root/.cache/huggingface \
     vllm/vllm-openai:v0.14.1-cu130 \
-        Infomaniak-AI/vllm-translategemma-4b-it \
+        ViralityLeo/vllm-translategemma-4b-it-FP8-Dynamic \
         --served-model-name translategemma-4b-it \
-        --gpu-memory-utilization 0.8 \
         --host 0.0.0.0 \
-        --port 8128
+        --port 8128 \
+        --max-model-len 4096 \
+        --gpu-memory-utilization 0.75
