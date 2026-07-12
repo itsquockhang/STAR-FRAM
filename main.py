@@ -529,6 +529,97 @@ async def delete_label(
     return RedirectResponse(url=f"/settings?success=Label '{label_name}' deleted successfully.", status_code=status.HTTP_303_SEE_OTHER)
 
 
+async def get_conductor_model() -> str:
+    import httpx
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get("https://www-conductor.quockhang.io.vn/v1/models")
+            if resp.status_code == 200:
+                data = resp.json()
+                if "data" in data and len(data["data"]) > 0:
+                    model_id = data["data"][0]["id"]
+                    logger.info(f"Dynamically fetched conductor model: {model_id}")
+                    return model_id
+    except Exception as e:
+        logger.warning(f"Failed to dynamically fetch conductor model, using fallback: {e}")
+    return "google/gemma-4-E2B-it-qat-w4a16-ct"
+
+
+@app.post("/settings/labels/enhance")
+async def enhance_label_queries(
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    try:
+        import dspy
+        
+        class GenerateRAGQueries(dspy.Signature):
+            """
+            Generate exactly 5 diverse and effective search queries (in Vietnamese) for a search engine in a Retrieval-Augmented Generation (RAG) system.
+            The queries must be designed to retrieve documents relevant to the entity label and its definitions.
+            Return ONLY the numbered list of 5 queries.
+            """
+            label_name = dspy.InputField(desc="The name of the entity label")
+            definition_en = dspy.InputField(desc="The definition of the entity label in English")
+            definition_vi = dspy.InputField(desc="The definition of the entity label in Vietnamese")
+            queries = dspy.OutputField(desc="Exactly 5 search queries, numbered 1 to 5, one per line")
+            
+        data = await request.json()
+        name = data.get("name", "")
+        desc_en = data.get("desc_en", "")
+        desc_vi = data.get("desc_vi", "")
+        
+        if not name:
+            return {"success": False, "error": "Label name is required."}
+            
+        model_id = await get_conductor_model()
+        
+        # Configure DSPy LM
+        lm = dspy.LM(
+            model=f"openai/{model_id}",
+            api_base="https://www-conductor.quockhang.io.vn/v1",
+            api_key="dummy"
+        )
+        
+        with dspy.context(lm=lm):
+            predictor = dspy.Predict(GenerateRAGQueries)
+            result = predictor(
+                label_name=name,
+                definition_en=desc_en,
+                definition_vi=desc_vi
+            )
+            
+        queries_text = result.queries
+        
+        import re
+        queries = []
+        for line in queries_text.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+            # Remove leading numbers/bullets like "1.", "- ", "2) " or "1. "
+            cleaned = re.sub(r'^[\d\-\*\.\)\s]+', '', line).strip()
+            if cleaned:
+                queries.append(cleaned)
+                
+        # Slice to 5 and ensure fallback if fewer
+        queries = queries[:5]
+        while len(queries) < 5:
+            queries.append(f"Truy vấn tài liệu liên quan đến nhãn {name}")
+            
+        logger.info(f"Query enhancement completed for label '{name}' using model '{model_id}'")
+        return {"success": True, "queries": queries}
+    except Exception as e:
+        logger.error(f"Query enhancement failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
 # ── NER Routes ──────────────────────────────────────────────────────
 
 MAX_NER_CHARS = 100000

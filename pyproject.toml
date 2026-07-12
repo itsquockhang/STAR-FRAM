@@ -23,4 +23,6 @@ dependencies = [
     "soundfile",
     "trafilatura>=2.1.0",
     "chonkie>=1.7.0",
+    "dspy",
+    "litellm<1.91.0",
 ]
