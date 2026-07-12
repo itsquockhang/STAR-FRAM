@@ -28,12 +28,12 @@ async def get_conductor_model() -> str:
                     model_id = data["data"][0]["id"]
                     logger.info(f"Dynamically fetched conductor model: {model_id}")
                     return model_id
-            raise LLMConnectionError(f"Server LLM (Conductor) báo lỗi status code {resp.status_code}. Vui lòng kiểm tra lại.")
+            raise LLMConnectionError(f"Server LLM (Conductor) returned status code {resp.status_code}. Please check server logs.")
     except LLMConnectionError as e:
         raise e
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.RequestError) as e:
         logger.error(f"Conductor server is unreachable: {e}")
-        raise LLMConnectionError("Server LLM (Conductor) đã bị tắt hoặc không thể kết nối. Vui lòng kiểm tra lại serve.sh.")
+        raise LLMConnectionError("Server LLM (Conductor) is offline or unreachable. Please verify serve.sh is running.")
     except Exception as e:
         logger.warning(f"Failed to dynamically fetch conductor model, using fallback: {e}")
     return "google/gemma-4-E2B-it-qat-w4a16-ct"
