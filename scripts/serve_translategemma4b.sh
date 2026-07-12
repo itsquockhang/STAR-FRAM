@@ -12,6 +12,8 @@
 #       ]
 #     }'
 
+## Tested on RTX 3060 12GB VRAM
+
 docker run -itd --name google-translategemma-4b-it \
     --ipc=host \
     --network host \
