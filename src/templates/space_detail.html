@@ -4,489 +4,499 @@
 {% block title %}{{ doc.title }} | Document Detail{% endblock %}
 
 {% block extra_styles %}
-    /* Entity highlight colors — 8 distinct hues */
-    .ner-tag-0 { background: rgba(16,185,129,0.15); color: #065f46; border-bottom: 2px solid #10b981; }
-    .ner-tag-1 { background: rgba(59,130,246,0.15); color: #1e3a5f; border-bottom: 2px solid #3b82f6; }
-    .ner-tag-2 { background: rgba(234,179,8,0.15);  color: #713f12; border-bottom: 2px solid #eab308; }
-    .ner-tag-3 { background: rgba(239,68,68,0.15);  color: #7f1d1d; border-bottom: 2px solid #ef4444; }
-    .ner-tag-4 { background: rgba(168,85,247,0.15); color: #4c1d95; border-bottom: 2px solid #a855f7; }
-    .ner-tag-5 { background: rgba(236,72,153,0.15); color: #831843; border-bottom: 2px solid #ec4899; }
-    .ner-tag-6 { background: rgba(20,184,166,0.15); color: #134e4a; border-bottom: 2px solid #14b8a6; }
-    .ner-tag-7 { background: rgba(249,115,22,0.15); color: #7c2d12; border-bottom: 2px solid #f97316; }
+/* Entity highlight colors — 8 distinct hues */
+.ner-tag-0 { background: rgba(16,185,129,0.15); color: #065f46; border-bottom: 2px solid #10b981; }
+.ner-tag-1 { background: rgba(59,130,246,0.15); color: #1e3a5f; border-bottom: 2px solid #3b82f6; }
+.ner-tag-2 { background: rgba(234,179,8,0.15); color: #713f12; border-bottom: 2px solid #eab308; }
+.ner-tag-3 { background: rgba(239,68,68,0.15); color: #7f1d1d; border-bottom: 2px solid #ef4444; }
+.ner-tag-4 { background: rgba(168,85,247,0.15); color: #4c1d95; border-bottom: 2px solid #a855f7; }
+.ner-tag-5 { background: rgba(236,72,153,0.15); color: #831843; border-bottom: 2px solid #ec4899; }
+.ner-tag-6 { background: rgba(20,184,166,0.15); color: #134e4a; border-bottom: 2px solid #14b8a6; }
+.ner-tag-7 { background: rgba(249,115,22,0.15); color: #7c2d12; border-bottom: 2px solid #f97316; }
 
-    .ner-chip-0 { background: #10b981; } .ner-chip-1 { background: #3b82f6; }
-    .ner-chip-2 { background: #eab308; } .ner-chip-3 { background: #ef4444; }
-    .ner-chip-4 { background: #a855f7; } .ner-chip-5 { background: #ec4899; }
-    .ner-chip-6 { background: #14b8a6; } .ner-chip-7 { background: #f97316; }
+.ner-chip-0 { background: #10b981; } .ner-chip-1 { background: #3b82f6; }
+.ner-chip-2 { background: #eab308; } .ner-chip-3 { background: #ef4444; }
+.ner-chip-4 { background: #a855f7; } .ner-chip-5 { background: #ec4899; }
+.ner-chip-6 { background: #14b8a6; } .ner-chip-7 { background: #f97316; }
 
-    .ner-entity {
-      padding: 1px 4px;
-      border-radius: 4px;
-      font-weight: 500;
-      position: relative;
-      cursor: default;
-      transition: filter 0.15s;
-    }
-    .ner-entity:hover { filter: brightness(0.92); }
-    .ner-entity .ner-label {
-      font-size: 9px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      opacity: 0.7;
-      margin-left: 3px;
-      vertical-align: super;
-    }
+.ner-entity {
+padding: 1px 4px;
+border-radius: 4px;
+font-weight: 500;
+position: relative;
+cursor: default;
+transition: filter 0.15s;
+}
+.ner-entity:hover { filter: brightness(0.92); }
+.ner-entity .ner-label {
+font-size: 9px;
+font-weight: 700;
+text-transform: uppercase;
+letter-spacing: 0.05em;
+opacity: 0.7;
+margin-left: 3px;
+vertical-align: super;
+}
 {% endblock %}
 
 {% block content %}
-  <!-- Main Content -->
-  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
+<!-- Main Content -->
+<main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
 
-    <!-- Header Actions -->
-    <div class="animate-fade-in flex items-center gap-3 mb-6">
-      <a href="/spaces" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-1">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="rotate-180"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        Back to Spaces
-      </a>
-    </div>
+  <!-- Header Actions -->
+  <div class="animate-fade-in flex items-center gap-3 mb-6">
+    <a href="/spaces"
+      class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-1">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" stroke-linejoin="round" class="rotate-180">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+      Back to Spaces
+    </a>
+  </div>
 
-    <!-- Main Detail Layout -->
-    <div class="animate-fade-in grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8 items-start">
-      
-      <!-- Left Column: Tabs & Main Content -->
-      <div class="space-y-6">
-        <!-- Tabs Header -->
-        <div class="flex items-center gap-2 border-b border-[#eceae4] pb-px">
-          <button
-            onclick="switchTab('annotated-tab')"
-            id="btn-annotated-tab"
-            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-emerald-500 text-emerald-600 transition-all cursor-pointer outline-none"
-          >
-            Annotated Document
-          </button>
-          <button
-            onclick="switchTab('kg-builder-tab')"
-            id="btn-kg-builder-tab"
-            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none"
-          >
-            KG Builder (Drag & Drop)
-          </button>
-          <button
-            onclick="switchTab('graph-tab')"
-            id="btn-graph-tab"
-            class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none"
-          >
-            Visual Graph
-          </button>
-        </div>
+  <!-- Main Detail Layout -->
+  <div class="animate-fade-in grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8 items-start">
 
-        <!-- Tab 1: Annotated Document -->
-        <div id="panel-annotated-tab" class="tab-panel bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
-            <div>
-              <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">
-                {{ doc.title }}
-              </h2>
-              <!-- Metadata -->
-              <p class="text-xs text-[#5f5f5d]">
-                Saved by <strong class="text-[#1c1c1c]">{{ doc.author }}</strong> on {{ doc.created_at.strftime('%d/%m/%Y %H:%M') if doc.created_at else 'N/A' }}
-              </p>
-            </div>
-            <div class="shrink-0 flex items-center gap-3">
-              <span class="inline-block px-2.5 py-1 text-xs font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100 rounded">
-                Model: {{ doc.model }}
-              </span>
-            </div>
+    <!-- Left Column: Tabs & Main Content -->
+    <div class="space-y-6">
+      <!-- Tabs Header -->
+      <div class="flex items-center gap-2 border-b border-[#eceae4] pb-px">
+        <button onclick="switchTab('annotated-tab')" id="btn-annotated-tab"
+          class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-emerald-500 text-emerald-600 transition-all cursor-pointer outline-none">
+          Annotated Document
+        </button>
+        <button onclick="switchTab('kg-builder-tab')" id="btn-kg-builder-tab"
+          class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none">
+          KG Builder (Drag & Drop)
+        </button>
+        <button onclick="switchTab('graph-tab')" id="btn-graph-tab"
+          class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none">
+          Visual Graph
+        </button>
+      </div>
+
+      <!-- Tab 1: Annotated Document -->
+      <div id="panel-annotated-tab"
+        class="tab-panel bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <div
+          class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">
+              {{ doc.title }}
+            </h2>
+            <!-- Metadata -->
+            <p class="text-xs text-[#5f5f5d]">
+              Saved by <strong class="text-[#1c1c1c]">{{ doc.author }}</strong> on {{ doc.created_at.strftime('%d/%m/%Y
+              %H:%M') if doc.created_at else 'N/A' }}
+            </p>
           </div>
-
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70 mb-3">Annotated Document Text</h3>
-          <div class="p-6 bg-white border border-[#eceae4] rounded-xl text-sm leading-8 whitespace-pre-wrap break-words">
-            {{ highlighted_html | safe }}
+          <div class="shrink-0 flex items-center gap-3">
+            <span
+              class="inline-block px-2.5 py-1 text-xs font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100 rounded">
+              Model: {{ doc.model }}
+            </span>
           </div>
         </div>
 
-        <!-- Tab 2: KG Builder -->
-        <div id="panel-kg-builder-tab" class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
-            <div>
-              <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Construction</h2>
-              <p class="text-xs text-[#5f5f5d]">Drag entities from the sidebar and drop them here to define agricultural relationships, or use automatic extraction.</p>
-            </div>
-            <div class="shrink-0">
-              <button
-                type="button"
-                id="btnAutoExtract"
-                onclick="autoExtractRelations()"
-                class="btn-inset px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] flex items-center gap-1.5"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg>
-                Auto-Extract KGs (GliNER2)
-              </button>
-            </div>
-          </div>
-
-          <!-- Drag and Drop Workspace -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center bg-[#fbfaf7] border border-[#eceae4] p-5 rounded-xl mb-6">
-            <!-- Subject slot -->
-            <div class="flex flex-col gap-1.5 text-center">
-              <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Subject</span>
-              <div 
-                id="slot-subject"
-                ondragover="allowDrop(event)"
-                ondrop="handleDrop(event, 'subject')"
-                class="h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300"
-              >
-                Drop Subject here
-              </div>
-            </div>
-
-            <!-- Predicate dropdown -->
-            <div class="flex flex-col gap-1.5 text-center">
-              <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Relationship Predicate</span>
-              <select
-                id="select-predicate"
-                class="w-full px-3 py-2.5 text-xs bg-white border border-[#eceae4] rounded-lg transition-all focus:outline-none focus:border-emerald-500 font-medium"
-              >
-                <option value="" disabled selected>Select Predicate...</option>
-                {% for pred in predicates %}
-                  <option value="{{ pred.label_vi }}">{{ pred.label_vi }} ({{ pred.name }})</option>
-                {% endfor %}
-              </select>
-            </div>
-
-            <!-- Object slot -->
-            <div class="flex flex-col gap-1.5 text-center">
-              <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Object</span>
-              <div 
-                id="slot-object"
-                ondragover="allowDrop(event)"
-                ondrop="handleDrop(event, 'object')"
-                class="h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300"
-              >
-                Drop Object here
-              </div>
-            </div>
-          </div>
-
-          <div class="flex justify-end gap-2 mb-6">
-            <button
-              type="button"
-              onclick="clearSlots()"
-              class="px-4 py-1.5 border border-[#eceae4] bg-transparent text-[#1c1c1c] font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#eceae4] active:scale-95"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onclick="saveRelationTriple()"
-              class="px-4 py-1.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98]"
-            >
-              Add Relation
-            </button>
-          </div>
-
-          <!-- Relations Table -->
-          <h3 class="text-xs font-bold uppercase tracking-wider text-[#1c1c1c] mb-3">Relations Table</h3>
-          <div class="overflow-x-auto border border-[#eceae4] rounded-xl bg-white">
-            <table class="w-full text-left border-collapse" id="relationsTable">
-              <thead>
-                <tr class="bg-[#fbfaf7] border-b border-[#eceae4]">
-                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Subject</th>
-                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Predicate</th>
-                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Object</th>
-                  <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right w-16">Action</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-[#eceae4]" id="relationsTableBody">
-                {% for rel in doc.get('relations', []) %}
-                <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150 text-xs">
-                  <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">{{ rel.subject }}</td>
-                  <td class="py-2.5 px-4 text-emerald-700 font-medium bg-emerald-50/20 px-2 py-0.5 rounded border border-emerald-100 inline-block mt-1">{{ rel.predicate }}</td>
-                  <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">{{ rel.object }}</td>
-                  <td class="py-2.5 px-4 text-right">
-                    <button 
-                      type="button" 
-                      onclick="deleteRelation('{{ rel.subject | escape }}', '{{ rel.predicate | escape }}', '{{ rel.object | escape }}', this)"
-                      class="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded-lg transition-colors hover:bg-red-50"
-                      title="Delete relation"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                  </td>
-                </tr>
-                {% endfor %}
-                {% if not doc.get('relations', []) %}
-                <tr id="noRelationsRow">
-                  <td colspan="4" class="py-6 text-center text-xs text-[#5f5f5d] italic">No relations built yet. Drag and drop to add, or auto-extract!</td>
-                </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
-
-          <!-- AI Assistant suggestions section -->
-          <div class="mt-8 border-t border-[#eceae4] pt-6">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h4 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider flex items-center gap-1.5">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 w-3.5 h-3.5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z"/></svg>
-                  AI Assistant Suggestions
-                </h4>
-                <p class="text-[10px] text-[#5f5f5d]">Let the AI analyze the document and suggest relationship triples.</p>
-              </div>
-              <button
-                type="button"
-                id="btnSuggestRelations"
-                onclick="aiSuggestRelations()"
-                class="px-3 py-1.5 border border-indigo-200 text-indigo-600 rounded-lg cursor-pointer bg-indigo-50/50 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95 transition-all duration-200 text-xs font-semibold flex items-center gap-1.5"
-              >
-                AI Suggest Relations
-              </button>
-            </div>
-            
-            <div id="aiSuggestionsContainer" class="hidden grid grid-cols-1 gap-2.5 max-h-60 overflow-y-auto p-4 bg-indigo-50/15 border border-indigo-100 rounded-xl">
-              <!-- Dynamically populated by JS -->
-            </div>
-          </div>
-        </div>
-
-        <!-- Tab 3: Visual Graph -->
-        <div id="panel-graph-tab" class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-          <div class="border-b border-[#eceae4]/60 pb-4 mb-6">
-            <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Visualization</h2>
-            <p class="text-xs text-[#5f5f5d]">Zoom, pan, and drag nodes to explore the generated entity relationships.</p>
-          </div>
-          
-          <div id="graphContainer" class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative">
-            <!-- Loading state / instructions -->
-            <div id="graphEmptyState" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-white/95 z-10 transition-opacity duration-200">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#5f5f5d] mb-2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-              <p class="text-xs font-semibold text-[#1c1c1c]">No graph data found</p>
-              <p class="text-[10px] text-[#5f5f5d] max-w-[280px]">Build relations in the KG Builder tab first to visualize the graph.</p>
-            </div>
-            
-            <!-- Vis network container -->
-            <div id="networkCanvas" class="w-full h-full"></div>
-          </div>
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70 mb-3">Annotated Document Text</h3>
+        <div class="p-6 bg-white border border-[#eceae4] rounded-xl text-sm leading-8 whitespace-pre-wrap break-words">
+          {{ highlighted_html | safe }}
         </div>
       </div>
 
-      <!-- Sidebar / Entities summary table -->
-      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-        <h2 class="text-lg font-semibold tracking-tight mb-1">Entity Summary</h2>
-        <p class="text-xs text-[#5f5f5d] leading-relaxed mb-6">
-          A summary of all named entities extracted and saved in this document.
-        </p>
+      <!-- Tab 2: KG Builder -->
+      <div id="panel-kg-builder-tab"
+        class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <div
+          class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Construction</h2>
+            <p class="text-xs text-[#5f5f5d]">Drag entities from the sidebar and drop them here to define agricultural
+              relationships, or use automatic extraction.</p>
+          </div>
+          <div class="shrink-0">
+            <button type="button" id="btnAutoExtract" onclick="autoExtractRelations()"
+              class="btn-inset px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-emerald-700 active:scale-[0.98] flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5">
+                <path
+                  d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" />
+                <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z" />
+                <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z" />
+              </svg>
+              Auto-Extract KGs (GliNER2)
+            </button>
+          </div>
+        </div>
 
-        <!-- Entity Summary Table -->
-        <div class="overflow-x-auto mb-6">
-          <table class="w-full text-left border-collapse">
+        <!-- Drag and Drop Workspace -->
+        <div
+          class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center bg-[#fbfaf7] border border-[#eceae4] p-5 rounded-xl mb-6">
+          <!-- Subject slot -->
+          <div class="flex flex-col gap-1.5 text-center">
+            <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Subject</span>
+            <div id="slot-subject" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'subject')"
+              class="h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300">
+              Drop Subject here
+            </div>
+          </div>
+
+          <!-- Predicate dropdown -->
+          <div class="flex flex-col gap-1.5 text-center">
+            <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Relationship Predicate</span>
+            <select id="select-predicate"
+              class="w-full px-3 py-2.5 text-xs bg-white border border-[#eceae4] rounded-lg transition-all focus:outline-none focus:border-emerald-500 font-medium">
+              <option value="" disabled selected>Select Predicate...</option>
+              {% for pred in predicates %}
+              <option value="{{ pred.label_vi }}">{{ pred.label_vi }} ({{ pred.name }})</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Object slot -->
+          <div class="flex flex-col gap-1.5 text-center">
+            <span class="text-[9px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Object</span>
+            <div id="slot-object" ondragover="allowDrop(event)" ondrop="handleDrop(event, 'object')"
+              class="h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300">
+              Drop Object here
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mb-6">
+          <button type="button" onclick="clearSlots()"
+            class="px-4 py-1.5 border border-[#eceae4] bg-transparent text-[#1c1c1c] font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#eceae4] active:scale-95">
+            Clear
+          </button>
+          <button type="button" onclick="saveRelationTriple()"
+            class="px-4 py-1.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98]">
+            Add Relation
+          </button>
+        </div>
+
+        <!-- Relations Table -->
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[#1c1c1c] mb-3">Relations Table</h3>
+        <div class="overflow-x-auto border border-[#eceae4] rounded-xl bg-white">
+          <table class="w-full text-left border-collapse" id="relationsTable">
             <thead>
-              <tr class="border-b border-[#eceae4]">
-                <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Label</th>
-                <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Entities Found</th>
-                <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right">Count</th>
+              <tr class="bg-[#fbfaf7] border-b border-[#eceae4]">
+                <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Subject</th>
+                <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Predicate</th>
+                <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Object</th>
+                <th class="py-2.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right w-16">
+                  Action</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-[#eceae4]">
-              {% for label in doc.labels %}
-              {% set label_idx = loop.index0 % 8 %}
-              <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150">
-                <td class="py-2.5 px-3">
-                  <span class="inline-flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full ner-chip-{{ label_idx }}"></span>
-                    <span class="text-xs font-bold uppercase tracking-wider">{{ label }}</span>
-                  </span>
+            <tbody class="divide-y divide-[#eceae4]" id="relationsTableBody">
+              {% for rel in doc.get('relations', []) %}
+              <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150 text-xs">
+                <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">{{ rel.subject }}</td>
+                <td
+                  class="py-2.5 px-4 text-emerald-700 font-medium bg-emerald-50/20 px-2 py-0.5 rounded border border-emerald-100 inline-block mt-1">
+                  {{ rel.predicate }}</td>
+                <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">{{ rel.object }}</td>
+                <td class="py-2.5 px-4 text-right">
+                  <button type="button"
+                    onclick="deleteRelation('{{ rel.subject | escape }}', '{{ rel.predicate | escape }}', '{{ rel.object | escape }}', this)"
+                    class="text-red-500 hover:text-red-700 cursor-pointer p-1 rounded-lg transition-colors hover:bg-red-50"
+                    title="Delete relation">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
                 </td>
-                <td class="py-2.5 px-3 text-xs leading-relaxed">
-                  {% set label_entities = doc.entities.get(label, []) %}
-                  {% for entity in label_entities %}
-                    <span
-                      draggable="true"
-                      ondragstart="dragEntity(event)"
-                      data-entity="{{ entity.text if entity.text is defined else entity }}"
-                      class="ner-entity ner-tag-{{ label_idx }} mr-1 mb-1.5 inline-block cursor-grab active:cursor-grabbing hover:scale-105 transform transition-all duration-150"
-                      title="Drag to Subject or Object slot. Confidence: {{ (entity.confidence * 100) | round(1) if entity.confidence is defined else 'N/A' }}%"
-                    >
-                      {{ entity.text if entity.text is defined else entity }}
-                    </span>
-                  {% endfor %}
-                  {% if not label_entities %}
-                    <span class="text-xs text-[#5f5f5d] italic">None found</span>
-                  {% endif %}
-                </td>
-                <td class="py-2.5 px-3 text-xs text-right font-medium tabular-nums">{{ label_entities | length }}</td>
               </tr>
               {% endfor %}
+              {% if not doc.get('relations', []) %}
+              <tr id="noRelationsRow">
+                <td colspan="4" class="py-6 text-center text-xs text-[#5f5f5d] italic">No relations built yet. Drag and
+                  drop to add, or auto-extract!</td>
+              </tr>
+              {% endif %}
             </tbody>
           </table>
         </div>
 
-        <!-- Danger zone / Delete document -->
-        <div class="border-t border-[#eceae4] pt-5 mt-6">
-          {% if doc.author == username %}
-          <h4 class="text-xs font-semibold uppercase tracking-wider text-red-600 mb-2">Danger Zone</h4>
-          <p class="text-xs text-[#5f5f5d] mb-4">Deleting this document is permanent and cannot be undone.</p>
-          <form action="/spaces/{{ doc._id }}/delete" method="POST" id="deleteDocForm" class="m-0">
-            <button type="submit" class="w-full py-2 text-sm font-medium border border-red-300 text-red-600 rounded-lg bg-transparent cursor-pointer transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500/20">
-              Delete Document
+        <!-- AI Assistant suggestions section -->
+        <div class="mt-8 border-t border-[#eceae4] pt-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h4 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider flex items-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 w-3.5 h-3.5">
+                  <path
+                    d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" />
+                  <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z" />
+                </svg>
+                AI Assistant Suggestions
+              </h4>
+              <p class="text-[10px] text-[#5f5f5d]">Let the AI analyze the document and suggest relationship triples.
+              </p>
+            </div>
+            <button type="button" id="btnSuggestRelations" onclick="aiSuggestRelations()"
+              class="px-3 py-1.5 border border-indigo-200 text-indigo-600 rounded-lg cursor-pointer bg-indigo-50/50 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 active:scale-95 transition-all duration-200 text-xs font-semibold flex items-center gap-1.5">
+              AI Suggest Relations
             </button>
-          </form>
-          {% else %}
-          <div class="flex items-center gap-2 p-3.5 bg-[#f4f1e6]/40 border border-[#eceae4] rounded-xl text-xs text-[#5f5f5d]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            <span>This document is read-only. Only the author (<strong>{{ doc.author }}</strong>) can delete this document.</span>
           </div>
-          {% endif %}
+
+          <div id="aiSuggestionsContainer"
+            class="hidden grid grid-cols-1 gap-2.5 max-h-60 overflow-y-auto p-4 bg-indigo-50/15 border border-indigo-100 rounded-xl">
+            <!-- Dynamically populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Visual Graph -->
+      <div id="panel-graph-tab"
+        class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <div class="border-b border-[#eceae4]/60 pb-4 mb-6">
+          <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Visualization</h2>
+          <p class="text-xs text-[#5f5f5d]">Zoom, pan, and drag nodes to explore the generated entity relationships.</p>
         </div>
 
+        <div id="graphContainer"
+          class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative">
+          <!-- Loading state / instructions -->
+          <div id="graphEmptyState"
+            class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-white/95 z-10 transition-opacity duration-200">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="text-[#5f5f5d] mb-2">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            <p class="text-xs font-semibold text-[#1c1c1c]">No graph data found</p>
+            <p class="text-[10px] text-[#5f5f5d] max-w-[280px]">Build relations in the KG Builder tab first to visualize
+              the graph.</p>
+          </div>
+
+          <!-- Vis network container -->
+          <div id="networkCanvas" class="w-full h-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar / Entities summary table -->
+    <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+      <h2 class="text-lg font-semibold tracking-tight mb-1">Entity Summary</h2>
+      <p class="text-xs text-[#5f5f5d] leading-relaxed mb-6">
+        A summary of all named entities extracted and saved in this document.
+      </p>
+
+      <!-- Entity Summary Table -->
+      <div class="overflow-x-auto mb-6">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-[#eceae4]">
+              <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Label</th>
+              <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Entities Found</th>
+              <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right">Count
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#eceae4]">
+            {% for label in doc.labels %}
+            {% set label_idx = loop.index0 % 8 %}
+            <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150">
+              <td class="py-2.5 px-3">
+                <span class="inline-flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full ner-chip-{{ label_idx }}"></span>
+                  <span class="text-xs font-bold uppercase tracking-wider">{{ label }}</span>
+                </span>
+              </td>
+              <td class="py-2.5 px-3 text-xs leading-relaxed">
+                {% set label_entities = doc.entities.get(label, []) %}
+                {% for entity in label_entities %}
+                <span draggable="true" ondragstart="dragEntity(event)"
+                  data-entity="{{ entity.text if entity.text is defined else entity }}"
+                  class="ner-entity ner-tag-{{ label_idx }} mr-1 mb-1.5 inline-block cursor-grab active:cursor-grabbing hover:scale-105 transform transition-all duration-150"
+                  title="Drag to Subject or Object slot. Confidence: {{ (entity.confidence * 100) | round(1) if entity.confidence is defined else 'N/A' }}%">
+                  {{ entity.text if entity.text is defined else entity }}
+                </span>
+                {% endfor %}
+                {% if not label_entities %}
+                <span class="text-xs text-[#5f5f5d] italic">None found</span>
+                {% endif %}
+              </td>
+              <td class="py-2.5 px-3 text-xs text-right font-medium tabular-nums">{{ label_entities | length }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Danger zone / Delete document -->
+      <div class="border-t border-[#eceae4] pt-5 mt-6">
+        {% if doc.author == username %}
+        <h4 class="text-xs font-semibold uppercase tracking-wider text-red-600 mb-2">Danger Zone</h4>
+        <p class="text-xs text-[#5f5f5d] mb-4">Deleting this document is permanent and cannot be undone.</p>
+        <form action="/spaces/{{ doc._id }}/delete" method="POST" id="deleteDocForm" class="m-0">
+          <button type="submit"
+            class="w-full py-2 text-sm font-medium border border-red-300 text-red-600 rounded-lg bg-transparent cursor-pointer transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500/20">
+            Delete Document
+          </button>
+        </form>
+        {% else %}
+        <div
+          class="flex items-center gap-2 p-3.5 bg-[#f4f1e6]/40 border border-[#eceae4] rounded-xl text-xs text-[#5f5f5d]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>This document is read-only. Only the author (<strong>{{ doc.author }}</strong>) can delete this
+            document.</span>
+        </div>
+        {% endif %}
       </div>
 
     </div>
 
-  </main>
+  </div>
+
+</main>
 {% endblock %}
 
 {% block scripts %}
-  <!-- Load Vis-Network standing JS package via CDN -->
-  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<!-- Load Vis-Network standing JS package via CDN -->
+<script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
-  <script>
-    // Document details reference
-    const docId = "{{ doc._id }}";
+<script>
+  // Document details reference
+  const docId = "{{ doc._id }}";
 
-    // 1. Tab Navigation Logic
-    function switchTab(tabId) {
-      // Hide all panels
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
-      // Show chosen panel
-      document.getElementById('panel-' + tabId).classList.remove('hidden');
+  // 1. Tab Navigation Logic
+  function switchTab(tabId) {
+    // Hide all panels
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+    // Show chosen panel
+    document.getElementById('panel-' + tabId).classList.remove('hidden');
 
-      // Update button styles
-      document.querySelectorAll('[id^="btn-"]').forEach(btn => {
-        btn.classList.remove('border-emerald-500', 'text-emerald-600');
-        btn.classList.add('border-transparent', 'text-[#5f5f5d]');
+    // Update button styles
+    document.querySelectorAll('[id^="btn-"]').forEach(btn => {
+      btn.classList.remove('border-emerald-500', 'text-emerald-600');
+      btn.classList.add('border-transparent', 'text-[#5f5f5d]');
+    });
+
+    const activeBtn = document.getElementById('btn-' + tabId);
+    activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
+    activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
+
+    // If active tab is graph-tab, initialize/redraw the graph
+    if (tabId === 'graph-tab') {
+      drawGraph();
+    }
+  }
+
+  // 2. HTML5 Drag and Drop Handlers
+  let draggedEntity = null;
+
+  function dragEntity(ev) {
+    draggedEntity = ev.target.getAttribute('data-entity');
+    ev.dataTransfer.setData("text/plain", draggedEntity);
+    ev.dataTransfer.effectAllowed = "copy";
+  }
+
+  function allowDrop(ev) {
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleDrop(ev, slotType) {
+    ev.preventDefault();
+    const entity = ev.dataTransfer.getData("text/plain") || draggedEntity;
+    if (!entity) return;
+
+    const slot = document.getElementById('slot-' + slotType);
+    slot.textContent = entity;
+    slot.className = "h-16 border-2 border-solid border-emerald-500 bg-emerald-50/20 rounded-lg flex items-center justify-center text-xs text-[#1c1c1c] font-semibold transition-all duration-200 select-all cursor-default";
+  }
+
+  function clearSlots() {
+    const subjectSlot = document.getElementById('slot-subject');
+    subjectSlot.textContent = "Drop Subject here";
+    subjectSlot.className = "h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300";
+
+    const objectSlot = document.getElementById('slot-object');
+    objectSlot.textContent = "Drop Object here";
+    objectSlot.className = "h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300";
+
+    document.getElementById('select-predicate').selectedIndex = 0;
+  }
+
+  // 3. AJAX KG Triples Persistence Logic
+  async function saveRelationTriple() {
+    const subjectSlot = document.getElementById('slot-subject');
+    const objectSlot = document.getElementById('slot-object');
+    const selectPredicate = document.getElementById('select-predicate');
+
+    const subject = subjectSlot.textContent.trim();
+    const object = objectSlot.textContent.trim();
+    const predicate = selectPredicate.value;
+
+    if (subject === "Drop Subject here" || !subject) {
+      alert("Please drag and drop a Subject entity.");
+      return;
+    }
+    if (!predicate) {
+      alert("Please select a relationship predicate.");
+      return;
+    }
+    if (object === "Drop Object here" || !object) {
+      alert("Please drag and drop an Object entity.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/spaces/${docId}/relations/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, predicate, object })
       });
-
-      const activeBtn = document.getElementById('btn-' + tabId);
-      activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
-      activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
-
-      // If active tab is graph-tab, initialize/redraw the graph
-      if (tabId === 'graph-tab') {
-        drawGraph();
+      const data = await response.json();
+      if (data.success) {
+        addRelationToTable(subject, predicate, object);
+        clearSlots();
+      } else {
+        alert("Failed to save relation: " + (data.error || "Unknown error"));
       }
+    } catch (err) {
+      console.error(err);
+      alert("Connection error occurred while saving relation.");
+    }
+  }
+
+  async function deleteRelation(subject, predicate, object, btn) {
+    if (!confirm(`Are you sure you want to delete this relation: "${subject} ${predicate} ${object}"?`)) {
+      return;
     }
 
-    // 2. HTML5 Drag and Drop Handlers
-    let draggedEntity = null;
-
-    function dragEntity(ev) {
-      draggedEntity = ev.target.getAttribute('data-entity');
-      ev.dataTransfer.setData("text/plain", draggedEntity);
-      ev.dataTransfer.effectAllowed = "copy";
-    }
-
-    function allowDrop(ev) {
-      ev.preventDefault();
-      ev.dataTransfer.dropEffect = "copy";
-    }
-
-    function handleDrop(ev, slotType) {
-      ev.preventDefault();
-      const entity = ev.dataTransfer.getData("text/plain") || draggedEntity;
-      if (!entity) return;
-
-      const slot = document.getElementById('slot-' + slotType);
-      slot.textContent = entity;
-      slot.className = "h-16 border-2 border-solid border-emerald-500 bg-emerald-50/20 rounded-lg flex items-center justify-center text-xs text-[#1c1c1c] font-semibold transition-all duration-200 select-all cursor-default";
-    }
-
-    function clearSlots() {
-      const subjectSlot = document.getElementById('slot-subject');
-      subjectSlot.textContent = "Drop Subject here";
-      subjectSlot.className = "h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300";
-
-      const objectSlot = document.getElementById('slot-object');
-      objectSlot.textContent = "Drop Object here";
-      objectSlot.className = "h-16 border-2 border-dashed border-[#eceae4] rounded-lg bg-white flex items-center justify-center text-xs text-[#5f5f5d] font-medium transition-colors hover:bg-emerald-50/20 hover:border-emerald-300";
-
-      document.getElementById('select-predicate').selectedIndex = 0;
-    }
-
-    // 3. AJAX KG Triples Persistence Logic
-    async function saveRelationTriple() {
-      const subjectSlot = document.getElementById('slot-subject');
-      const objectSlot = document.getElementById('slot-object');
-      const selectPredicate = document.getElementById('select-predicate');
-
-      const subject = subjectSlot.textContent.trim();
-      const object = objectSlot.textContent.trim();
-      const predicate = selectPredicate.value;
-
-      if (subject === "Drop Subject here" || !subject) {
-        alert("Please drag and drop a Subject entity.");
-        return;
+    try {
+      const response = await fetch(`/spaces/${docId}/relations/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, predicate, object })
+      });
+      const data = await response.json();
+      if (data.success) {
+        const row = btn.closest('tr');
+        row.remove();
+        checkTableEmpty();
+      } else {
+        alert("Failed to delete relation: " + (data.error || "Unknown error"));
       }
-      if (!predicate) {
-        alert("Please select a relationship predicate.");
-        return;
-      }
-      if (object === "Drop Object here" || !object) {
-        alert("Please drag and drop an Object entity.");
-        return;
-      }
-
-      try {
-        const response = await fetch(`/spaces/${docId}/relations/add`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject, predicate, object })
-        });
-        const data = await response.json();
-        if (data.success) {
-          addRelationToTable(subject, predicate, object);
-          clearSlots();
-        } else {
-          alert("Failed to save relation: " + (data.error || "Unknown error"));
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Connection error occurred while saving relation.");
-      }
+    } catch (err) {
+      console.error(err);
+      alert("Connection error occurred while deleting relation.");
     }
+  }
 
-    async function deleteRelation(subject, predicate, object, btn) {
-      if (!confirm(`Are you sure you want to delete this relation: "${subject} ${predicate} ${object}"?`)) {
-        return;
-      }
-
-      try {
-        const response = await fetch(`/spaces/${docId}/relations/delete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject, predicate, object })
-        });
-        const data = await response.json();
-        if (data.success) {
-          const row = btn.closest('tr');
-          row.remove();
-          checkTableEmpty();
-        } else {
-          alert("Failed to delete relation: " + (data.error || "Unknown error"));
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Connection error occurred while deleting relation.");
-      }
-    }
-
-    async function autoExtractRelations() {
-      const btn = document.getElementById('btnAutoExtract');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `
+  async function autoExtractRelations() {
+    const btn = document.getElementById('btnAutoExtract');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `
         <svg class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -494,32 +504,32 @@
         Extracting...
       `;
 
-      try {
-        const response = await fetch(`/spaces/${docId}/relations/auto-extract`, {
-          method: 'POST'
-        });
-        const data = await response.json();
-        if (data.success) {
-          repopulateRelationsTable(data.relations);
-        } else {
-          alert("Failed to auto-extract relations: " + (data.error || "Unknown error"));
-        }
-      } catch (err) {
-        console.error(err);
-        alert("Connection error occurred during auto-extraction.");
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+    try {
+      const response = await fetch(`/spaces/${docId}/relations/auto-extract`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      if (data.success) {
+        repopulateRelationsTable(data.relations);
+      } else {
+        alert("Failed to auto-extract relations: " + (data.error || "Unknown error"));
       }
+    } catch (err) {
+      console.error(err);
+      alert("Connection error occurred during auto-extraction.");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
     }
+  }
 
-    async function aiSuggestRelations() {
-      const btn = document.getElementById('btnSuggestRelations');
-      const container = document.getElementById('aiSuggestionsContainer');
-      const originalText = btn.innerHTML;
+  async function aiSuggestRelations() {
+    const btn = document.getElementById('btnSuggestRelations');
+    const container = document.getElementById('aiSuggestionsContainer');
+    const originalText = btn.innerHTML;
 
-      btn.disabled = true;
-      btn.innerHTML = `
+    btn.disabled = true;
+    btn.innerHTML = `
         <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -527,8 +537,8 @@
         Suggesting...
       `;
 
-      container.classList.remove('hidden');
-      container.innerHTML = `
+    container.classList.remove('hidden');
+    container.innerHTML = `
         <div class="flex items-center justify-center gap-2 py-4 text-indigo-600 text-xs font-medium">
           <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -538,31 +548,31 @@
         </div>
       `;
 
-      try {
-        const response = await fetch(`/spaces/${docId}/relations/suggest`, {
-          method: 'POST'
-        });
-        const data = await response.json();
-        if (data.success) {
-          container.innerHTML = '';
-          if (!data.suggestions || data.suggestions.length === 0) {
-            container.innerHTML = `
+    try {
+      const response = await fetch(`/spaces/${docId}/relations/suggest`, {
+        method: 'POST'
+      });
+      const data = await response.json();
+      if (data.success) {
+        container.innerHTML = '';
+        if (!data.suggestions || data.suggestions.length === 0) {
+          container.innerHTML = `
               <div class="text-center py-4 text-xs text-[#5f5f5d] italic">
                 No relationship suggestions found in this text.
               </div>
             `;
-            return;
-          }
+          return;
+        }
 
-          data.suggestions.forEach(sug => {
-            const div = document.createElement('div');
-            div.className = "flex items-center justify-between p-2.5 bg-white border border-[#eceae4] rounded-lg shadow-sm hover:border-indigo-300 transition-colors duration-150";
-            
-            const escSub = escapeHtmlString(sug.subject);
-            const escPred = escapeHtmlString(sug.predicate);
-            const escObj = escapeHtmlString(sug.object);
-            
-            div.innerHTML = `
+        data.suggestions.forEach(sug => {
+          const div = document.createElement('div');
+          div.className = "flex items-center justify-between p-2.5 bg-white border border-[#eceae4] rounded-lg shadow-sm hover:border-indigo-300 transition-colors duration-150";
+
+          const escSub = escapeHtmlString(sug.subject);
+          const escPred = escapeHtmlString(sug.predicate);
+          const escObj = escapeHtmlString(sug.object);
+
+          div.innerHTML = `
               <div class="flex items-center gap-2 text-xs">
                 <span class="font-semibold text-[#1c1c1c]">${escSub}</span>
                 <span class="text-indigo-600 font-medium bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded text-[10px]">${escPred}</span>
@@ -576,81 +586,81 @@
                 Add to Graph
               </button>
             `;
-            container.appendChild(div);
-          });
-        } else {
-          container.innerHTML = `
+          container.appendChild(div);
+        });
+      } else {
+        container.innerHTML = `
             <div class="text-center py-4 text-xs text-red-600 font-medium">
               Failed to suggest relations: ${data.error || 'Unknown error'}
             </div>
           `;
-        }
-      } catch (err) {
-        console.error(err);
-        container.innerHTML = `
+      }
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = `
           <div class="text-center py-4 text-xs text-red-600 font-medium">
             Connection error occurred.
           </div>
         `;
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-      }
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
     }
+  }
 
-    async function acceptSuggestion(subject, predicate, object, btn) {
-      const originalText = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = "Adding...";
+  async function acceptSuggestion(subject, predicate, object, btn) {
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Adding...";
 
-      try {
-        const response = await fetch(`/spaces/${docId}/relations/add`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subject, predicate, object })
-        });
-        const data = await response.json();
-        if (data.success) {
-          addRelationToTable(subject, predicate, object);
-          const sugCard = btn.closest('.flex');
-          sugCard.remove();
-          
-          const container = document.getElementById('aiSuggestionsContainer');
-          if (container.children.length === 0) {
-            container.innerHTML = `
+    try {
+      const response = await fetch(`/spaces/${docId}/relations/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, predicate, object })
+      });
+      const data = await response.json();
+      if (data.success) {
+        addRelationToTable(subject, predicate, object);
+        const sugCard = btn.closest('.flex');
+        sugCard.remove();
+
+        const container = document.getElementById('aiSuggestionsContainer');
+        if (container.children.length === 0) {
+          container.innerHTML = `
               <div class="text-center py-4 text-xs text-[#5f5f5d] italic">
                 All suggestions processed!
               </div>
             `;
-          }
-        } else {
-          alert("Failed to save relation: " + (data.error || "Unknown error"));
-          btn.disabled = false;
-          btn.textContent = originalText;
         }
-      } catch (err) {
-        console.error(err);
-        alert("Connection error occurred.");
+      } else {
+        alert("Failed to save relation: " + (data.error || "Unknown error"));
         btn.disabled = false;
         btn.textContent = originalText;
       }
+    } catch (err) {
+      console.error(err);
+      alert("Connection error occurred.");
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
+  // 4. Table Helpers
+  function addRelationToTable(subject, predicate, object) {
+    const tbody = document.getElementById('relationsTableBody');
+    const noRelationsRow = document.getElementById('noRelationsRow');
+    if (noRelationsRow) {
+      noRelationsRow.remove();
     }
 
-    // 4. Table Helpers
-    function addRelationToTable(subject, predicate, object) {
-      const tbody = document.getElementById('relationsTableBody');
-      const noRelationsRow = document.getElementById('noRelationsRow');
-      if (noRelationsRow) {
-        noRelationsRow.remove();
-      }
+    const escSub = escapeHtmlString(subject);
+    const escPred = escapeHtmlString(predicate);
+    const escObj = escapeHtmlString(object);
 
-      const escSub = escapeHtmlString(subject);
-      const escPred = escapeHtmlString(predicate);
-      const escObj = escapeHtmlString(object);
-
-      const tr = document.createElement('tr');
-      tr.className = "hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150 text-xs";
-      tr.innerHTML = `
+    const tr = document.createElement('tr');
+    tr.className = "hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150 text-xs";
+    tr.innerHTML = `
         <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">${escSub}</td>
         <td class="py-2.5 px-4"><span class="text-emerald-700 font-medium bg-emerald-50/20 px-2 py-0.5 rounded border border-emerald-100 inline-block">${escPred}</span></td>
         <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">${escObj}</td>
@@ -665,180 +675,180 @@
           </button>
         </td>
       `;
-      tbody.appendChild(tr);
-    }
+    tbody.appendChild(tr);
+  }
 
-    function repopulateRelationsTable(relations) {
-      const tbody = document.getElementById('relationsTableBody');
-      tbody.innerHTML = '';
+  function repopulateRelationsTable(relations) {
+    const tbody = document.getElementById('relationsTableBody');
+    tbody.innerHTML = '';
 
-      if (!relations || relations.length === 0) {
-        tbody.innerHTML = `
+    if (!relations || relations.length === 0) {
+      tbody.innerHTML = `
           <tr id="noRelationsRow">
             <td colspan="4" class="py-6 text-center text-xs text-[#5f5f5d] italic">No relations built yet. Drag and drop to add, or auto-extract!</td>
           </tr>
         `;
-        return;
-      }
-
-      relations.forEach(rel => {
-        addRelationToTable(rel.subject, rel.predicate, rel.object);
-      });
+      return;
     }
 
-    function checkTableEmpty() {
-      const tbody = document.getElementById('relationsTableBody');
-      if (tbody.children.length === 0) {
-        tbody.innerHTML = `
+    relations.forEach(rel => {
+      addRelationToTable(rel.subject, rel.predicate, rel.object);
+    });
+  }
+
+  function checkTableEmpty() {
+    const tbody = document.getElementById('relationsTableBody');
+    if (tbody.children.length === 0) {
+      tbody.innerHTML = `
           <tr id="noRelationsRow">
             <td colspan="4" class="py-6 text-center text-xs text-[#5f5f5d] italic">No relations built yet. Drag and drop to add, or auto-extract!</td>
           </tr>
         `;
-      }
     }
+  }
 
-    function escapeHtmlString(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
+  function escapeHtmlString(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
 
-    // 5. Vis-network drawing logic
-    let networkInstance = null;
+  // 5. Vis-network drawing logic
+  let networkInstance = null;
 
-    // Build entity color mapping from doc.entities and doc.labels
-    const entityColors = {};
-    {% for label in doc.labels %}
-      {% set label_idx = loop.index0 % 8 %}
-      {% set label_entities = doc.entities.get(label, []) %}
-      {% for entity in label_entities %}
-        {% set ent_text = entity.text if entity.text is defined else entity %}
-        entityColors["{{ ent_text | escape | replace('\"', '\\\"') | replace('\'', '\\\'') }}".toLowerCase().trim()] = {{ label_idx }};
-      {% endfor %}
-    {% endfor %}
+  // Build entity color mapping from doc.entities and doc.labels
+  const entityColors = {};
+  {% for label in doc.labels %}
+  {% set label_idx = loop.index0 % 8 %}
+  {% set label_entities = doc.entities.get(label, []) %}
+  {% for entity in label_entities %}
+  {% set ent_text = entity.text if entity.text is defined else entity %}
+  entityColors["{{ ent_text | escape | replace('\"', '\\\"') | replace('\'', '\\\'') }}".toLowerCase().trim()] = {{ label_idx }};
+  {% endfor %}
+  {% endfor %}
 
-    function drawGraph() {
-      const rows = document.querySelectorAll('#relationsTableBody tr');
-      const edges = [];
-      const nodeSet = new Set();
+  function drawGraph() {
+    const rows = document.querySelectorAll('#relationsTableBody tr');
+    const edges = [];
+    const nodeSet = new Set();
 
-      rows.forEach(row => {
-        if (row.id === 'noRelationsRow') return;
-        const cols = row.querySelectorAll('td');
-        if (cols.length < 3) return;
+    rows.forEach(row => {
+      if (row.id === 'noRelationsRow') return;
+      const cols = row.querySelectorAll('td');
+      if (cols.length < 3) return;
 
-        const subject = cols[0].textContent.trim();
-        const predicate = cols[1].textContent.trim();
-        const object = cols[2].textContent.trim();
+      const subject = cols[0].textContent.trim();
+      const predicate = cols[1].textContent.trim();
+      const object = cols[2].textContent.trim();
 
-        nodeSet.add(subject);
-        nodeSet.add(object);
+      nodeSet.add(subject);
+      nodeSet.add(object);
 
-        edges.push({
-          from: subject,
-          to: object,
-          label: predicate,
-          arrows: 'to',
-          font: { align: 'horizontal', size: 9, color: '#4b5563', background: '#f9fafb' },
-          color: { color: '#9ca3af', hover: '#4b5563', highlight: '#374151' }
-        });
+      edges.push({
+        from: subject,
+        to: object,
+        label: predicate,
+        arrows: 'to',
+        font: { align: 'horizontal', size: 9, color: '#4b5563', background: '#f9fafb' },
+        color: { color: '#9ca3af', hover: '#4b5563', highlight: '#374151' }
       });
+    });
 
-      const emptyState = document.getElementById('graphEmptyState');
-      if (nodeSet.size === 0) {
-        emptyState.classList.remove('opacity-0', 'invisible');
-        if (networkInstance) {
-          networkInstance.destroy();
-          networkInstance = null;
-        }
-        return;
-      }
-
-      emptyState.classList.add('opacity-0', 'invisible');
-
-      const colorPalettes = [
-        { bg: '#ecfdf5', border: '#10b981', text: '#065f46' }, // 0: emerald
-        { bg: '#eff6ff', border: '#3b82f6', text: '#1e3a8a' }, // 1: blue
-        { bg: '#fefce8', border: '#eab308', text: '#713f12' }, // 2: yellow
-        { bg: '#fef2f2', border: '#ef4444', text: '#7f1d1d' }, // 3: red
-        { bg: '#faf5ff', border: '#a855f7', text: '#581c87' }, // 4: purple
-        { bg: '#fdf2f8', border: '#ec4899', text: '#831843' }, // 5: pink
-        { bg: '#f0fdfa', border: '#14b8a6', text: '#115e59' }, // 6: teal
-        { bg: '#fff7ed', border: '#f97316', text: '#7c2d12' }  // 7: orange
-      ];
-
-      const nodes = Array.from(nodeSet).map(name => {
-        let colorIdx = 0;
-        const lowerName = name.toLowerCase().trim();
-        if (entityColors[lowerName] !== undefined) {
-          colorIdx = entityColors[lowerName];
-        } else {
-          colorIdx = name.length % 8;
-        }
-        
-        const palette = colorPalettes[colorIdx];
-
-        return {
-          id: name,
-          label: name,
-          shape: 'box',
-          color: {
-            background: palette.bg,
-            border: palette.border,
-            hover: { background: palette.bg, border: palette.border },
-            highlight: { background: palette.bg, border: palette.border }
-          },
-          borderWidth: 1.5,
-          font: { size: 12, color: palette.text, face: 'Outfit, Inter, sans-serif' },
-          margin: 10,
-          shadow: {
-            enabled: true,
-            color: 'rgba(28,28,28,0.06)',
-            size: 6,
-            x: 0,
-            y: 3
-          }
-        };
-      });
-
-      const container = document.getElementById('networkCanvas');
-      const data = {
-        nodes: new vis.DataSet(nodes),
-        edges: new vis.DataSet(edges)
-      };
-
-      const options = {
-        physics: {
-          stabilization: true,
-          barnesHut: {
-            gravitationalConstant: -2000,
-            centralGravity: 0.3,
-            springLength: 120,
-            springConstant: 0.04
-          }
-        },
-        interaction: {
-          hover: true
-        }
-      };
-
+    const emptyState = document.getElementById('graphEmptyState');
+    if (nodeSet.size === 0) {
+      emptyState.classList.remove('opacity-0', 'invisible');
       if (networkInstance) {
         networkInstance.destroy();
+        networkInstance = null;
       }
-      networkInstance = new vis.Network(container, data, options);
+      return;
     }
 
-    // 6. Delete document confirmation listener
-    const deleteForm = document.getElementById('deleteDocForm');
-    if (deleteForm) {
-      deleteForm.addEventListener('submit', (e) => {
-        if (!confirm('Are you sure you want to permanently delete this document from Spaces?')) {
-          e.preventDefault();
-        } else {
-          const btn = deleteForm.querySelector('button[type="submit"]');
-          if (btn) { btn.disabled = true; btn.innerText = 'Deleting...'; }
+    emptyState.classList.add('opacity-0', 'invisible');
+
+    const colorPalettes = [
+      { bg: '#ecfdf5', border: '#10b981', text: '#065f46' }, // 0: emerald
+      { bg: '#eff6ff', border: '#3b82f6', text: '#1e3a8a' }, // 1: blue
+      { bg: '#fefce8', border: '#eab308', text: '#713f12' }, // 2: yellow
+      { bg: '#fef2f2', border: '#ef4444', text: '#7f1d1d' }, // 3: red
+      { bg: '#faf5ff', border: '#a855f7', text: '#581c87' }, // 4: purple
+      { bg: '#fdf2f8', border: '#ec4899', text: '#831843' }, // 5: pink
+      { bg: '#f0fdfa', border: '#14b8a6', text: '#115e59' }, // 6: teal
+      { bg: '#fff7ed', border: '#f97316', text: '#7c2d12' }  // 7: orange
+    ];
+
+    const nodes = Array.from(nodeSet).map(name => {
+      let colorIdx = 0;
+      const lowerName = name.toLowerCase().trim();
+      if (entityColors[lowerName] !== undefined) {
+        colorIdx = entityColors[lowerName];
+      } else {
+        colorIdx = name.length % 8;
+      }
+
+      const palette = colorPalettes[colorIdx];
+
+      return {
+        id: name,
+        label: name,
+        shape: 'box',
+        color: {
+          background: palette.bg,
+          border: palette.border,
+          hover: { background: palette.bg, border: palette.border },
+          highlight: { background: palette.bg, border: palette.border }
+        },
+        borderWidth: 1.5,
+        font: { size: 12, color: palette.text, face: 'Outfit, Inter, sans-serif' },
+        margin: 10,
+        shadow: {
+          enabled: true,
+          color: 'rgba(28,28,28,0.06)',
+          size: 6,
+          x: 0,
+          y: 3
         }
-      });
+      };
+    });
+
+    const container = document.getElementById('networkCanvas');
+    const data = {
+      nodes: new vis.DataSet(nodes),
+      edges: new vis.DataSet(edges)
+    };
+
+    const options = {
+      physics: {
+        stabilization: true,
+        barnesHut: {
+          gravitationalConstant: -2000,
+          centralGravity: 0.3,
+          springLength: 120,
+          springConstant: 0.04
+        }
+      },
+      interaction: {
+        hover: true
+      }
+    };
+
+    if (networkInstance) {
+      networkInstance.destroy();
     }
-  </script>
+    networkInstance = new vis.Network(container, data, options);
+  }
+
+  // 6. Delete document confirmation listener
+  const deleteForm = document.getElementById('deleteDocForm');
+  if (deleteForm) {
+    deleteForm.addEventListener('submit', (e) => {
+      if (!confirm('Are you sure you want to permanently delete this document from Spaces?')) {
+        e.preventDefault();
+      } else {
+        const btn = deleteForm.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled = true; btn.innerText = 'Deleting...'; }
+      }
+    });
+  }
+</script>
 {% endblock %}

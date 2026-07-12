@@ -470,3 +470,59 @@ async def delete_predicate(
         
     logger.info(f"Predicate '{name}' deleted successfully by admin '{session['username']}'.")
     return RedirectResponse(url="/settings?success=Predicate deleted successfully.", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/settings/predicates/suggest")
+async def suggest_predicate_definitions(
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return {"success": False, "error": "Unauthorized"}
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return {"success": False, "error": "Unauthorized"}
+
+    try:
+        import dspy
+        
+        class GeneratePredicateDefinition(dspy.Signature):
+            """
+            Generate bilingual labels and descriptions for a relationship predicate key name in an agricultural knowledge graph context.
+            Example input:
+              predicate_name: 'cultivated_in'
+            Example output:
+              label_en: 'is grown in'
+              label_vi: 'được trồng ở'
+              desc_en: 'Which crop is grown in which region/location'
+              desc_vi: 'Cây trồng nào được trồng ở vùng miền/vị trí nào'
+            """
+            predicate_name = dspy.InputField(desc="The name/key of the relationship predicate, e.g. 'cultivated_in' or 'affected_by'")
+            label_en = dspy.OutputField(desc="A brief English label, e.g. 'is grown in'")
+            label_vi = dspy.OutputField(desc="Một nhãn tiếng Việt ngắn gọn, ví dụ: 'được trồng ở'")
+            desc_en = dspy.OutputField(desc="A brief one-sentence English description of the relation")
+            desc_vi = dspy.OutputField(desc="Một mô tả ngắn gọn một câu bằng tiếng Việt về mối quan hệ")
+
+        data = await request.json()
+        name = data.get("name", "")
+        if not name:
+            return {"success": False, "error": "Predicate name is required."}
+
+        # Configure DSPy LM
+        lm = await get_dspy_lm()
+        
+        with dspy.context(lm=lm):
+            predictor = dspy.Predict(GeneratePredicateDefinition)
+            result = predictor(predicate_name=name)
+
+        logger.info(f"Predicate definitions suggested for '{name}' using model '{lm.model}'")
+        return {
+            "success": True,
+            "label_en": result.label_en.strip() if result.label_en else "",
+            "label_vi": result.label_vi.strip() if result.label_vi else "",
+            "desc_en": result.desc_en.strip() if result.desc_en else "",
+            "desc_vi": result.desc_vi.strip() if result.desc_vi else ""
+        }
+    except Exception as e:
+        logger.error(f"Predicate suggestion generation failed: {e}")
+        return {"success": False, "error": str(e)}
