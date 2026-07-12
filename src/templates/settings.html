@@ -101,16 +101,28 @@
           <form action="/settings/labels/add" method="POST" class="space-y-4">
             <div class="flex flex-col gap-1">
               <label for="new_name" class="text-[10px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Label Key Name</label>
-              <input
-                type="text"
-                id="new_name"
-                name="name"
-                required
-                placeholder="e.g. crop_variety"
-                pattern="^[a-zA-Z0-9_]+$"
-                title="Only alphanumeric characters and underscores are allowed"
-                class="w-full px-3 py-2 text-xs bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
-              >
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  id="new_name"
+                  name="name"
+                  required
+                  placeholder="e.g. crop_variety"
+                  pattern="^[a-zA-Z0-9_]+$"
+                  title="Only alphanumeric characters and underscores are allowed"
+                  class="flex-grow px-3 py-2 text-xs bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+                >
+                <button
+                  type="button"
+                  id="suggestBtn"
+                  onclick="suggestDefinition()"
+                  title="Suggest definitions using LLM"
+                  class="px-3 py-2 text-xs font-semibold border border-emerald-500 text-emerald-600 rounded-lg cursor-pointer bg-emerald-50/30 transition-all duration-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 active:scale-95 flex items-center gap-1 shrink-0"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z"/><path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg>
+                  Suggest
+                </button>
+              </div>
             </div>
 
             <div class="flex flex-col gap-1">
@@ -527,6 +539,62 @@
     function regenerateCurrentQuery() {
       if (currentEnhanceName) {
         enhanceQuery(currentEnhanceName, currentEnhanceDescEn, currentEnhanceDescVi, true);
+      }
+    }
+
+    async function suggestDefinition() {
+      const nameInput = document.getElementById('new_name');
+      const descEnInput = document.getElementById('new_desc_en');
+      const descViInput = document.getElementById('new_desc_vi');
+      const suggestBtn = document.getElementById('suggestBtn');
+
+      const name = nameInput.value.trim();
+      if (!name) {
+        alert('Please enter a Label Key Name first.');
+        nameInput.focus();
+        return;
+      }
+
+      // Set loading state
+      const originalBtnHtml = suggestBtn.innerHTML;
+      suggestBtn.disabled = true;
+      suggestBtn.innerHTML = `
+        <svg class="animate-spin h-3 w-3 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Suggesting...
+      `;
+
+      descEnInput.placeholder = 'Generating English definition suggestion...';
+      descViInput.placeholder = 'Đang tự động sinh mô tả Tiếng Việt...';
+      descEnInput.value = '';
+      descViInput.value = '';
+
+      try {
+        const response = await fetch('/settings/labels/suggest-definition', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name: name })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          descEnInput.value = data.desc_en;
+          descViInput.value = data.desc_vi;
+        } else {
+          alert('Failed to suggest definitions: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Connection error occurred while suggesting definitions.');
+      } finally {
+        suggestBtn.disabled = false;
+        suggestBtn.innerHTML = originalBtnHtml;
+        descEnInput.placeholder = 'Description of the entity in English';
+        descViInput.placeholder = 'Mô tả thực thể bằng Tiếng Việt';
       }
     }
 

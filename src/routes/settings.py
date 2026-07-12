@@ -315,3 +315,59 @@ async def enhance_label_queries(
     except Exception as e:
         logger.error(f"Query enhancement failed: {e}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/settings/labels/suggest-definition")
+async def suggest_label_definition(
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    try:
+        import dspy
+        
+        class GenerateLabelDefinition(dspy.Signature):
+            """
+            Generate a brief and accurate definition/description for a given entity label key name.
+            Generate exactly one brief definition in English (definition_en) and one in Vietnamese (definition_vi).
+            Each description must be a single concise sentence.
+            """
+            label_name = dspy.InputField(desc="The name/key of the entity label, e.g. 'crop_disease' or 'fertilizer'")
+            definition_en = dspy.OutputField(desc="A brief one-sentence English description of what this entity is")
+            definition_vi = dspy.OutputField(desc="Một mô tả ngắn gọn một câu bằng Tiếng Việt về thực thể này")
+            
+        data = await request.json()
+        name = data.get("name", "")
+        if not name:
+            return {"success": False, "error": "Label name is required."}
+            
+        model_id = await get_conductor_model()
+        conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
+        
+        # Configure DSPy LM
+        lm = dspy.LM(
+            model=f"openai/{model_id}",
+            api_base=conductor_api_base,
+            api_key="dummy",
+            temperature=1.0,
+            top_p=0.95,
+            top_k=64
+        )
+        
+        with dspy.context(lm=lm):
+            predictor = dspy.Predict(GenerateLabelDefinition)
+            result = predictor(label_name=name)
+            
+        desc_en = result.definition_en.strip() if result.definition_en else ""
+        desc_vi = result.definition_vi.strip() if result.definition_vi else ""
+        
+        logger.info(f"Label definition generated for '{name}' using model '{model_id}'")
+        return {"success": True, "desc_en": desc_en, "desc_vi": desc_vi}
+    except Exception as e:
+        logger.error(f"Label definition generation failed: {e}")
+        return {"success": False, "error": str(e)}
