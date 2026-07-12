@@ -430,3 +430,132 @@ async def auto_extract_relations(
     except Exception as e:
         logger.error(f"Failed to auto-extract relations for doc {doc_id}: {e}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/spaces/{doc_id}/relations/suggest")
+async def suggest_relations(
+    doc_id: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        doc = await db.spaces_documents.find_one({"_id": ObjectId(doc_id)})
+        if not doc:
+            return {"success": False, "error": "Document not found."}
+
+        # Get active language for descriptions
+        user = await db.users.find_one({"username": session["username"]})
+        user_settings = user.get("settings", {}) if user else {}
+        lang = user_settings.get("language", "en")
+
+        # Fetch registered predicates
+        predicates_cursor = db.predicates.find({})
+        predicates = await predicates_cursor.to_list(length=100)
+        if not predicates:
+            predicates = [
+                {
+                    "name": "cultivated_in", 
+                    "label_en": "is grown in", 
+                    "label_vi": "được trồng ở", 
+                    "desc_en": "Which crop is grown in which region/location", 
+                    "desc_vi": "Cây trồng nào được trồng ở vùng miền/vị trí nào"
+                },
+                {
+                    "name": "affected_by", 
+                    "label_en": "is affected by", 
+                    "label_vi": "bị bệnh", 
+                    "desc_en": "Which crop is affected by which disease", 
+                    "desc_vi": "Cây trồng nào bị mắc bệnh hại gì"
+                },
+                {
+                    "name": "has_yield", 
+                    "label_en": "has yield", 
+                    "label_vi": "có năng suất", 
+                    "desc_en": "The average or peak yield of a crop", 
+                    "desc_vi": "Năng suất trung bình hoặc tối đa của cây trồng"
+                },
+                {
+                    "name": "grown_in_season", 
+                    "label_en": "is grown in season", 
+                    "label_vi": "trồng vào mùa", 
+                    "desc_en": "Which season or time of year the crop is grown", 
+                    "desc_vi": "Mùa vụ gieo trồng của cây trong năm"
+                },
+                {
+                    "name": "solution_for", 
+                    "label_en": "is remedy/solution for", 
+                    "label_vi": "giải pháp cho", 
+                    "desc_en": "Remedy or control solution for a crop disease", 
+                    "desc_vi": "Giải pháp phòng trừ hoặc chữa trị cho bệnh hại cây trồng"
+                }
+            ]
+
+        # Use predicate label based on user active language
+        pred_labels = [p.get(f"label_{lang}") or p.get("label_vi") or p.get("label_en") for p in predicates]
+
+        import dspy
+        
+        class GenerateKGRelations(dspy.Signature):
+            """
+            Extract relationship triples (Subject - Predicate - Object) from the document text based on the allowed predicates list.
+            Format output as: Subject | Predicate | Object (one triple per line).
+            Only extract relationships that are explicitly mentioned in the text.
+            Do not include headers, numbering, bullets, or extra text. Output only the triples.
+            """
+            text = dspy.InputField(desc="The document text to analyze")
+            predicates = dspy.InputField(desc="Comma-separated allowed relationship predicates list")
+            relations = dspy.OutputField(desc="Suggested triples in the format 'Subject | Predicate | Object', one per line")
+
+        # Configure DSPy LM
+        from src.routes.settings import get_dspy_lm
+        lm = await get_dspy_lm()
+
+        with dspy.context(lm=lm):
+            predictor = dspy.Predict(GenerateKGRelations)
+            result = predictor(
+                text=doc.get("text", ""),
+                predicates=", ".join(pred_labels)
+            )
+
+        relations_text = result.relations
+        suggestions = []
+        if relations_text:
+            for line in relations_text.split("\n"):
+                line = line.strip()
+                if not line or "|" not in line:
+                    continue
+                parts = line.split("|")
+                if len(parts) >= 3:
+                    sub = parts[0].strip()
+                    pred = parts[1].strip()
+                    obj = parts[2].strip()
+                    
+                    # Clean potential bullet points or leading numbers
+                    import re
+                    sub = re.sub(r'^\d+[\.\)\-\s]+', '', sub).strip()
+                    pred = re.sub(r'^\d+[\.\)\-\s]+', '', pred).strip()
+                    obj = re.sub(r'^\d+[\.\)\-\s]+', '', obj).strip()
+                    
+                    # Skip empty components
+                    if not sub or not pred or not obj:
+                        continue
+
+                    # Prevent duplicate suggestions in output
+                    if not any(s["subject"] == sub and s["predicate"] == pred and s["object"] == obj for s in suggestions):
+                        suggestions.append({
+                            "subject": sub,
+                            "predicate": pred,
+                            "object": obj
+                        })
+
+        logger.info(f"AI suggested {len(suggestions)} relations for doc {doc_id} using model '{lm.model}'")
+        return {"success": True, "suggestions": suggestions}
+    except Exception as e:
+        logger.error(f"Failed to suggest relations for doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}
