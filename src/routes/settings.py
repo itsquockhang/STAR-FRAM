@@ -12,18 +12,26 @@ logger = logging.getLogger("starfarm.routes.settings")
 
 router = APIRouter()
 
+class LLMConnectionError(RuntimeError):
+    pass
+
+
 async def get_conductor_model() -> str:
     import httpx
     conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{conductor_api_base}/models")
+            resp = await client.get(f"{conductor_api_base}/models", timeout=3.0)
             if resp.status_code == 200:
                 data = resp.json()
                 if "data" in data and len(data["data"]) > 0:
                     model_id = data["data"][0]["id"]
                     logger.info(f"Dynamically fetched conductor model: {model_id}")
                     return model_id
+            raise LLMConnectionError(f"Conductor server returned status code {resp.status_code}")
+    except (httpx.ConnectError, httpx.ConnectTimeout, httpx.RequestError) as e:
+        logger.error(f"Conductor server is unreachable: {e}")
+        raise LLMConnectionError("Server LLM (Conductor) đã bị tắt hoặc không thể kết nối. Vui lòng kiểm tra lại serve.sh.")
     except Exception as e:
         logger.warning(f"Failed to dynamically fetch conductor model, using fallback: {e}")
     return "google/gemma-4-E2B-it-qat-w4a16-ct"
