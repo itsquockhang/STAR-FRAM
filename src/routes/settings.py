@@ -16,23 +16,47 @@ class LLMConnectionError(RuntimeError):
     pass
 
 
+# Global circuit breaker state for Conductor LLM connection
+_llm_online = True
+_llm_last_checked = 0.0
+_llm_offline_reason = ""
+
+
 async def get_conductor_model() -> str:
+    global _llm_online, _llm_last_checked, _llm_offline_reason
+    import time
+    
+    current_time = time.time()
+    # Circuit breaker: if marked offline within last 15 seconds, fail immediately without waiting for HTTP timeout
+    if not _llm_online and (current_time - _llm_last_checked < 15.0):
+        raise LLMConnectionError(f"Server LLM (Conductor) is offline. (Circuit Breaker active. Reason: {_llm_offline_reason})")
+
     import httpx
     conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{conductor_api_base}/models", timeout=3.0)
+            resp = await client.get(f"{conductor_api_base}/models", timeout=2.0)
             if resp.status_code == 200:
                 data = resp.json()
                 if "data" in data and len(data["data"]) > 0:
                     model_id = data["data"][0]["id"]
                     logger.info(f"Dynamically fetched conductor model: {model_id}")
+                    _llm_online = True
+                    _llm_last_checked = current_time
                     return model_id
+            
+            reason = f"Status code {resp.status_code}"
+            _llm_online = False
+            _llm_last_checked = current_time
+            _llm_offline_reason = reason
             raise LLMConnectionError(f"Server LLM (Conductor) returned status code {resp.status_code}. Please check server logs.")
     except LLMConnectionError as e:
         raise e
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.RequestError) as e:
         logger.error(f"Conductor server is unreachable: {e}")
+        _llm_online = False
+        _llm_last_checked = current_time
+        _llm_offline_reason = "Connection failed/Timeout"
         raise LLMConnectionError("Server LLM (Conductor) is offline or unreachable. Please verify serve.sh is running.")
     except Exception as e:
         logger.warning(f"Failed to dynamically fetch conductor model, using fallback: {e}")

@@ -10,30 +10,62 @@ TRANSLATE_API_BASE = os.getenv("TRANSLATE_API_BASE", "https://www-translate.quoc
 DEFAULT_MODEL = "translategemma-4b-it"
 TARGET_MODEL_ROOT = "ViralityLeo/vllm-translategemma-4b-it-FP8-Dynamic"
 
+# Global circuit breaker state for Translation connection
+_translate_online = True
+_translate_last_checked = 0.0
+_translate_offline_reason = ""
+
+
 async def check_connection() -> tuple[bool, str | None, list[str]]:
     """
     Check connection to the translation server and fetch available models.
     Returns:
         (is_connected, error_message, available_model_ids)
     """
+    global _translate_online, _translate_last_checked, _translate_offline_reason
+    import time
+    
+    current_time = time.time()
+    # Circuit breaker: if marked offline within last 15 seconds, fail immediately without waiting for HTTP timeout
+    if not _translate_online and (current_time - _translate_last_checked < 15.0):
+        return False, f"Translation server is marked offline (Circuit Breaker active. Reason: {_translate_offline_reason})", []
+
     url = f"{TRANSLATE_API_BASE}/models"
     try:
-        async with httpx.AsyncClient(timeout=4.0) as client:
+        async with httpx.AsyncClient(timeout=2.0) as client:
             response = await client.get(url)
             if response.status_code == 200:
                 data = response.json()
                 models = data.get("data", [])
                 model_ids = [m.get("id") for m in models if m.get("id")]
+                _translate_online = True
+                _translate_last_checked = current_time
                 return True, None, model_ids
             else:
-                return False, f"Server returned HTTP status code {response.status_code}", []
+                reason = f"Server returned HTTP status code {response.status_code}"
+                _translate_online = False
+                _translate_last_checked = current_time
+                _translate_offline_reason = reason
+                return False, reason, []
     except httpx.ConnectError:
-        return False, "Could not resolve host or connect to the translation server. Please verify your internet connection.", []
+        reason = "Could not resolve host or connect to the translation server. Please verify your internet connection."
+        _translate_online = False
+        _translate_last_checked = current_time
+        _translate_offline_reason = reason
+        return False, reason, []
     except httpx.TimeoutException:
-        return False, "Connection to the translation server timed out.", []
+        reason = "Connection to the translation server timed out."
+        _translate_online = False
+        _translate_last_checked = current_time
+        _translate_offline_reason = reason
+        return False, reason, []
     except Exception as e:
         logger.error(f"Error checking translation server status: {e}")
-        return False, f"Unexpected error: {str(e)}", []
+        reason = f"Unexpected error: {str(e)}"
+        _translate_online = False
+        _translate_last_checked = current_time
+        _translate_offline_reason = reason
+        return False, reason, []
 
 async def translate_text(text: str, source_lang: str, target_lang: str) -> dict:
     """
