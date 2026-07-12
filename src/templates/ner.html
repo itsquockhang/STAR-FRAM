@@ -207,10 +207,17 @@
             Extracted entities are highlighted inline below.
           </p>
           {% if results %}
-          <button type="button" id="exportTxtBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-1 cursor-pointer">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            Export .txt
-          </button>
+          <div class="flex items-center gap-3">
+            <button type="button" id="saveSpacesBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-1 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              Save to Spaces
+            </button>
+            <span class="text-[#eceae4]">&bull;</span>
+            <button type="button" id="exportTxtBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-1 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Export .txt
+            </button>
+          </div>
           {% endif %}
         </div>
 
@@ -268,6 +275,33 @@
           <p class="text-sm text-[#5f5f5d]">No results yet. Enter text and labels, then click <strong>Extract Entities</strong>.</p>
         </div>
         {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Save to Spaces Modal -->
+    <div id="saveModal" class="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-[100] opacity-0 invisible transition-all duration-200">
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 max-w-md w-full mx-4 shadow-[0_20px_50px_rgba(28,28,28,0.15)] scale-95 transition-all duration-200" id="saveModalContent">
+        <h3 class="text-lg font-semibold tracking-tight text-[#1c1c1c] mb-1">Save to Spaces</h3>
+        <p class="text-xs text-[#5f5f5d] mb-4">Enter a title to save this document and its extracted entities.</p>
+        
+        <div class="flex flex-col gap-1.5 mb-5">
+          <label for="docTitleInput" class="text-[10px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Document Title</label>
+          <input
+            type="text"
+            id="docTitleInput"
+            placeholder="e.g. Rice Blast Outbreak Report 2026"
+            class="w-full px-3 py-2 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+          >
+        </div>
+        
+        <div class="flex items-center justify-end gap-3">
+          <button type="button" id="closeModalBtn" class="px-4 py-2 text-xs font-semibold border border-[#eceae4] text-[#1c1c1c] rounded-lg bg-transparent cursor-pointer hover:bg-[#f4f1e6]/40 transition-colors duration-150">
+            Cancel
+          </button>
+          <button type="button" id="confirmSaveBtn" class="px-4 py-2 text-xs font-semibold bg-[#1c1c1c] text-white rounded-lg cursor-pointer hover:bg-[#2e2e2e] transition-colors duration-150">
+            Save Document
+          </button>
         </div>
       </div>
     </div>
@@ -503,6 +537,97 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+      });
+    }
+
+    // ---- Save to Spaces Modal & AJAX ----
+    const saveModal = document.getElementById('saveModal');
+    const saveModalContent = document.getElementById('saveModalContent');
+    const saveSpacesBtn = document.getElementById('saveSpacesBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const confirmSaveBtn = document.getElementById('confirmSaveBtn');
+    const docTitleInput = document.getElementById('docTitleInput');
+
+    if (saveSpacesBtn) {
+      saveSpacesBtn.addEventListener('click', () => {
+        // Prefill with default title
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('vi-VN') + ' ' + now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        const previewText = textarea.value.trim().substring(0, 20);
+        docTitleInput.value = `NER: ${previewText || 'Unnamed'} (${dateStr})`;
+        
+        // Show modal
+        saveModal.classList.remove('opacity-0', 'invisible');
+        saveModalContent.classList.remove('scale-95');
+        saveModalContent.classList.add('scale-100');
+      });
+    }
+
+    function hideModal() {
+      saveModal.classList.add('opacity-0', 'invisible');
+      saveModalContent.classList.remove('scale-100');
+      saveModalContent.classList.add('scale-95');
+    }
+
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener('click', hideModal);
+    }
+
+    if (saveModal) {
+      saveModal.addEventListener('click', (e) => {
+        if (e.target === saveModal) hideModal();
+      });
+    }
+
+    if (confirmSaveBtn) {
+      confirmSaveBtn.addEventListener('click', async () => {
+        const title = docTitleInput.value.trim();
+        if (!title) {
+          alert('Please enter a title for the document.');
+          return;
+        }
+        
+        confirmSaveBtn.disabled = true;
+        confirmSaveBtn.innerHTML = `
+          <span class="flex items-center gap-1.5 justify-center">
+            <svg class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Saving...
+          </span>
+        `;
+        
+        try {
+          const response = await fetch('/spaces/save', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              title: title,
+              text: textarea.value,
+              entities: extractionResults,
+              labels: labels,
+              model: document.getElementById('modelSelect').value
+            })
+          });
+          
+          const result = await response.json();
+          if (result.success) {
+            alert('Document saved successfully to Spaces!');
+            window.location.href = '/spaces';
+          } else {
+            alert('Error: ' + (result.error || 'Unknown error occurred.'));
+            confirmSaveBtn.disabled = false;
+            confirmSaveBtn.innerText = 'Save Document';
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to save document. Please check your connection.');
+          confirmSaveBtn.disabled = false;
+          confirmSaveBtn.innerText = 'Save Document';
+        }
       });
     }
   </script>

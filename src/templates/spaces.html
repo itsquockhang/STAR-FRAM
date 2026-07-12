@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% set active_page = "spaces" %}
+
+{% block title %}Document Spaces | Starfarm{% endblock %}
+
+{% block extra_styles %}
+    /* Card hover effects */
+    .doc-card {
+      transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s;
+    }
+    .doc-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(28,28,28,0.05);
+    }
+{% endblock %}
+
+{% block content %}
+  <!-- Main Content -->
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
+
+    {% if success %}
+    <div id="success-alert" data-auto-dismiss="5000" class="animate-slide-down flex items-center justify-between gap-3 p-4 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm" role="alert">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span>{{ success }}</span>
+      </div>
+      <button onclick="dismissAlert('success-alert')" class="text-emerald-500 hover:text-emerald-700 focus:outline-none cursor-pointer p-0.5 rounded-lg hover:bg-emerald-100/50 transition-colors duration-150" aria-label="Close alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div id="error-alert" class="animate-slide-down flex items-center justify-between gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+      <button onclick="dismissAlert('error-alert')" class="text-red-400 hover:text-red-600 focus:outline-none cursor-pointer p-0.5 rounded-lg hover:bg-red-100/50 transition-colors duration-150" aria-label="Close alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    {% endif %}
+
+    <div class="animate-fade-in flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-2xl font-semibold tracking-tight mb-1">Document Spaces</h1>
+        <p class="text-sm text-[#5f5f5d]">Browse and manage documents saved with their extracted NER metadata.</p>
+      </div>
+      
+      <!-- Search Form -->
+      <form action="/spaces" method="GET" class="flex gap-2 w-full md:w-auto max-w-md m-0">
+        <div class="relative flex-grow">
+          <input
+            type="text"
+            name="q"
+            value="{{ q }}"
+            placeholder="Search documents..."
+            class="w-full pl-9 pr-3.5 py-2 text-sm bg-[#fcfbf9] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+          >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3.5 top-3 text-[#5f5f5d]/70">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <button type="submit" class="px-4 py-2 text-sm font-medium bg-[#1c1c1c] text-white rounded-lg cursor-pointer transition-colors duration-150 hover:bg-[#2e2e2e]">
+          Search
+        </button>
+        {% if q %}
+        <a href="/spaces" class="px-3.5 py-2 text-sm font-medium border border-[#eceae4] text-[#1c1c1c] rounded-lg bg-white cursor-pointer transition-colors duration-150 hover:bg-[#f4f1e6]/30 flex items-center justify-center">
+          Clear
+        </a>
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- Document Grid -->
+    {% if documents %}
+    <div class="animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-6">
+      {% for doc in documents %}
+      <div class="doc-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 flex flex-col justify-between shadow-[0_4px_20px_rgba(28,28,28,0.015)]">
+        <div>
+          <!-- Title and Model -->
+          <div class="flex items-start justify-between gap-3 mb-2">
+            <h3 class="text-base font-semibold tracking-tight text-[#1c1c1c] line-clamp-1" title="{{ doc.title }}">
+              {{ doc.title }}
+            </h3>
+            <span class="shrink-0 inline-block px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100 rounded">
+              {{ doc.model }}
+            </span>
+          </div>
+
+          <!-- Metadata -->
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#5f5f5d] mb-4 border-b border-[#eceae4]/45 pb-3">
+            <span>Saved by <strong class="text-[#1c1c1c]">{{ doc.author }}</strong></span>
+            <span class="text-[#eceae4]">&bull;</span>
+            <time datetime="{{ doc.created_at.isoformat() if doc.created_at else '' }}">{{ doc.created_at.strftime('%d/%m/%Y %H:%M') if doc.created_at else 'N/A' }}</time>
+          </div>
+
+          <!-- Snippet -->
+          <p class="text-xs text-[#5f5f5d] leading-relaxed line-clamp-3 mb-5">
+            {{ doc.text }}
+          </p>
+
+          <!-- Labels used -->
+          {% if doc.labels %}
+          <div class="flex flex-wrap gap-1.5 mb-6">
+            {% for label in doc.labels %}
+            <span class="px-2 py-0.5 rounded bg-[#1c1c1c]/[0.04] text-[9px] uppercase font-bold tracking-widest text-[#1c1c1c]/60 border border-[#1c1c1c]/[0.05]">
+              {{ label }}
+            </span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between border-t border-[#eceae4]/45 pt-4 mt-auto">
+          <a href="/spaces/{{ doc._id }}" class="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold border border-[#1c1c1c]/40 text-[#1c1c1c] rounded-lg bg-transparent cursor-pointer transition-all duration-200 hover:bg-[#1c1c1c] hover:text-white active:scale-95">
+            View Details
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </a>
+
+          {% if doc.author == username %}
+          <form action="/spaces/{{ doc._id }}/delete" method="POST" class="delete-doc-form m-0" data-title="{{ doc.title }}">
+            <button type="submit" class="px-3.5 py-1.5 text-xs font-semibold border border-red-200 text-red-600 rounded-lg bg-transparent cursor-pointer transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95">
+              Delete
+            </button>
+          </form>
+          {% else %}
+          <span class="text-[10px] text-[#5f5f5d]/70 italic select-none">ReadOnly (by {{ doc.author }})</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="animate-fade-in flex flex-col items-center justify-center py-24 text-center bg-[#fcfbf9] border border-dashed border-[#eceae4] rounded-2xl p-8">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="text-[#eceae4] mb-4">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <line x1="10" y1="9" x2="8" y2="9"></line>
+      </svg>
+      <h3 class="text-base font-semibold text-[#1c1c1c] mb-1">No documents in Spaces</h3>
+      <p class="text-xs text-[#5f5f5d] max-w-sm leading-relaxed mb-6">
+        {% if q %}
+        No documents matched your search term "{{ q }}". Try a different query.
+        {% else %}
+        Save text annotations directly from the Named Entity Recognition (NER) extractor tool to view them here later.
+        {% endif %}
+      </p>
+      {% if q %}
+      <a href="/spaces" class="px-4 py-2 text-sm font-medium bg-[#1c1c1c] text-white rounded-lg cursor-pointer transition-colors duration-150 hover:bg-[#2e2e2e]">
+        Back to all documents
+      </a>
+      {% else %}
+      <a href="/ner" class="px-4 py-2 text-sm font-medium bg-[#1c1c1c] text-white rounded-lg cursor-pointer transition-colors duration-150 hover:bg-[#2e2e2e]">
+        Extract & Save NER
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    // Safe delete document confirmation
+    document.querySelectorAll('.delete-doc-form').forEach(form => {
+      form.addEventListener('submit', (e) => {
+        const title = form.getAttribute('data-title');
+        if (!confirm(`Are you sure you want to delete the document "${title}" from Spaces?`)) {
+          e.preventDefault();
+        } else {
+          const btn = form.querySelector('button[type="submit"]');
+          if (btn) { btn.disabled = true; btn.innerText = 'Deleting...'; }
+        }
+      });
+    });
+  </script>
+{% endblock %}

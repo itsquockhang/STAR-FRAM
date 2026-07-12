@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% set active_page = "spaces" %}
+
+{% block title %}{{ doc.title }} | Document Detail{% endblock %}
+
+{% block extra_styles %}
+    /* Entity highlight colors — 8 distinct hues */
+    .ner-tag-0 { background: rgba(16,185,129,0.15); color: #065f46; border-bottom: 2px solid #10b981; }
+    .ner-tag-1 { background: rgba(59,130,246,0.15); color: #1e3a5f; border-bottom: 2px solid #3b82f6; }
+    .ner-tag-2 { background: rgba(234,179,8,0.15);  color: #713f12; border-bottom: 2px solid #eab308; }
+    .ner-tag-3 { background: rgba(239,68,68,0.15);  color: #7f1d1d; border-bottom: 2px solid #ef4444; }
+    .ner-tag-4 { background: rgba(168,85,247,0.15); color: #4c1d95; border-bottom: 2px solid #a855f7; }
+    .ner-tag-5 { background: rgba(236,72,153,0.15); color: #831843; border-bottom: 2px solid #ec4899; }
+    .ner-tag-6 { background: rgba(20,184,166,0.15); color: #134e4a; border-bottom: 2px solid #14b8a6; }
+    .ner-tag-7 { background: rgba(249,115,22,0.15); color: #7c2d12; border-bottom: 2px solid #f97316; }
+
+    .ner-chip-0 { background: #10b981; } .ner-chip-1 { background: #3b82f6; }
+    .ner-chip-2 { background: #eab308; } .ner-chip-3 { background: #ef4444; }
+    .ner-chip-4 { background: #a855f7; } .ner-chip-5 { background: #ec4899; }
+    .ner-chip-6 { background: #14b8a6; } .ner-chip-7 { background: #f97316; }
+
+    .ner-entity {
+      padding: 1px 4px;
+      border-radius: 4px;
+      font-weight: 500;
+      position: relative;
+      cursor: default;
+      transition: filter 0.15s;
+    }
+    .ner-entity:hover { filter: brightness(0.92); }
+    .ner-entity .ner-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.7;
+      margin-left: 3px;
+      vertical-align: super;
+    }
+{% endblock %}
+
+{% block content %}
+  <!-- Main Content -->
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
+
+    <!-- Header Actions -->
+    <div class="animate-fade-in flex items-center gap-3 mb-6">
+      <a href="/spaces" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="rotate-180"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        Back to Spaces
+      </a>
+    </div>
+
+    <!-- Main Detail Layout -->
+    <div class="animate-fade-in grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8 items-start">
+      
+      <!-- Highlighted Text Content -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">
+              {{ doc.title }}
+            </h2>
+            <!-- Metadata -->
+            <p class="text-xs text-[#5f5f5d]">
+              Saved by <strong class="text-[#1c1c1c]">{{ doc.author }}</strong> on {{ doc.created_at.strftime('%d/%m/%Y %H:%M') if doc.created_at else 'N/A' }}
+            </p>
+          </div>
+          <div class="shrink-0 flex items-center gap-3">
+            <span class="inline-block px-2.5 py-1 text-xs font-bold uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-100 rounded">
+              Model: {{ doc.model }}
+            </span>
+          </div>
+        </div>
+
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70 mb-3">Annotated Document Text</h3>
+        <div class="p-6 bg-white border border-[#eceae4] rounded-xl text-sm leading-8 whitespace-pre-wrap break-words">
+          {{ highlighted_html | safe }}
+        </div>
+      </div>
+
+      <!-- Sidebar / Entities summary table -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        <h2 class="text-lg font-semibold tracking-tight mb-1">Entity Summary</h2>
+        <p class="text-xs text-[#5f5f5d] leading-relaxed mb-6">
+          A summary of all named entities extracted and saved in this document.
+        </p>
+
+        <!-- Entity Summary Table -->
+        <div class="overflow-x-auto mb-6">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-[#eceae4]">
+                <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Label</th>
+                <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d]">Entities Found</th>
+                <th class="py-2.5 px-3 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#eceae4]">
+              {% for label in doc.labels %}
+              {% set label_idx = loop.index0 % 8 %}
+              <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150">
+                <td class="py-2.5 px-3">
+                  <span class="inline-flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full ner-chip-{{ label_idx }}"></span>
+                    <span class="text-xs font-bold uppercase tracking-wider">{{ label }}</span>
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 text-xs leading-relaxed">
+                  {% set label_entities = doc.entities.get(label, []) %}
+                  {% for entity in label_entities %}
+                    <span class="ner-entity ner-tag-{{ label_idx }} mr-1 mb-1.5 inline-block" title="Confidence: {{ (entity.confidence * 100) | round(1) if entity.confidence is defined else 'N/A' }}%">
+                      {{ entity.text if entity.text is defined else entity }}
+                    </span>
+                  {% endfor %}
+                  {% if not label_entities %}
+                    <span class="text-xs text-[#5f5f5d] italic">None found</span>
+                  {% endif %}
+                </td>
+                <td class="py-2.5 px-3 text-xs text-right font-medium tabular-nums">{{ label_entities | length }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Danger zone / Delete document -->
+        <div class="border-t border-[#eceae4] pt-5 mt-6">
+          {% if doc.author == username %}
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-red-600 mb-2">Danger Zone</h4>
+          <p class="text-xs text-[#5f5f5d] mb-4">Deleting this document is permanent and cannot be undone.</p>
+          <form action="/spaces/{{ doc._id }}/delete" method="POST" id="deleteDocForm" class="m-0">
+            <button type="submit" class="w-full py-2 text-sm font-medium border border-red-300 text-red-600 rounded-lg bg-transparent cursor-pointer transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95 focus:outline-none focus:ring-2 focus:ring-red-500/20">
+              Delete Document
+            </button>
+          </form>
+          {% else %}
+          <div class="flex items-center gap-2 p-3.5 bg-[#f4f1e6]/40 border border-[#eceae4] rounded-xl text-xs text-[#5f5f5d]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span>This document is read-only. Only the author (<strong>{{ doc.author }}</strong>) can delete this document.</span>
+          </div>
+          {% endif %}
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  {% if doc.author == username %}
+  <script>
+    const deleteForm = document.getElementById('deleteDocForm');
+    if (deleteForm) {
+      deleteForm.addEventListener('submit', (e) => {
+        if (!confirm('Are you sure you want to permanently delete this document from Spaces?')) {
+          e.preventDefault();
+        } else {
+          const btn = deleteForm.querySelector('button[type="submit"]');
+          if (btn) { btn.disabled = true; btn.innerText = 'Deleting...'; }
+        }
+      });
+    }
+  </script>
+  {% endif %}
+{% endblock %}
