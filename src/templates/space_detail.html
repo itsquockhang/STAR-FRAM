@@ -231,7 +231,7 @@
               <div>
                 <h4 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider flex items-center gap-1.5">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 w-3.5 h-3.5"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/><path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5Z"/></svg>
-                  AI Assistant Suggestions (Conductor LLM)
+                  AI Assistant Suggestions
                 </h4>
                 <p class="text-[10px] text-[#5f5f5d]">Let the AI analyze the document and suggest relationship triples.</p>
               </div>
@@ -706,6 +706,17 @@
     // 5. Vis-network drawing logic
     let networkInstance = null;
 
+    // Build entity color mapping from doc.entities and doc.labels
+    const entityColors = {};
+    {% for label in doc.labels %}
+      {% set label_idx = loop.index0 % 8 %}
+      {% set label_entities = doc.entities.get(label, []) %}
+      {% for entity in label_entities %}
+        {% set ent_text = entity.text if entity.text is defined else entity %}
+        entityColors["{{ ent_text | escape | replace('\"', '\\\"') | replace('\'', '\\\'') }}".toLowerCase().trim()] = {{ label_idx }};
+      {% endfor %}
+    {% endfor %}
+
     function drawGraph() {
       const rows = document.querySelectorAll('#relationsTableBody tr');
       const edges = [];
@@ -728,8 +739,8 @@
           to: object,
           label: predicate,
           arrows: 'to',
-          font: { align: 'horizontal', size: 10, color: '#065f46', background: '#f0fdf4' },
-          color: { color: '#059669', hover: '#047857', highlight: '#10b981' }
+          font: { align: 'horizontal', size: 9, color: '#4b5563', background: '#f9fafb' },
+          color: { color: '#9ca3af', hover: '#4b5563', highlight: '#374151' }
         });
       });
 
@@ -745,26 +756,47 @@
 
       emptyState.classList.add('opacity-0', 'invisible');
 
+      const colorPalettes = [
+        { bg: '#ecfdf5', border: '#10b981', text: '#065f46' }, // 0: emerald
+        { bg: '#eff6ff', border: '#3b82f6', text: '#1e3a8a' }, // 1: blue
+        { bg: '#fefce8', border: '#eab308', text: '#713f12' }, // 2: yellow
+        { bg: '#fef2f2', border: '#ef4444', text: '#7f1d1d' }, // 3: red
+        { bg: '#faf5ff', border: '#a855f7', text: '#581c87' }, // 4: purple
+        { bg: '#fdf2f8', border: '#ec4899', text: '#831843' }, // 5: pink
+        { bg: '#f0fdfa', border: '#14b8a6', text: '#115e59' }, // 6: teal
+        { bg: '#fff7ed', border: '#f97316', text: '#7c2d12' }  // 7: orange
+      ];
+
       const nodes = Array.from(nodeSet).map(name => {
+        let colorIdx = 0;
+        const lowerName = name.toLowerCase().trim();
+        if (entityColors[lowerName] !== undefined) {
+          colorIdx = entityColors[lowerName];
+        } else {
+          colorIdx = name.length % 8;
+        }
+        
+        const palette = colorPalettes[colorIdx];
+
         return {
           id: name,
           label: name,
           shape: 'box',
           color: {
-            background: '#ffffff',
-            border: '#eceae4',
-            hover: { background: '#f0fdf4', border: '#10b981' },
-            highlight: { background: '#ecfdf5', border: '#10b981' }
+            background: palette.bg,
+            border: palette.border,
+            hover: { background: palette.bg, border: palette.border },
+            highlight: { background: palette.bg, border: palette.border }
           },
           borderWidth: 1.5,
-          font: { size: 12, color: '#1c1c1c', face: 'Outfit, Inter, sans-serif' },
+          font: { size: 12, color: palette.text, face: 'Outfit, Inter, sans-serif' },
           margin: 10,
           shadow: {
             enabled: true,
-            color: 'rgba(28,28,28,0.03)',
-            size: 4,
+            color: 'rgba(28,28,28,0.06)',
+            size: 6,
             x: 0,
-            y: 2
+            y: 3
           }
         };
       });
