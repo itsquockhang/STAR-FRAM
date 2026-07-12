@@ -92,6 +92,10 @@
             <nav class="hidden md:flex items-center gap-6">
               <a href="/dashboard" class="text-xs font-semibold uppercase tracking-wider transition-colors duration-200 {% if active_page == 'dashboard' %}text-emerald-600 border-b-2 border-emerald-500 pb-0.5{% else %}text-[#5f5f5d] hover:text-[#1c1c1c]{% endif %}">Dashboard</a>
               
+              {% if is_admin %}
+              <a href="/settings" class="text-xs font-semibold uppercase tracking-wider transition-colors duration-200 {% if active_page == 'settings' %}text-emerald-600 border-b-2 border-emerald-500 pb-0.5{% else %}text-[#5f5f5d] hover:text-[#1c1c1c]{% endif %}">Settings</a>
+              {% endif %}
+              
               <!-- Apps Dropdown -->
               <div class="relative inline-block text-left" id="appsDropdown">
                 <button

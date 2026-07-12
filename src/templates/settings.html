@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% set active_page = "settings" %}
+
+{% block title %}Settings | Starfarm{% endblock %}
+
+{% block extra_styles %}
+    /* Custom button states and lift transitions */
+    .settings-card {
+      transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s;
+    }
+    .settings-card:hover {
+      box-shadow: 0 12px 32px rgba(28,28,28,0.05);
+    }
+    .badge-lang {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+{% endblock %}
+
+{% block content %}
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
+    
+    <!-- Success/Error Alerts -->
+    {% if success %}
+    <div id="success-alert" data-auto-dismiss="5000" class="animate-slide-down flex items-center justify-between gap-3 p-4 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm" role="alert">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span>{{ success }}</span>
+      </div>
+      <button onclick="dismissAlert('success-alert')" class="text-emerald-500 hover:text-emerald-700 focus:outline-none cursor-pointer p-0.5 rounded-lg hover:bg-emerald-100/50 transition-colors duration-150" aria-label="Close alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div id="error-alert" class="animate-slide-down flex items-center justify-between gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+      <button onclick="dismissAlert('error-alert')" class="text-red-400 hover:text-red-600 focus:outline-none cursor-pointer p-0.5 rounded-lg hover:bg-red-100/50 transition-colors duration-150" aria-label="Close alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    {% endif %}
+
+    <div class="mb-8">
+      <h1 class="text-2xl font-semibold tracking-tight mb-1">User Settings & Preferences</h1>
+      <p class="text-sm text-[#5f5f5d]">Configure custom entity labels, descriptions, and translation preferences for Named Entity Recognition.</p>
+    </div>
+
+    <div class="animate-fade-in grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-8 items-start">
+      
+      <!-- Left Column: Preference & Add/Edit Forms -->
+      <div class="space-y-6">
+        
+        <!-- Language preference -->
+        <div class="settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+          <h2 class="text-base font-semibold tracking-tight mb-1">Definition Language</h2>
+          <p class="text-xs text-[#5f5f5d] leading-relaxed mb-4">
+            Select the active language translation for NER entity descriptions.
+          </p>
+          
+          <form action="/settings/language" method="POST" class="space-y-3">
+            <div class="flex flex-col gap-2">
+              <label class="flex items-center gap-3 px-3.5 py-2.5 bg-[#fbfaf7] border border-[#eceae4] rounded-lg cursor-pointer transition-colors duration-150 hover:bg-[#1c1c1c]/[0.01]">
+                <input type="radio" name="language" value="en" class="w-4 h-4 accent-emerald-500 cursor-pointer" {% if settings.language == 'en' %}checked{% endif %}>
+                <span class="text-sm font-medium">English (en)</span>
+              </label>
+              <label class="flex items-center gap-3 px-3.5 py-2.5 bg-[#fbfaf7] border border-[#eceae4] rounded-lg cursor-pointer transition-colors duration-150 hover:bg-[#1c1c1c]/[0.01]">
+                <input type="radio" name="language" value="vi" class="w-4 h-4 accent-emerald-500 cursor-pointer" {% if settings.language == 'vi' %}checked{% endif %}>
+                <span class="text-sm font-medium">Vietnamese (vi)</span>
+              </label>
+            </div>
+            
+            <button type="submit" class="btn-inset w-full py-2 bg-[#1c1c1c] text-white font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98]">
+              Save Language Preference
+            </button>
+          </form>
+        </div>
+
+        <!-- Add Custom Label -->
+        <div id="addLabelCard" class="settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+          <h2 class="text-base font-semibold tracking-tight mb-1">Add Label Definition</h2>
+          <p class="text-xs text-[#5f5f5d] leading-relaxed mb-4">
+            Add a new entity type and supply descriptions in both English and Vietnamese.
+          </p>
+
+          <form action="/settings/labels/add" method="POST" class="space-y-4">
+            <div class="flex flex-col gap-1">
+              <label for="new_name" class="text-[10px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Label Key Name</label>
+              <input
+                type="text"
+                id="new_name"
+                name="name"
+                required
+                placeholder="e.g. crop_variety"
+                pattern="^[a-zA-Z0-9_]+$"
+                title="Only alphanumeric characters and underscores are allowed"
+                class="w-full px-3 py-2 text-xs bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15"
+              >
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="new_desc_en" class="text-[10px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">English Definition</label>
+              <textarea
+                id="new_desc_en"
+                name="desc_en"
+                required
+                rows="3"
+                placeholder="Description of the entity in English"
+                class="w-full px-3 py-2 text-xs bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 resize-y"
+              ></textarea>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="new_desc_vi" class="text-[10px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Vietnamese Definition</label>
+              <textarea
+                id="new_desc_vi"
+                name="desc_vi"
+                required
+                rows="3"
+                placeholder="Mô tả thực thể bằng Tiếng Việt"
+                class="w-full px-3 py-2 text-xs bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 resize-y"
+              ></textarea>
+            </div>
+
+            <button type="submit" class="btn-inset w-full py-2 bg-[#1c1c1c] text-white font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98]">
+              Add Label
+            </button>
+          </form>
+        </div>
+
+        <!-- Edit Custom Label (Hidden by default) -->
+        <div id="editLabelCard" class="hidden settings-card bg-[#fcfbf9] border border-amber-200 rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+          <div class="flex justify-between items-center mb-1">
+            <h2 class="text-base font-semibold tracking-tight text-amber-900">Edit Label Definition</h2>
+            <button onclick="cancelEdit()" class="text-xs text-[#5f5f5d] hover:text-[#1c1c1c] font-medium transition-colors cursor-pointer">Cancel</button>
+          </div>
+          <p class="text-xs text-[#5f5f5d] leading-relaxed mb-4">
+            Modify definitions for label: <strong id="editingLabelTitle" class="text-amber-800"></strong>
+          </p>
+
+          <form action="/settings/labels/edit" method="POST" class="space-y-4">
+            <input type="hidden" id="edit_name" name="name">
+
+            <div class="flex flex-col gap-1">
+              <label for="edit_desc_en" class="text-[10px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">English Definition</label>
+              <textarea
+                id="edit_desc_en"
+                name="desc_en"
+                required
+                rows="3"
+                placeholder="Description of the entity in English"
+                class="w-full px-3 py-2 text-xs bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 resize-y"
+              ></textarea>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="edit_desc_vi" class="text-[10px] font-bold uppercase tracking-wider text-[#1c1c1c]/70">Vietnamese Definition</label>
+              <textarea
+                id="edit_desc_vi"
+                name="desc_vi"
+                required
+                rows="3"
+                placeholder="Mô tả thực thể bằng Tiếng Việt"
+                class="w-full px-3 py-2 text-xs bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 resize-y"
+              ></textarea>
+            </div>
+
+            <div class="flex gap-2">
+              <button type="submit" class="btn-inset flex-1 py-2 bg-[#1c1c1c] text-white font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98]">
+                Save Changes
+              </button>
+              <button type="button" onclick="cancelEdit()" class="flex-1 py-2 border border-[#eceae4] bg-transparent text-[#1c1c1c] font-medium rounded-lg text-xs cursor-pointer transition-all duration-200 hover:bg-[#eceae4] active:scale-[0.98]">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Labels List -->
+      <div class="settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+        <div class="flex justify-between items-center mb-6">
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight">Entity Labels List</h2>
+            <p class="text-xs text-[#5f5f5d] leading-relaxed">
+              Configured entity labels and their bilingual descriptions.
+            </p>
+          </div>
+          <div class="flex items-center gap-1.5 bg-[#f4f1e6] border border-[#eceae4] px-3 py-1.5 rounded-full select-none">
+            <span class="text-[10px] text-[#5f5f5d] font-bold uppercase tracking-wider">Active:</span>
+            {% if settings.language == 'en' %}
+              <span class="badge-lang bg-emerald-100 text-emerald-800">English (en)</span>
+            {% else %}
+              <span class="badge-lang bg-teal-100 text-teal-800">Tiếng Việt (vi)</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-[#eceae4]">
+                <th class="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] w-1/4">Label Name</th>
+                <th class="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] w-1/3">English Definition</th>
+                <th class="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] w-1/3">Vietnamese Definition</th>
+                <th class="py-3.5 px-4 text-[10px] font-bold uppercase tracking-wider text-[#5f5f5d] text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#eceae4]">
+              {% for label in settings.labels %}
+              <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150">
+                <td class="py-3.5 px-4 font-mono text-xs font-semibold text-[#1c1c1c]">{{ label.name }}</td>
+                <td class="py-3.5 px-4 text-xs text-[#5f5f5d] leading-relaxed">{{ label.desc_en }}</td>
+                <td class="py-3.5 px-4 text-xs text-[#5f5f5d] leading-relaxed">{{ label.desc_vi }}</td>
+                <td class="py-3.5 px-4 text-right">
+                  <div class="inline-flex gap-2">
+                    <button
+                      type="button"
+                      onclick="startEdit('{{ label.name }}', '{{ label.desc_en | escape }}', '{{ label.desc_vi | escape }}')"
+                      class="px-2.5 py-1 text-xs font-medium border border-[#eceae4] text-[#1c1c1c] rounded cursor-pointer bg-[#fcfbf9] transition-all duration-200 hover:bg-[#eceae4] active:scale-95"
+                    >
+                      Edit
+                    </button>
+                    
+                    <form action="/settings/labels/delete/{{ label.name }}" method="POST" class="delete-label-form m-0 inline-block" data-label="{{ label.name }}">
+                      <button type="submit" class="px-2.5 py-1 text-xs font-medium border border-red-200 text-red-600 rounded cursor-pointer bg-transparent transition-all duration-200 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95">Delete</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="4" class="py-8 text-center text-xs text-[#5f5f5d] italic">No custom labels defined. Add one using the form on the left.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const addLabelCard = document.getElementById('addLabelCard');
+    const editLabelCard = document.getElementById('editLabelCard');
+    const editingLabelTitle = document.getElementById('editingLabelTitle');
+    
+    const editNameInput = document.getElementById('edit_name');
+    const editDescEnInput = document.getElementById('edit_desc_en');
+    const editDescViInput = document.getElementById('edit_desc_vi');
+
+    function startEdit(name, descEn, descVi) {
+      // Toggle form cards
+      addLabelCard.classList.add('hidden');
+      editLabelCard.classList.remove('hidden');
+
+      // Populate edit fields
+      editingLabelTitle.textContent = name;
+      editNameInput.value = name;
+      editDescEnInput.value = descEn;
+      editDescViInput.value = descVi;
+
+      // Scroll form card into view if needed (useful on mobile layout)
+      editLabelCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      editDescEnInput.focus();
+    }
+
+    function cancelEdit() {
+      // Toggle form cards back
+      editLabelCard.classList.add('hidden');
+      addLabelCard.classList.remove('hidden');
+      
+      // Clear values
+      editNameInput.value = '';
+      editDescEnInput.value = '';
+      editDescViInput.value = '';
+    }
+
+    // Double submit protection
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+      form.addEventListener('submit', () => {
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) {
+          btn.disabled = true;
+          if (btn.classList.contains('btn-inset')) {
+            btn.innerHTML = `
+              <span class="flex items-center justify-center gap-1.5">
+                <svg class="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </span>
+            `;
+          } else {
+            btn.textContent = 'Saving...';
+          }
+        }
+      });
+    });
+
+    // Delete confirmation
+    document.querySelectorAll('.delete-label-form').forEach(form => {
+      form.addEventListener('submit', (e) => {
+        const label = form.getAttribute('data-label');
+        if (!confirm(`Are you sure you want to delete the entity label "${label}"? This will remove its definition from settings.`)) {
+          e.preventDefault();
+        }
+      });
+    });
+  </script>
+{% endblock %}

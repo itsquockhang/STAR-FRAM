@@ -86,7 +86,7 @@ def get_model(model_id: str = "gliner2-multi-v1") -> GLiNER2:
     return _model
 
 
-def extract_entities(text: str, labels: list[str], model_id: str = "gliner2-multi-v1") -> dict:
+def extract_entities(text: str, labels: list[str] | dict[str, str], model_id: str = "gliner2-multi-v1") -> dict:
     """
     Run NER extraction on the given text with the specified labels.
     Uses extract_entities_long to support long document extraction.
@@ -96,8 +96,10 @@ def extract_entities(text: str, labels: list[str], model_id: str = "gliner2-mult
     result = model.extract_entities_long(
         text,
         labels,
-        chunk_size=384,
-        chunk_overlap=64,
+        # chunk_size=384,
+        # chunk_overlap=64,
+        chunk_size=512,
+        chunk_overlap=96,
         include_spans=True,
         include_confidence=True
     )

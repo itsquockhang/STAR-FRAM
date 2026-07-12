@@ -18,6 +18,82 @@ from src.services.ner import load_model as load_ner_model, extract_entities, AVA
 from src.services.transcribe import get_available_devices, download_audio_from_youtube, transcribe_audio
 from src.services.extractor import extract_url_content
 
+DEFAULT_SETTINGS = {
+    "language": "en",
+    "labels": [
+        {
+            "name": "crop",
+            "desc_en": "Types of crops, agricultural plants, or grains",
+            "desc_vi": "Các loại cây trồng, cây nông nghiệp hoặc ngũ cốc"
+        },
+        {
+            "name": "disease",
+            "desc_en": "Plant or crop diseases caused by pathogens",
+            "desc_vi": "Bệnh hại cây trồng hoặc cây nông nghiệp do tác nhân gây bệnh"
+        },
+        {
+            "name": "pest",
+            "desc_en": "Agricultural pests, insects, or rodents affecting crops",
+            "desc_vi": "Sâu bệnh, côn trùng hại hoặc động vật gặm nhấm ảnh hưởng đến cây trồng"
+        },
+        {
+            "name": "pesticide",
+            "desc_en": "Chemical or biological substances used to destroy pests",
+            "desc_vi": "Chất hóa học hoặc sinh học dùng để tiêu diệt sâu hại"
+        },
+        {
+            "name": "fertilizer",
+            "desc_en": "Chemical or natural substances added to soil to increase fertility",
+            "desc_vi": "Chất hóa học hoặc tự nhiên bổ sung vào đất để tăng độ phì nhiêu"
+        },
+        {
+            "name": "variety",
+            "desc_en": "Specific varieties or cultivars of agricultural crops",
+            "desc_vi": "Các giống cây trồng hoặc giống cây nông nghiệp cụ thể"
+        },
+        {
+            "name": "symptom",
+            "desc_en": "Visible signs of plant diseases or nutrient deficiencies",
+            "desc_vi": "Các dấu hiệu nhìn thấy được của bệnh cây hoặc thiếu hụt chất dinh dưỡng"
+        },
+        {
+            "name": "pathogen",
+            "desc_en": "Microorganisms like fungi, bacteria, or viruses causing diseases",
+            "desc_vi": "Vi sinh vật như nấm, vi khuẩn hoặc vi-rút gây bệnh"
+        },
+        {
+            "name": "season",
+            "desc_en": "Agricultural seasons, weather periods, or farming cycles",
+            "desc_vi": "Các vụ mùa nông nghiệp, thời kỳ thời tiết hoặc chu kỳ trồng trọt"
+        },
+        {
+            "name": "person",
+            "desc_en": "Names of people, individuals, or figures",
+            "desc_vi": "Tên người, cá nhân hoặc nhân vật"
+        },
+        {
+            "name": "organization",
+            "desc_en": "Names of companies, agencies, institutions, or groups",
+            "desc_vi": "Tên công ty, cơ quan, tổ chức hoặc hội nhóm"
+        },
+        {
+            "name": "location",
+            "desc_en": "Geographical places, areas, regions, or coordinates",
+            "desc_vi": "Địa điểm địa lý, khu vực, vùng miền hoặc tọa độ"
+        },
+        {
+            "name": "date",
+            "desc_en": "Dates, years, specific days, or time durations",
+            "desc_vi": "Ngày tháng, năm, ngày cụ thể hoặc thời lượng thời gian"
+        },
+        {
+            "name": "quantity",
+            "desc_en": "Numerical amounts, measurements, weights, or volumes",
+            "desc_vi": "Số lượng bằng số, phép đo, trọng lượng hoặc thể tích"
+        }
+    ]
+}
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize MongoDB and Redis
@@ -38,13 +114,25 @@ async def lifespan(app: FastAPI):
             await db.users.insert_one({
                 "username": admin_username,
                 "password_hash": hashed_pw,
-                "is_admin": True
+                "is_admin": True,
+                "settings": DEFAULT_SETTINGS
             })
             logger.info("Default admin user created successfully.")
         else:
             logger.info(f"Admin user '{admin_username}' already exists. Skipping seed.")
+
+        # Ensure all existing users have the default settings seeded/updated if they don't have settings or have old settings
+        update_result = await db.users.update_many(
+            {"$or": [
+                {"settings": {"$exists": False}},
+                {"settings.labels.name": "contract_party"}
+            ]},
+            {"$set": {"settings": DEFAULT_SETTINGS}}
+        )
+        if update_result.modified_count > 0:
+            logger.info(f"Seeded/Updated default settings for {update_result.modified_count} users.")
     except Exception as e:
-        logger.error(f"Error seeding default admin user: {e}")
+        logger.error(f"Error seeding default admin user/settings: {e}")
 
     # Pre-load NER model so first request doesn't stall
     try:
@@ -226,7 +314,8 @@ async def create_user(
         new_user = {
             "username": username,
             "password_hash": hashed_pw,
-            "is_admin": is_admin == "true"
+            "is_admin": is_admin == "true",
+            "settings": DEFAULT_SETTINGS
         }
         await db.users.insert_one(new_user)
         logger.info(f"Admin '{session['username']}' created new user '{username}' (is_admin: {is_admin == 'true'}).")
@@ -272,6 +361,169 @@ async def delete_user(
     except Exception as e:
         logger.error(f"Error deleting user: {e}")
         return RedirectResponse(url="/dashboard?error=System error occurred while deleting the user.", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# ── Settings Routes ──────────────────────────────────────────────────
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(
+    request: Request,
+    session_id: str | None = Cookie(default=None),
+    success: str | None = None,
+    error: str | None = None
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse(url="/dashboard?error=You do not have permission to access Settings.", status_code=status.HTTP_303_SEE_OTHER)
+
+    username = session["username"]
+    db = get_db()
+    user = await db.users.find_one({"username": username})
+    user_settings = user.get("settings", DEFAULT_SETTINGS) if user else DEFAULT_SETTINGS
+    
+    # Sort labels alphabetically by name
+    sorted_settings = {
+        "language": user_settings.get("language", "en"),
+        "labels": sorted(user_settings.get("labels", []), key=lambda x: x["name"])
+    }
+
+    return templates.TemplateResponse(
+        request=request,
+        name="settings.html",
+        context={
+            "username": username,
+            "is_admin": session["is_admin"],
+            "settings": sorted_settings,
+            "active_page": "settings",
+            "success": success,
+            "error": error
+        }
+    )
+
+@app.post("/settings/language")
+async def update_language(
+    language: str = Form(...),
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse(url="/dashboard?error=Unauthorized action.", status_code=status.HTTP_303_SEE_OTHER)
+
+    if language not in ("en", "vi"):
+        return RedirectResponse(url="/settings?error=Invalid language selected.", status_code=status.HTTP_303_SEE_OTHER)
+
+    username = session["username"]
+    db = get_db()
+    await db.users.update_one(
+        {"username": username},
+        {"$set": {"settings.language": language}}
+    )
+    logger.info(f"User '{username}' updated definition language to '{language}'.")
+    return RedirectResponse(url="/settings?success=Language preference updated successfully.", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/settings/labels/add")
+async def add_label(
+    name: str = Form(...),
+    desc_en: str = Form(""),
+    desc_vi: str = Form(""),
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse(url="/dashboard?error=Unauthorized action.", status_code=status.HTTP_303_SEE_OTHER)
+
+    # Validate label name: lowercase, alphanumeric and underscores, no spaces
+    name = name.strip().lower()
+    if not re.match(r"^[a-z0-9_]+$", name) or len(name) < 2:
+        return RedirectResponse(url="/settings?error=Label name must be alphanumeric with underscores, and at least 2 characters long.", status_code=status.HTTP_303_SEE_OTHER)
+
+    username = session["username"]
+    db = get_db()
+    user = await db.users.find_one({"username": username})
+    user_settings = user.get("settings", DEFAULT_SETTINGS)
+    labels = user_settings.get("labels", [])
+
+    # Check duplicate
+    if any(l["name"] == name for l in labels):
+        return RedirectResponse(url=f"/settings?error=Label '{name}' already exists.", status_code=status.HTTP_303_SEE_OTHER)
+
+    new_label = {
+        "name": name,
+        "desc_en": desc_en.strip(),
+        "desc_vi": desc_vi.strip()
+    }
+    
+    await db.users.update_one(
+        {"username": username},
+        {"$push": {"settings.labels": new_label}}
+    )
+    logger.info(f"User '{username}' added new custom label '{name}'.")
+    return RedirectResponse(url=f"/settings?success=Label '{name}' added successfully.", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/settings/labels/edit")
+async def edit_label(
+    name: str = Form(...),
+    desc_en: str = Form(""),
+    desc_vi: str = Form(""),
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse(url="/dashboard?error=Unauthorized action.", status_code=status.HTTP_303_SEE_OTHER)
+
+    name = name.strip().lower()
+    username = session["username"]
+    db = get_db()
+    
+    # Update matching label using array filter
+    result = await db.users.update_one(
+        {"username": username, "settings.labels.name": name},
+        {
+            "$set": {
+                "settings.labels.$.desc_en": desc_en.strip(),
+                "settings.labels.$.desc_vi": desc_vi.strip()
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        return RedirectResponse(url=f"/settings?error=Label '{name}' not found.", status_code=status.HTTP_303_SEE_OTHER)
+
+    logger.info(f"User '{username}' updated definitions for label '{name}'.")
+    return RedirectResponse(url=f"/settings?success=Label '{name}' updated successfully.", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/settings/labels/delete/{label_name}")
+async def delete_label(
+    label_name: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    session = await get_session(session_id)
+    if not session or not session.get("is_admin"):
+        return RedirectResponse(url="/dashboard?error=Unauthorized action.", status_code=status.HTTP_303_SEE_OTHER)
+
+    username = session["username"]
+    db = get_db()
+    
+    result = await db.users.update_one(
+        {"username": username},
+        {"$pull": {"settings.labels": {"name": label_name}}}
+    )
+    
+    if result.modified_count == 0:
+        return RedirectResponse(url=f"/settings?error=Label '{label_name}' not found or could not be deleted.", status_code=status.HTTP_303_SEE_OTHER)
+
+    logger.info(f"User '{username}' deleted label '{label_name}'.")
+    return RedirectResponse(url=f"/settings?success=Label '{label_name}' deleted successfully.", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # ── NER Routes ──────────────────────────────────────────────────────
@@ -351,6 +603,14 @@ async def ner_page(
         response.delete_cookie(key="session_id")
         return response
 
+    username = session["username"]
+    db = get_db()
+    user = await db.users.find_one({"username": username})
+    user_settings = user.get("settings", DEFAULT_SETTINGS) if user else DEFAULT_SETTINGS
+    
+    user_labels = sorted(user_settings.get("labels", []), key=lambda x: x["name"])
+    labels_str = ",".join(l["name"] for l in user_labels)
+
     from src.services.ner import _model_name
     current_model = _model_name or "gliner2-multi-v1"
 
@@ -358,10 +618,12 @@ async def ner_page(
         request=request,
         name="ner.html",
         context={
-            "username": session["username"],
+            "username": username,
             "is_admin": session["is_admin"],
             "models": AVAILABLE_MODELS,
             "selected_model": current_model,
+            "user_labels": user_labels,
+            "labels_str": labels_str,
         }
     )
 
@@ -382,11 +644,19 @@ async def ner_extract(
         response.delete_cookie(key="session_id")
         return response
 
+    username = session["username"]
+    db = get_db()
+    user = await db.users.find_one({"username": username})
+    user_settings = user.get("settings", DEFAULT_SETTINGS) if user else DEFAULT_SETTINGS
+    user_labels = sorted(user_settings.get("labels", []), key=lambda x: x["name"])
+    lang = user_settings.get("language", "en")
+
     context = {
-        "username": session["username"],
+        "username": username,
         "is_admin": session["is_admin"],
         "text": text,
         "labels_str": labels,
+        "user_labels": user_labels,
         "models": AVAILABLE_MODELS,
         "selected_model": model,
     }
@@ -401,12 +671,26 @@ async def ner_extract(
         context["error"] = "Please provide at least one entity label."
         return templates.TemplateResponse(request=request, name="ner.html", context=context)
 
+    # Map label to bilingual description
+    desc_field = f"desc_{lang}"
+    label_desc_map = {}
+    for l in user_labels:
+        # Fallback between desc_en and desc_vi if one is empty
+        desc = l.get(desc_field) or l.get("desc_en") or l.get("desc_vi") or l["name"]
+        label_desc_map[l["name"]] = desc
+
+    # Construct definitions dictionary
+    labels_dict = {}
+    for l in label_list:
+        # If custom definition exists, use it. Otherwise, use label name itself.
+        labels_dict[l] = label_desc_map.get(l, l)
+
     try:
-        result = extract_entities(text, label_list, model)
+        result = extract_entities(text, labels_dict, model)
         entities = result.get("entities", {})
         context["results"] = entities
         context["highlighted_html"] = build_highlighted_html(text, entities, label_list)
-        logger.info(f"NER extraction by '{session['username']}' using '{model}': {len(text)} chars, {len(label_list)} labels, {sum(len(v) for v in entities.values())} entities found.")
+        logger.info(f"NER extraction by '{username}' using '{model}': {len(text)} chars, {len(label_list)} labels, {sum(len(v) for v in entities.values())} entities found.")
     except Exception as e:
         logger.error(f"NER extraction failed: {e}")
         context["error"] = f"An error occurred during entity extraction: {str(e)}"

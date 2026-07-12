@@ -109,26 +109,57 @@
 
             <!-- Preset dropdown -->
             <div class="flex flex-col gap-2">
+              {% set user_label_names = [] %}
+              {% if user_labels %}
+                {% for l in user_labels %}
+                  {% set _ = user_label_names.append(l.name) %}
+                {% endfor %}
+              {% endif %}
               <select id="presetSelect" class="w-full px-3 py-2 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 cursor-pointer">
                 <option value="" disabled selected>Select a preset label...</option>
+                {% if user_labels %}
+                <optgroup label="Custom Labels (Settings)">
+                  {% for l in user_labels %}
+                    <option value="{{ l.name }}">{{ l.name }}</option>
+                  {% endfor %}
+                </optgroup>
+                {% endif %}
+
+                {% set show_agri = namespace(value=false) %}
+                {% for l in ['crop', 'disease', 'pest', 'pesticide', 'fertilizer', 'variety', 'symptom', 'pathogen', 'season'] %}
+                  {% if l not in user_label_names %}
+                    {% set show_agri.value = true %}
+                  {% endif %}
+                {% endfor %}
+                {% if show_agri.value %}
                 <optgroup label="Agriculture">
-                  <option value="crop">Crop</option>
-                  <option value="disease">Disease</option>
-                  <option value="pest">Pest</option>
-                  <option value="pesticide">Pesticide</option>
-                  <option value="fertilizer">Fertilizer</option>
-                  <option value="variety">Variety</option>
-                  <option value="symptom">Symptom</option>
-                  <option value="pathogen">Pathogen</option>
-                  <option value="season">Season</option>
+                  {% if 'crop' not in user_label_names %}<option value="crop">Crop</option>{% endif %}
+                  {% if 'disease' not in user_label_names %}<option value="disease">Disease</option>{% endif %}
+                  {% if 'pest' not in user_label_names %}<option value="pest">Pest</option>{% endif %}
+                  {% if 'pesticide' not in user_label_names %}<option value="pesticide">Pesticide</option>{% endif %}
+                  {% if 'fertilizer' not in user_label_names %}<option value="fertilizer">Fertilizer</option>{% endif %}
+                  {% if 'variety' not in user_label_names %}<option value="variety">Variety</option>{% endif %}
+                  {% if 'symptom' not in user_label_names %}<option value="symptom">Symptom</option>{% endif %}
+                  {% if 'pathogen' not in user_label_names %}<option value="pathogen">Pathogen</option>{% endif %}
+                  {% if 'season' not in user_label_names %}<option value="season">Season</option>{% endif %}
                 </optgroup>
+                {% endif %}
+
+                {% set show_gen = namespace(value=false) %}
+                {% for l in ['person', 'organization', 'location', 'date', 'quantity'] %}
+                  {% if l not in user_label_names %}
+                    {% set show_gen.value = true %}
+                  {% endif %}
+                {% endfor %}
+                {% if show_gen.value %}
                 <optgroup label="General">
-                  <option value="person">Person</option>
-                  <option value="organization">Organization</option>
-                  <option value="location">Location</option>
-                  <option value="date">Date</option>
-                  <option value="quantity">Quantity</option>
+                  {% if 'person' not in user_label_names %}<option value="person">Person</option>{% endif %}
+                  {% if 'organization' not in user_label_names %}<option value="organization">Organization</option>{% endif %}
+                  {% if 'location' not in user_label_names %}<option value="location">Location</option>{% endif %}
+                  {% if 'date' not in user_label_names %}<option value="date">Date</option>{% endif %}
+                  {% if 'quantity' not in user_label_names %}<option value="quantity">Quantity</option>{% endif %}
                 </optgroup>
+                {% endif %}
               </select>
 
               <!-- Custom label input -->
