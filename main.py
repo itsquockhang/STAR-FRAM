@@ -531,9 +531,11 @@ async def delete_label(
 
 async def get_conductor_model() -> str:
     import httpx
+    import os
+    conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.get("https://www-conductor.quockhang.io.vn/v1/models")
+            resp = await client.get(f"{conductor_api_base}/models")
             if resp.status_code == 200:
                 data = resp.json()
                 if "data" in data and len(data["data"]) > 0:
@@ -558,6 +560,7 @@ async def enhance_label_queries(
         
     try:
         import dspy
+        import os
         
         class GenerateRAGQueries(dspy.Signature):
             """
@@ -580,10 +583,12 @@ async def enhance_label_queries(
             
         model_id = await get_conductor_model()
         
+        conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
+        
         # Configure DSPy LM
         lm = dspy.LM(
             model=f"openai/{model_id}",
-            api_base="https://www-conductor.quockhang.io.vn/v1",
+            api_base=conductor_api_base,
             api_key="dummy"
         )
         
