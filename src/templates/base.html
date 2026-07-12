@@ -100,7 +100,7 @@
               <div class="relative inline-block text-left" id="appsDropdown">
                 <button
                   type="button"
-                  class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider {% if active_page in ['ner', 'transcribe', 'extract'] %}text-emerald-600{% else %}text-[#5f5f5d] hover:text-[#1c1c1c]{% endif %} transition-all duration-200 focus:outline-none"
+                  class="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider {% if active_page in ['ner', 'transcribe', 'extract', 'translate'] %}text-emerald-600{% else %}text-[#5f5f5d] hover:text-[#1c1c1c]{% endif %} transition-all duration-200 focus:outline-none"
                   id="appsDropdownBtn"
                 >
                   Apps
@@ -131,6 +131,13 @@
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                     URL Extractor
+                  </a>
+                  <a
+                    href="/translate"
+                    class="flex items-center gap-2.5 px-4 py-2.5 text-xs transition-colors border-t border-[#eceae4]/45 {% if active_page == 'translate' %}text-emerald-600 bg-[#f4f1e6]/40 font-semibold{% else %}font-medium text-[#5f5f5d] hover:bg-[#f4f1e6]/30 hover:text-[#1c1c1c]{% endif %}"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    Translate
                   </a>
                 </div>
               </div>

@@ -1,0 +1,505 @@
+{% extends "base.html" %}
+{% set active_page = "translate" %}
+
+{% block title %}Translate | Starfarm{% endblock %}
+
+{% block extra_head %}
+  <!-- Mammoth DOCX parser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+{% endblock %}
+
+{% block extra_styles %}
+    /* Custom textarea styling */
+    .textarea-custom {
+      resize: none;
+      scrollbar-width: thin;
+    }
+{% endblock %}
+
+{% block content %}
+  <!-- Main Content -->
+  <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
+
+    <!-- Feedback alerts -->
+    {% if success %}
+    <div id="success-alert" data-auto-dismiss="5000" class="animate-slide-down flex items-center justify-between gap-3 p-4 mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm" role="alert">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <span>{{ success }}</span>
+      </div>
+      <button onclick="dismissAlert('success-alert')" class="text-emerald-500 hover:text-emerald-700 focus:outline-none cursor-pointer p-0.5 rounded-lg hover:bg-emerald-100/50 transition-colors duration-150" aria-label="Close alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div id="error-alert" class="animate-slide-down flex items-center justify-between gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>{{ error }}</span>
+      </div>
+      <button onclick="dismissAlert('error-alert')" class="text-red-400 hover:text-red-600 focus:outline-none cursor-pointer p-0.5 rounded-lg hover:bg-red-100/50 transition-colors duration-150" aria-label="Close alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    {% endif %}
+
+    <!-- Server Connection Error Banner (if connection failed) -->
+    {% if not is_connected %}
+    <div id="connection-warning" class="animate-slide-down flex items-start gap-3 p-4 mb-6 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm" role="alert">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 text-amber-600 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      <div class="space-y-1">
+        <h4 class="font-semibold text-amber-900">Translation Server Offline</h4>
+        <p class="text-xs text-amber-800/90 leading-relaxed">
+          {{ connection_error or "Cannot connect to the translation API server at https://www-translate.quockhang.io.vn. Please verify the server is running." }}
+        </p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Split Grid Layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 items-stretch">
+      
+      <!-- Input Panel (Source) -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)] flex flex-col justify-between min-h-[480px]">
+        <form action="/translate" method="POST" id="translateForm" class="flex-grow flex flex-col justify-between">
+          <div class="space-y-5 flex-grow flex flex-col">
+            
+            <!-- Language Selection Toolbar -->
+            <div class="flex items-center justify-between gap-3 p-1.5 bg-[#f4f1e6]/45 border border-[#eceae4] rounded-xl">
+              <!-- Source Lang -->
+              <div class="flex-grow">
+                <select
+                  id="sourceLang"
+                  name="source_lang"
+                  class="w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/80 bg-white border border-[#eceae4] rounded-lg cursor-pointer transition-all duration-200 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="en" {% if source_lang == 'en' or not source_lang %}selected{% endif %}>English (en)</option>
+                  <option value="vi" {% if source_lang == 'vi' %}selected{% endif %}>Vietnamese (vi)</option>
+                  <option value="zh" {% if source_lang == 'zh' %}selected{% endif %}>Chinese (zh)</option>
+                  <option value="ja" {% if source_lang == 'ja' %}selected{% endif %}>Japanese (ja)</option>
+                  <option value="ko" {% if source_lang == 'ko' %}selected{% endif %}>Korean (ko)</option>
+                  <option value="fr" {% if source_lang == 'fr' %}selected{% endif %}>French (fr)</option>
+                  <option value="de" {% if source_lang == 'de' %}selected{% endif %}>German (de)</option>
+                  <option value="es" {% if source_lang == 'es' %}selected{% endif %}>Spanish (es)</option>
+                  <option value="ru" {% if source_lang == 'ru' %}selected{% endif %}>Russian (ru)</option>
+                </select>
+              </div>
+
+              <!-- Swap Button -->
+              <button
+                type="button"
+                id="swapBtn"
+                class="p-2 border border-[#eceae4] bg-white rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-150 active:scale-95 cursor-pointer shrink-0"
+                title="Swap languages"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+              </button>
+
+              <!-- Import Document Button -->
+              <button
+                type="button"
+                id="importFileBtn"
+                class="p-2 border border-[#eceae4] bg-white rounded-lg hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-150 active:scale-95 cursor-pointer shrink-0 flex items-center justify-center"
+                title="Import .txt or .docx file"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 18 15 15"></polyline></svg>
+              </button>
+              <input type="file" id="fileInput" accept=".txt,.docx" class="hidden">
+
+              <!-- Target Lang -->
+              <div class="flex-grow">
+                <select
+                  id="targetLang"
+                  name="target_lang"
+                  class="w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/80 bg-white border border-[#eceae4] rounded-lg cursor-pointer transition-all duration-200 focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="vi" {% if target_lang == 'vi' or not target_lang %}selected{% endif %}>Vietnamese (vi)</option>
+                  <option value="en" {% if target_lang == 'en' %}selected{% endif %}>English (en)</option>
+                  <option value="zh" {% if target_lang == 'zh' %}selected{% endif %}>Chinese (zh)</option>
+                  <option value="ja" {% if target_lang == 'ja' %}selected{% endif %}>Japanese (ja)</option>
+                  <option value="ko" {% if target_lang == 'ko' %}selected{% endif %}>Korean (ko)</option>
+                  <option value="fr" {% if target_lang == 'fr' %}selected{% endif %}>French (fr)</option>
+                  <option value="de" {% if target_lang == 'de' %}selected{% endif %}>German (de)</option>
+                  <option value="es" {% if target_lang == 'es' %}selected{% endif %}>Spanish (es)</option>
+                  <option value="ru" {% if target_lang == 'ru' %}selected{% endif %}>Russian (ru)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="flex-grow flex flex-col relative">
+              <textarea
+                id="sourceText"
+                name="text"
+                required
+                placeholder="Type or paste text to translate here..."
+                maxlength="10000"
+                class="w-full flex-grow p-4 text-sm bg-white border border-[#eceae4] rounded-xl transition-all duration-200 placeholder:text-[#5f5f5d]/60 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 textarea-custom min-h-[220px]"
+              >{{ text or '' }}</textarea>
+              <div class="absolute bottom-3 right-3 text-[10px] text-[#5f5f5d]/70 bg-white/80 px-2 py-0.5 rounded border border-[#eceae4]" id="charCounter">
+                0 / 10,000
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Submit Button -->
+          <div class="mt-5">
+            <button
+              type="submit"
+              id="submitBtn"
+              {% if not is_connected %}disabled{% endif %}
+              class="btn-inset w-full py-3 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30 disabled:bg-[#eceae4] disabled:text-[#5f5f5d] disabled:cursor-not-allowed disabled:shadow-none disabled:transform-none"
+            >
+              {% if is_connected %}
+                Translate text
+              {% else %}
+                Server Offline - Translate Disabled
+              {% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Output Panel (Target) -->
+      <div class="bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)] flex flex-col min-h-[480px]">
+        <div class="flex justify-between items-center mb-4 shrink-0">
+          <h2 class="text-xl font-semibold tracking-tight">Translation Output</h2>
+          <div class="flex items-center gap-4 {% if not translated_text %}hidden{% endif %}" id="actionButtons">
+            <button type="button" id="sendToNerBtn" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+              Analyze with NER
+            </button>
+            <button type="button" id="copyBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy Text
+            </button>
+            <button type="button" id="downloadBtn" class="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1 cursor-pointer">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Download .txt
+            </button>
+          </div>
+        </div>
+
+        <div id="resultsContainer" class="flex-grow flex flex-col justify-between">
+          <!-- Placeholder shown if no translated_text -->
+          <div id="placeholderContainer" class="flex-grow flex flex-col items-center justify-center py-20 text-center {% if translated_text %}hidden{% endif %}">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-[#eceae4] mb-4">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <p class="text-sm text-[#5f5f5d]">No translation generated yet. Write your text and click <strong>Translate text</strong>.</p>
+          </div>
+
+          <!-- Translation Output Area -->
+          <div id="translationContent" class="flex-grow flex flex-col justify-between {% if not translated_text %}hidden{% endif %}">
+            <!-- Scrollable Output Text Box -->
+            <div class="flex-grow flex flex-col mb-4">
+              <div id="translationBox" class="p-5 flex-grow bg-white border border-[#eceae4] rounded-xl text-sm leading-7 whitespace-pre-wrap break-words overflow-y-auto selection:bg-emerald-500/20 max-h-[360px] lg:max-h-[none]">
+                {{- translated_text or '' -}}
+              </div>
+            </div>
+
+            <!-- Stats/Metadata Footer -->
+            <div class="p-4 bg-[#fdfdfc] border border-[#eceae4] rounded-xl shadow-[0_2px_8px_rgba(28,28,28,0.01)] shrink-0" id="statsFooter">
+              <div class="flex flex-wrap gap-4 items-center justify-between">
+                <div class="space-y-1">
+                  <div class="text-[10px] font-semibold uppercase tracking-wider text-[#5f5f5d]/85">Translation Model</div>
+                  <div id="modelNameText" class="text-xs font-medium text-[#1c1c1c]/90 mono-font truncate max-w-[280px]" title="{{ model_used or '' }}">
+                    {{ model_used or '' }}
+                  </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 items-center">
+                  <div id="durationTag" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 border border-amber-100 text-amber-800 text-[11px] font-medium leading-none {% if not duration %}hidden{% endif %}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span class="font-semibold uppercase tracking-wide" id="durationValue">{{ duration or '' }}s</span>
+                  </div>
+
+                  <div id="tokensTag" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-800 text-[11px] font-medium leading-none {% if not usage %}hidden{% endif %}">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+                    <span class="font-semibold uppercase tracking-wide" id="tokensValue">{{ usage.total_tokens if usage else '' }} tokens</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    const translateForm = document.getElementById('translateForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const resultsContainer = document.getElementById('resultsContainer');
+    const sourceText = document.getElementById('sourceText');
+    const charCounter = document.getElementById('charCounter');
+    const sourceLangSelect = document.getElementById('sourceLang');
+    const targetLangSelect = document.getElementById('targetLang');
+    const swapBtn = document.getElementById('swapBtn');
+
+    // Update character counter
+    function updateCounter() {
+      if (sourceText && charCounter) {
+        const count = sourceText.value.length;
+        charCounter.textContent = `${count.toLocaleString()} / 10,000`;
+      }
+    }
+    if (sourceText) {
+      sourceText.addEventListener('input', updateCounter);
+      updateCounter();
+    }
+
+    // Swap Languages action
+    if (swapBtn && sourceLangSelect && targetLangSelect) {
+      swapBtn.addEventListener('click', () => {
+        const sourceVal = sourceLangSelect.value;
+        const targetVal = targetLangSelect.value;
+        
+        sourceLangSelect.value = targetVal;
+        targetLangSelect.value = sourceVal;
+      });
+    }
+
+    // File upload/import logic
+    const importFileBtn = document.getElementById('importFileBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    if (importFileBtn && fileInput && sourceText) {
+      importFileBtn.addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const fileName = file.name.toLowerCase();
+        const reader = new FileReader();
+
+        if (fileName.endsWith('.txt')) {
+          reader.onload = (event) => {
+            sourceText.value = event.target.result;
+            updateCounter();
+          };
+          reader.readAsText(file);
+        } else if (fileName.endsWith('.docx')) {
+          reader.onload = (event) => {
+            const arrayBuffer = event.target.result;
+            mammoth.extractRawText({ arrayBuffer: arrayBuffer })
+              .then((result) => {
+                sourceText.value = result.value;
+                updateCounter();
+              })
+              .catch((err) => {
+                console.error('Error parsing docx: ', err);
+                alert('Failed to parse docx file. Please ensure it is a valid .docx file.');
+              });
+          };
+          reader.readAsArrayBuffer(file);
+        } else {
+          alert('Unsupported file format. Please upload a .txt or .docx file.');
+        }
+
+        // Reset file input so same file can be uploaded again
+        fileInput.value = '';
+      });
+    }
+
+    // Form Submission Streaming handler
+    if (translateForm) {
+      translateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const textVal = sourceText.value.trim();
+        if (!textVal) {
+          alert('Please enter some text to translate.');
+          return;
+        }
+
+        // Set submit button loading
+        submitBtn.disabled = true;
+        const originalBtnHTML = submitBtn.innerHTML;
+        submitBtn.innerHTML = `
+          <span class="flex items-center justify-center gap-2">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Translating...
+          </span>
+        `;
+
+        // Toggle visibility to show the output container immediately
+        const actionButtons = document.getElementById('actionButtons');
+        const placeholderContainer = document.getElementById('placeholderContainer');
+        const translationContent = document.getElementById('translationContent');
+        const translationBox = document.getElementById('translationBox');
+        const durationTag = document.getElementById('durationTag');
+        const tokensTag = document.getElementById('tokensTag');
+        const modelNameText = document.getElementById('modelNameText');
+
+        if (placeholderContainer) placeholderContainer.classList.add('hidden');
+        if (translationContent) translationContent.classList.remove('hidden');
+        if (actionButtons) actionButtons.classList.add('hidden');
+        if (durationTag) durationTag.classList.add('hidden');
+        if (tokensTag) tokensTag.classList.add('hidden');
+
+        translationBox.innerHTML = `
+          <span class="inline-flex items-center gap-2 text-[#5f5f5d] animate-pulse">
+            <svg class="animate-spin h-4 w-4 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Starting translation stream...</span>
+          </span>
+        `;
+
+        const startTime = Date.now();
+        const formData = new FormData(translateForm);
+
+        try {
+          const response = await fetch('/translate/stream', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          let isFirstToken = true;
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              const cleanedLine = line.trim();
+              if (cleanedLine.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(cleanedLine.slice(6));
+                  if (data.error) {
+                    throw new Error(data.error);
+                  }
+
+                  if (data.token !== undefined) {
+                    if (isFirstToken) {
+                      translationBox.textContent = '';
+                      isFirstToken = false;
+                    }
+                    translationBox.textContent += data.token;
+                    translationBox.scrollTop = translationBox.scrollHeight;
+                  }
+
+                  if (data.usage !== undefined) {
+                    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                    if (modelNameText) {
+                      modelNameText.textContent = data.model_used || '';
+                      modelNameText.setAttribute('title', data.model_used || '');
+                    }
+
+                    const durationValue = document.getElementById('durationValue');
+                    if (durationValue && durationTag) {
+                      durationValue.textContent = `${elapsed}s`;
+                      durationTag.classList.remove('hidden');
+                    }
+
+                    const tokensValue = document.getElementById('tokensValue');
+                    if (tokensValue && tokensTag && data.usage.total_tokens) {
+                      tokensValue.textContent = `${data.usage.total_tokens} tokens`;
+                      tokensTag.classList.remove('hidden');
+                      tokensTag.setAttribute('title', `Prompt: ${data.usage.prompt_tokens} | Completion: ${data.usage.completion_tokens}`);
+                    }
+
+                    if (actionButtons) actionButtons.classList.remove('hidden');
+                  }
+                } catch (jsonErr) {
+                  console.error('JSON parse error on line:', cleanedLine, jsonErr);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Translation failed:', err);
+          translationBox.innerHTML = `
+            <span class="text-red-600 font-medium">
+              Streaming translation failed: ${err.message || err}
+            </span>
+          `;
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHTML;
+        }
+      });
+    }
+
+    // Copy to Clipboard Action
+    const copyBtn = document.getElementById('copyBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const translationBox = document.getElementById('translationBox');
+        if (translationBox) {
+          navigator.clipboard.writeText(translationBox.innerText)
+            .then(() => {
+              const originalHTML = copyBtn.innerHTML;
+              copyBtn.innerHTML = `
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                Copied!
+              `;
+              setTimeout(() => {
+                copyBtn.innerHTML = originalHTML;
+              }, 2000);
+            })
+            .catch(err => {
+              console.error('Could not copy translation: ', err);
+            });
+        }
+      });
+    }
+
+    // Download text action
+    const downloadBtn = document.getElementById('downloadBtn');
+    if (downloadBtn) {
+      downloadBtn.addEventListener('click', () => {
+        const translationBox = document.getElementById('translationBox');
+        if (translationBox) {
+          const textContent = translationBox.innerText;
+          const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `starfarm_translation_${sourceLangSelect.value}_to_${targetLangSelect.value}.txt`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
+
+    // Send to NER Action
+    const sendToNerBtn = document.getElementById('sendToNerBtn');
+    if (sendToNerBtn) {
+      sendToNerBtn.addEventListener('click', () => {
+        const translationBox = document.getElementById('translationBox');
+        if (translationBox) {
+          const textContent = translationBox.innerText;
+          sessionStorage.setItem('ner_carry_text', textContent);
+          window.location.href = '/ner';
+        }
+      });
+    }
+  </script>
+{% endblock %}
