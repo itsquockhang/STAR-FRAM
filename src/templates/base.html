@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Starfarm{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/logo.svg">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS v4 Browser Compiler -->
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
@@ -17,15 +18,14 @@
 
   <style>
     html { font-size: 17px; }
-    body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+    body { font-family: 'K2D', ui-sans-serif, system-ui, sans-serif; }
     .mono-font { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 
     /* Ambient background glows */
-    .ambient-glow { position: relative; }
     .ambient-glow::before,
     .ambient-glow::after {
       content: "";
-      position: absolute;
+      position: fixed;
       width: 500px;
       height: 500px;
       border-radius: 50%;
@@ -59,6 +59,13 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .animate-slide-down { animation: slideDown 0.3s ease forwards; }
+
+    /* Slide-up and fade-out animation for alerts dismissal */
+    @keyframes slideUpFade {
+      from { opacity: 1; transform: translateY(0); max-height: 150px; margin-bottom: 1.5rem; }
+      to   { opacity: 0; transform: translateY(-8px); max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; border: none; }
+    }
+    .alert-dismissing { animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
     /* Fade-in animation */
     @keyframes fadeIn {
@@ -191,6 +198,30 @@
         appsDropdownIcon.style.transform = 'rotate(0deg)';
       });
     }
+
+    // Dismiss alerts helper
+    function dismissAlert(alertId) {
+      const alert = document.getElementById(alertId);
+      if (alert) {
+        alert.classList.add('alert-dismissing');
+        alert.addEventListener('animationend', () => {
+          alert.remove();
+        });
+      }
+    }
+
+    // Auto-dismiss success alerts
+    document.addEventListener('DOMContentLoaded', () => {
+      const successAlerts = document.querySelectorAll('[data-auto-dismiss]');
+      successAlerts.forEach(alert => {
+        const timeout = parseInt(alert.getAttribute('data-auto-dismiss')) || 5000;
+        setTimeout(() => {
+          if (document.body.contains(alert)) {
+            dismissAlert(alert.id);
+          }
+        }, timeout);
+      });
+    });
   </script>
   
   {% block scripts %}{% endblock %}

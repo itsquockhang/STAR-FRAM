@@ -49,11 +49,16 @@
   <main class="max-w-[1440px] mx-auto px-6 lg:px-12 w-full flex-grow flex flex-col pt-8 mb-16">
 
     {% if error %}
-    <div class="animate-slide-down flex items-center gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
-        <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
-      </svg>
-      <span>{{ error }}</span>
+    <div id="error-alert" class="animate-slide-down flex items-center justify-between gap-3 p-4 mb-6 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm" role="alert">
+      <div class="flex items-center gap-3">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+          <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>{{ error }}</span>
+      </div>
+      <button onclick="dismissAlert('error-alert')" class="text-red-400 hover:text-red-600 focus:outline-none cursor-pointer p-0.5 rounded-lg hover:bg-red-100/50 transition-colors duration-150" aria-label="Close alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     {% endif %}
 
@@ -140,6 +145,20 @@
 
             <!-- Hidden input to submit labels -->
             <input type="hidden" id="labelsHidden" name="labels" value="{{ labels_str or '' }}">
+          </div>
+
+          <!-- Model Selection -->
+          <div class="flex flex-col gap-1.5">
+            <label for="modelSelect" class="text-xs font-semibold uppercase tracking-wider text-[#1c1c1c]/70">Extraction Model</label>
+            <select
+              id="modelSelect"
+              name="model"
+              class="w-full px-3 py-2.5 text-sm bg-[#fbfaf7] border border-[#eceae4] rounded-lg transition-all duration-200 hover:border-[#1c1c1c]/30 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 cursor-pointer"
+            >
+              {% for m_id, m_info in models.items() %}
+                <option value="{{ m_id }}" {% if m_id == selected_model %}selected{% endif %}>{{ m_info.name }}</option>
+              {% endfor %}
+            </select>
           </div>
 
           <button type="submit" id="submitBtn" class="btn-inset w-full py-2.5 bg-[#1c1c1c] text-white font-medium rounded-lg text-sm cursor-pointer transition-all duration-200 hover:bg-[#2e2e2e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-emerald-500/30">

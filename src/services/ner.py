@@ -19,14 +19,38 @@ gliner2.inference.engine.DataLoader = TqdmDataLoader
 
 # Module-level singleton
 _model: GLiNER2 | None = None
+_model_name: str | None = None
+
+AVAILABLE_MODELS = {
+    "gliner2-multi-v1": {
+        "repo_id": "fastino/gliner2-multi-v1",
+        "name": "GLiNER2 Multilingual (fastino/gliner2-multi-v1)"
+    },
+    "gliner2-base-v1": {
+        "repo_id": "fastino/gliner2-base-v1",
+        "name": "GLiNER2 Base English (fastino/gliner2-base-v1)"
+    }
+}
 
 
-def load_model():
-    """Load the GLiNER2 model into memory. Called once at app startup."""
-    global _model
-    if _model is not None:
-        logger.info("NER model already loaded, skipping.")
+def load_model(model_id: str = "gliner2-multi-v1"):
+    """Load the GLiNER2 model into memory. Unloads previous model if model_id changes."""
+    global _model, _model_name
+    if _model is not None and _model_name == model_id:
+        logger.info(f"NER model {model_id} already loaded, skipping.")
         return
+        
+    if _model is not None:
+        logger.info(f"Unloading previous NER model: {_model_name}")
+        del _model
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elif hasattr(torch, "mps") and torch.mps.is_available():
+            torch.mps.empty_cache()
+        _model = None
+        _model_name = None
+
     device = get_device()
     device_type = device.type if hasattr(device, "type") else str(device)
     
@@ -36,40 +60,39 @@ def load_model():
     
     if device_type == "cuda":
         quantize = True
-        # compile_model = True
     elif device_type == "mps":
         quantize = True
-        # compile_model = False  # torch.compile fails on MPS for GLiNER2 due to Metal shading compiler bugs
     else:  # cpu
-        quantize = False  # CPU fp16 is slow or unsupported for many ops
-        # compile_model = True  # compile works on CPU
+        quantize = False
         
-    logger.info(f"Loading GLiNER2 model 'fastino/gliner2-multi-v1' on {device_type} (quantize={quantize}, compile={compile_model})...")
+    repo_id = AVAILABLE_MODELS.get(model_id, AVAILABLE_MODELS["gliner2-multi-v1"])["repo_id"]
+    logger.info(f"Loading GLiNER2 model '{repo_id}' on {device_type} (quantize={quantize}, compile={compile_model})...")
     
     _model = GLiNER2.from_pretrained(
-        "fastino/gliner2-multi-v1",
+        repo_id,
         map_location=device,
         quantize=quantize,
         compile=compile_model
     )
-    logger.info("GLiNER2 model loaded successfully.")
+    _model_name = model_id
+    logger.info(f"GLiNER2 model '{model_id}' loaded successfully.")
 
 
-def get_model() -> GLiNER2:
-    """Return the loaded model singleton, loading it lazily if necessary."""
-    global _model
-    if _model is None:
-        load_model()
+def get_model(model_id: str = "gliner2-multi-v1") -> GLiNER2:
+    """Return the loaded model singleton, loading/switching if necessary."""
+    global _model, _model_name
+    if _model is None or _model_name != model_id:
+        load_model(model_id)
     return _model
 
 
-def extract_entities(text: str, labels: list[str]) -> dict:
+def extract_entities(text: str, labels: list[str], model_id: str = "gliner2-multi-v1") -> dict:
     """
     Run NER extraction on the given text with the specified labels.
     Uses extract_entities_long to support long document extraction.
     Returns the result dict from GLiNER2 with global spans and confidence scores.
     """
-    model = get_model()
+    model = get_model(model_id)
     result = model.extract_entities_long(
         text,
         labels,

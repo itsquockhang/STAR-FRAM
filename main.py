@@ -14,7 +14,7 @@ logger = logging.getLogger("starfarm.main")
 
 from src.core.database import init_db, close_db, get_db
 from src.core.auth import hash_password, verify_password, create_session, get_session, delete_session
-from src.services.ner import load_model as load_ner_model, extract_entities
+from src.services.ner import load_model as load_ner_model, extract_entities, AVAILABLE_MODELS
 from src.services.transcribe import get_available_devices, download_audio_from_youtube, transcribe_audio
 from src.services.extractor import extract_url_content
 
@@ -351,12 +351,17 @@ async def ner_page(
         response.delete_cookie(key="session_id")
         return response
 
+    from src.services.ner import _model_name
+    current_model = _model_name or "gliner2-multi-v1"
+
     return templates.TemplateResponse(
         request=request,
         name="ner.html",
         context={
             "username": session["username"],
             "is_admin": session["is_admin"],
+            "models": AVAILABLE_MODELS,
+            "selected_model": current_model,
         }
     )
 
@@ -366,6 +371,7 @@ async def ner_extract(
     request: Request,
     text: str = Form(...),
     labels: str = Form(""),
+    model: str = Form("gliner2-multi-v1"),
     session_id: str | None = Cookie(default=None)
 ):
     if not session_id:
@@ -381,6 +387,8 @@ async def ner_extract(
         "is_admin": session["is_admin"],
         "text": text,
         "labels_str": labels,
+        "models": AVAILABLE_MODELS,
+        "selected_model": model,
     }
 
     # Validate
@@ -394,14 +402,14 @@ async def ner_extract(
         return templates.TemplateResponse(request=request, name="ner.html", context=context)
 
     try:
-        result = extract_entities(text, label_list)
+        result = extract_entities(text, label_list, model)
         entities = result.get("entities", {})
         context["results"] = entities
         context["highlighted_html"] = build_highlighted_html(text, entities, label_list)
-        logger.info(f"NER extraction by '{session['username']}': {len(text)} chars, {len(label_list)} labels, {sum(len(v) for v in entities.values())} entities found.")
+        logger.info(f"NER extraction by '{session['username']}' using '{model}': {len(text)} chars, {len(label_list)} labels, {sum(len(v) for v in entities.values())} entities found.")
     except Exception as e:
         logger.error(f"NER extraction failed: {e}")
-        context["error"] = "An error occurred during entity extraction. Please try again."
+        context["error"] = f"An error occurred during entity extraction: {str(e)}"
 
     return templates.TemplateResponse(request=request, name="ner.html", context=context)
 
