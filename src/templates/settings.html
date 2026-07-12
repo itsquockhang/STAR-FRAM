@@ -92,7 +92,7 @@
         </div>
 
         <!-- Add Custom Label -->
-        <div id="addLabelCard" class="settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+        <div id="panel-left-labels-tab" class="settings-tab-panel settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
           <h2 class="text-base font-semibold tracking-tight mb-1">Add Label Definition</h2>
           <p class="text-xs text-[#5f5f5d] leading-relaxed mb-4">
             Add a new entity type and supply descriptions in both English and Vietnamese.
@@ -203,7 +203,7 @@
         </div>
 
         <!-- Add Custom Predicate -->
-        <div id="addPredicateCard" class="settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
+        <div id="panel-left-predicates-tab" class="settings-tab-panel hidden settings-card bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 shadow-[0_4px_24px_rgba(28,28,28,0.02)]">
           <h2 class="text-base font-semibold tracking-tight mb-1">Add Relationship Predicate</h2>
           <p class="text-xs text-[#5f5f5d] leading-relaxed mb-4">
             Add a new predicate type for document knowledge graph building.
@@ -834,10 +834,12 @@
     }
 
     function switchSettingsTab(tabId) {
-      // Hide all panels
+      // Hide all panels (both left and right side tabs)
       document.querySelectorAll('.settings-tab-panel').forEach(p => p.classList.add('hidden'));
-      // Show chosen panel
+      
+      // Show chosen panels (both left and right sides)
       document.getElementById('panel-' + tabId).classList.remove('hidden');
+      document.getElementById('panel-left-' + tabId).classList.remove('hidden');
 
       // Update button styles
       document.querySelectorAll('[id^="btn-"]').forEach(btn => {
