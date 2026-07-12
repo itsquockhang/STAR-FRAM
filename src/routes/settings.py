@@ -255,7 +255,11 @@ async def enhance_label_queries(
         lm = dspy.LM(
             model=f"openai/{model_id}",
             api_base=conductor_api_base,
-            api_key="dummy"
+            api_key="dummy",
+            # google/gemma-4-E2B-it-qat-w4a16-ct
+            temperature=1.0,
+            top_p=0.95,
+            top_k=64
         )
         
         with dspy.context(lm=lm):
