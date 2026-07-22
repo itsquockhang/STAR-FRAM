@@ -269,13 +269,48 @@ vertical-align: super;
       <!-- Tab 3: Visual Graph -->
       <div id="panel-graph-tab"
         class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-        <div class="border-b border-[#eceae4]/60 pb-4 mb-6">
-          <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Visualization</h2>
-          <p class="text-xs text-[#5f5f5d]">Zoom, pan, and drag nodes to explore the generated entity relationships.</p>
+        <div class="flex items-center justify-between border-b border-[#eceae4]/60 pb-4 mb-6">
+          <div>
+            <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Visualization</h2>
+            <p class="text-xs text-[#5f5f5d]">Zoom, pan, and drag nodes to explore the generated entity relationships.</p>
+          </div>
+          <button 
+            type="button" 
+            onclick="toggleFullscreenGraph()"
+            class="px-3 py-1.5 bg-white border border-[#eceae4] hover:border-emerald-500 hover:text-emerald-600 text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer"
+            title="Toggle full width / fullscreen mode"
+          >
+            <svg class="w-4 h-4 fullscreen-expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+            </svg>
+            <svg class="w-4 h-4 fullscreen-compress-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15L4 20m0 0h4m-4 0v-4m11 0l5 5m0 0h-4m4 0v-4M9 9L4 4m0 0h4m-4 0v4m11 0l5-5m0 0h-4m4 0v4"/>
+            </svg>
+            <span class="fullscreen-btn-text">Full Width</span>
+          </button>
         </div>
 
         <div id="graphContainer"
-          class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative">
+          class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative transition-all duration-200">
+          
+          <!-- Floating Controls inside graph canvas -->
+          <div class="absolute top-3 right-3 z-20 flex items-center gap-2">
+            <button 
+              type="button" 
+              onclick="toggleFullscreenGraph()"
+              class="px-2.5 py-1.5 bg-white/90 backdrop-blur border border-[#eceae4] hover:border-emerald-500 hover:text-emerald-600 text-xs font-semibold rounded-lg shadow-md transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer"
+              title="Toggle full width / fullscreen mode"
+            >
+              <svg class="w-3.5 h-3.5 fullscreen-expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+              </svg>
+              <svg class="w-3.5 h-3.5 fullscreen-compress-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15L4 20m0 0h4m-4 0v-4m11 0l5 5m0 0h-4m4 0v-4M9 9L4 4m0 0h4m-4 0v4m11 0l5-5m0 0h-4m4 0v4"/>
+              </svg>
+              <span class="fullscreen-btn-text">Full Width</span>
+            </button>
+          </div>
+
           <!-- Loading state / instructions -->
           <div id="graphEmptyState"
             class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-white/95 z-10 transition-opacity duration-200">
@@ -989,6 +1024,44 @@ vertical-align: super;
     }
     networkInstance = new vis.Network(container, data, options);
   }
+
+  let isGraphFullscreen = false;
+
+  function toggleFullscreenGraph() {
+    const container = document.getElementById('graphContainer');
+    const expandIcons = document.querySelectorAll('.fullscreen-expand-icon');
+    const compressIcons = document.querySelectorAll('.fullscreen-compress-icon');
+    const btnTexts = document.querySelectorAll('.fullscreen-btn-text');
+
+    isGraphFullscreen = !isGraphFullscreen;
+
+    if (isGraphFullscreen) {
+      container.classList.add('fixed', 'top-4', 'left-4', 'right-4', 'bottom-4', 'z-[9999]', 'h-[calc(100vh-32px)]', 'shadow-2xl', 'ring-4', 'ring-emerald-500/20');
+      container.classList.remove('h-[500px]');
+      expandIcons.forEach(i => i.classList.add('hidden'));
+      compressIcons.forEach(i => i.classList.remove('hidden'));
+      btnTexts.forEach(t => t.textContent = "Exit Full Width");
+    } else {
+      container.classList.remove('fixed', 'top-4', 'left-4', 'right-4', 'bottom-4', 'z-[9999]', 'h-[calc(100vh-32px)]', 'shadow-2xl', 'ring-4', 'ring-emerald-500/20');
+      container.classList.add('h-[500px]');
+      expandIcons.forEach(i => i.classList.remove('hidden'));
+      compressIcons.forEach(i => i.classList.add('hidden'));
+      btnTexts.forEach(t => t.textContent = "Full Width");
+    }
+
+    setTimeout(() => {
+      if (networkInstance) {
+        networkInstance.redraw();
+        networkInstance.fit();
+      }
+    }, 100);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isGraphFullscreen) {
+      toggleFullscreenGraph();
+    }
+  });
 
   // 6. Delete document confirmation listener
   const deleteForm = document.getElementById('deleteDocForm');
