@@ -38,6 +38,11 @@ async def get_conductor_model() -> str:
     global _llm_online, _llm_last_checked, _llm_offline_reason
     import time
     
+    # Allow overriding model via CONDUCTOR_MODEL environment variable
+    env_model = os.getenv("CONDUCTOR_MODEL")
+    if env_model and env_model.strip():
+        return env_model.strip()
+
     current_time = time.time()
     # Circuit breaker: if marked offline within last 15 seconds, fail immediately without waiting for HTTP timeout
     if not _llm_online and (current_time - _llm_last_checked < 15.0):
@@ -72,21 +77,28 @@ async def get_conductor_model() -> str:
         raise LLMConnectionError("Server LLM is offline or unreachable. Please verify serve.sh is running.")
     except Exception as e:
         logger.warning(f"Failed to dynamically fetch conductor model, using fallback: {e}")
-    return "google/gemma-4-E2B-it-qat-w4a16-ct"
+    return "nvidia/Qwen3-8B-NVFP4"
 
 
 async def get_dspy_lm():
     import dspy
     model_id = await get_conductor_model()
     conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
+    
+    # Generation hyperparameters (defaults tuned for nvidia/Qwen3-8B-NVFP4)
+    temperature = float(os.getenv("CONDUCTOR_TEMPERATURE", "0.7"))
+    top_p = float(os.getenv("CONDUCTOR_TOP_P", "0.8"))
+    top_k = int(os.getenv("CONDUCTOR_TOP_K", "20"))
+    min_p = float(os.getenv("CONDUCTOR_MIN_P", "0.0"))
+
     return dspy.LM(
         model=f"openai/{model_id}",
         api_base=conductor_api_base,
         api_key="dummy",
-        # Config parameters tuned for google/gemma-4-E2B-it-qat-w4a16-ct
-        temperature=1.0,
-        top_p=0.95,
-        top_k=64
+        temperature=temperature,
+        top_p=top_p,
+        top_k=top_k,
+        min_p=min_p
     )
 
 
