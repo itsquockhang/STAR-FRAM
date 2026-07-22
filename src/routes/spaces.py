@@ -523,6 +523,12 @@ async def suggest_relations(
                 predicates=", ".join(pred_labels)
             )
 
+        registered_set = set()
+        for p in predicates:
+            if p.get("name"): registered_set.add(p["name"].lower().replace(" ", "_"))
+            if p.get("label_en"): registered_set.add(p["label_en"].lower().strip())
+            if p.get("label_vi"): registered_set.add(p["label_vi"].lower().strip())
+
         relations_text = result.relations
         suggestions = []
         if relations_text:
@@ -546,12 +552,17 @@ async def suggest_relations(
                     if not sub or not pred or not obj:
                         continue
 
+                    pred_clean = pred.lower().strip()
+                    pred_slug = pred_clean.replace(" ", "_")
+                    in_settings = (pred_clean in registered_set) or (pred_slug in registered_set)
+
                     # Prevent duplicate suggestions in output
                     if not any(s["subject"] == sub and s["predicate"] == pred and s["object"] == obj for s in suggestions):
                         suggestions.append({
                             "subject": sub,
                             "predicate": pred,
-                            "object": obj
+                            "object": obj,
+                            "in_settings": in_settings
                         })
 
         logger.info(f"AI suggested {len(suggestions)} relations for doc {doc_id} using model '{lm.model}'")

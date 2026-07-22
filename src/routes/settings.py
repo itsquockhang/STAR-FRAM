@@ -560,3 +560,90 @@ async def suggest_predicate_definitions(
     except Exception as e:
         logger.error(f"Predicate suggestion generation failed: {e}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/settings/predicates/add_auto")
+async def add_auto_predicate(
+    request: Request,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        return {"success": False, "error": "Unauthorized"}
+    session = await get_session(session_id)
+    if not session:
+        return {"success": False, "error": "Unauthorized"}
+
+    try:
+        data = await request.json()
+        raw_pred = data.get("predicate", "").strip()
+        if not raw_pred:
+            return {"success": False, "error": "Predicate is required."}
+
+        import re, datetime
+        # Slugify predicate for key name
+        name = re.sub(r'[^a-z0-9_]', '', raw_pred.lower().replace(" ", "_")).strip("_")
+        if not name:
+            name = f"pred_{int(datetime.datetime.now().timestamp())}"
+
+        db = get_db()
+        pattern = re.compile(f"^{re.escape(raw_pred)}$", re.IGNORECASE)
+        existing = await db.predicates.find_one({
+            "$or": [
+                {"name": name},
+                {"label_en": pattern},
+                {"label_vi": pattern}
+            ]
+        })
+
+        if existing:
+            return {
+                "success": True,
+                "already_exists": True,
+                "message": f"Predicate '{existing.get('label_vi') or existing['name']}' already exists in settings.",
+                "predicate": existing["name"]
+            }
+
+        # Generate definitions using LLM (DSPy)
+        import dspy
+        
+        class GeneratePredicateDefinition(dspy.Signature):
+            """
+            Generate bilingual labels and descriptions for a relationship predicate key name in an agricultural knowledge graph context.
+            """
+            predicate_name = dspy.InputField(desc="The name/key of the relationship predicate")
+            label_en = dspy.OutputField(desc="A brief English label")
+            label_vi = dspy.OutputField(desc="Một nhãn tiếng Việt ngắn gọn")
+            desc_en = dspy.OutputField(desc="A brief one-sentence English description of the relation")
+            desc_vi = dspy.OutputField(desc="Một mô tả ngắn gọn một câu bằng tiếng Việt về mối quan hệ")
+
+        lm = await get_dspy_lm()
+        with dspy.context(lm=lm):
+            predictor = dspy.Predict(GeneratePredicateDefinition)
+            result = predictor(predicate_name=raw_pred)
+
+        label_en = result.label_en.strip() if result.label_en else raw_pred
+        label_vi = result.label_vi.strip() if result.label_vi else raw_pred
+        desc_en = result.desc_en.strip() if result.desc_en else f"Relationship '{raw_pred}'"
+        desc_vi = result.desc_vi.strip() if result.desc_vi else f"Mối quan hệ '{raw_pred}'"
+
+        new_pred = {
+            "name": name,
+            "label_en": label_en,
+            "label_vi": label_vi,
+            "desc_en": desc_en,
+            "desc_vi": desc_vi,
+            "created_at": datetime.datetime.now(datetime.timezone.utc)
+        }
+        await db.predicates.insert_one(new_pred)
+        logger.info(f"Predicate '{name}' auto-added by '{session['username']}' using model '{lm.model}'")
+
+        return {
+            "success": True,
+            "already_exists": False,
+            "message": f"Predicate '{raw_pred}' successfully added to settings.",
+            "predicate": new_pred
+        }
+    except Exception as e:
+        logger.error(f"Auto-add predicate failed: {e}")
+        return {"success": False, "error": str(e)}
+
