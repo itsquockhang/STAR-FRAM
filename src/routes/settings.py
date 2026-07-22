@@ -621,10 +621,12 @@ async def add_auto_predicate(
             predictor = dspy.Predict(GeneratePredicateDefinition)
             result = predictor(predicate_name=raw_pred)
 
-        label_en = result.label_en.strip() if result.label_en else raw_pred
-        label_vi = result.label_vi.strip() if result.label_vi else raw_pred
-        desc_en = result.desc_en.strip() if result.desc_en else f"Relationship '{raw_pred}'"
-        desc_vi = result.desc_vi.strip() if result.desc_vi else f"Mối quan hệ '{raw_pred}'"
+        from src.routes.spaces import clean_dspy_output
+
+        label_en = clean_dspy_output(result.label_en) if getattr(result, 'label_en', None) else raw_pred
+        label_vi = clean_dspy_output(result.label_vi) if getattr(result, 'label_vi', None) else raw_pred
+        desc_en = clean_dspy_output(result.desc_en) if getattr(result, 'desc_en', None) else f"Relationship '{raw_pred}'"
+        desc_vi = clean_dspy_output(result.desc_vi) if getattr(result, 'desc_vi', None) else f"Mối quan hệ '{raw_pred}'"
 
         new_pred = {
             "name": name,
@@ -635,6 +637,9 @@ async def add_auto_predicate(
             "created_at": datetime.datetime.now(datetime.timezone.utc)
         }
         await db.predicates.insert_one(new_pred)
+        if "_id" in new_pred:
+            new_pred["_id"] = str(new_pred["_id"])
+
         logger.info(f"Predicate '{name}' auto-added by '{session['username']}' using model '{lm.model}'")
 
         return {
