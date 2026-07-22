@@ -916,14 +916,15 @@ async def synthesize_prai_sentences(
                 Synthesize structured agricultural PRAI narrative sentences in English based ONLY on the provided document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
                 CRITICAL REQUIREMENTS:
-                1. SEMANTIC LOGIC & CAUSE-EFFECT RULE: Practices (R) are applied to CONTROL, MITIGATE, or PREVENT Problems (P) and Negative Damage/Impact (I). NEVER output absurd logic like "applied practice X in order to reduce grain quality"! If Impact is negative (e.g. "grain quality reduction"), phrase it as "to mitigate [Impact]" or "to prevent [Impact]".
-                2. STRICT FAITHFULNESS & GROUNDING: Rely ONLY on facts, entities, locations, and organizations present in the provided input text. NEVER introduce or hallucinate outside location names, province names, actors, or organizations!
-                3. Output strictly 1 structured line per distinct Problem/Situation using the exact format:
+                1. GRAMMAR & FLUENCY RULE: Write natural, grammatically correct English sentences. NEVER repeat consecutive action verbs like "applied applying" or "applied spraying"! Use proper phrasing such as "applied [Practice]", "used [Practice]", or "adopted [Practice]".
+                2. SEMANTIC LOGIC & CAUSE-EFFECT RULE: Practices (R) are applied to CONTROL, MITIGATE, or PREVENT Problems (P) and Negative Damage/Impact (I). NEVER output absurd logic such as "applied practice X to reduce grain quality"! If Impact (I) is negative (e.g. "grain quality reduction", "reduce grain quality"), phrase it as "to prevent [Impact]", "to mitigate [Impact]", or "to avoid [Impact]".
+                3. STRICT FAITHFULNESS & GROUNDING: Rely ONLY on facts, entities, locations, and organizations present in the provided input text. NEVER introduce or hallucinate outside location names, province names, actors, or organizations!
+                4. Output strictly 1 structured line per distinct Problem/Situation using the exact format:
                    Actor: <A> | Problem: <P> | Practice: <R> | Impact: <I> | Sentence: <Sentence text>
-                4. VERBATIM RULE: The exact words specified in <A>, <P>, <R>, <I> MUST appear verbatim inside <Sentence text> so they can be highlighted accurately.
+                5. VERBATIM RULE: The exact words specified in <A>, <P>, <R>, <I> MUST appear verbatim inside <Sentence text> so they can be highlighted accurately.
                 
                 Example output format:
-                Actor: Farmers | Problem: Rice blast disease | Practice: Spraying Trichoderma bio-agent | Impact: Rice grain quality reduction | Sentence: To control rice blast disease, farmers applied spraying Trichoderma bio-agent to prevent rice grain quality reduction.
+                Actor: Farmers | Problem: Rice blast disease | Practice: Trichoderma bio-preparations | Impact: Grain quality reduction | Sentence: To control rice blast disease, farmers applied Trichoderma bio-preparations to prevent grain quality reduction.
                 """
                 text = dspy.InputField(desc="Document text context")
                 prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
@@ -937,18 +938,19 @@ async def synthesize_prai_sentences(
                 Synthesize structured agricultural PRAI narrative sentences in Vietnamese based ONLY on the provided document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
                 YÊU CẦU BẮT BUỘC & CHẶT CHẼ:
-                1. QUY TẮC LOGIC NGỮ NGHĨA & NGUYÊN NHÂN - KẾT QUẢ (SEMANTIC LOGIC & CAUSE-EFFECT):
-                   - Biện pháp/Kỹ thuật (Practice) được áp dụng là để KHẮC PHỤC/HẠN CHẾ/NGĂN NGỪA Vấn đề (Problem) và Tác hại (Impact).
+                1. QUY TẮC NGỮ PHÁP & TRÔI CHẢY: Câu văn chuẩn ngữ pháp tiếng Việt, diễn đạt tự nhiên. TUYỆT ĐỐI KHÔNG lặp động từ vụng về như "áp dụng áp dụng", "áp dụng phun chế phẩm"! Dùng các từ nối tự nhiên như "áp dụng [Practice]", "sử dụng [Practice]", hoặc "triển khai [Practice]".
+                2. QUY TẮC LOGIC NGỮ NGHĨA & NGUYÊN NHÂN - KẾT QUẢ (SEMANTIC LOGIC & CAUSE-EFFECT):
+                   - Biện pháp/Kỹ thuật (Practice) được áp dụng là để KHẮC PHỤC / HẠN CHẾ / NGĂN NGỪA Vấn đề (Problem) và Tác hại (Impact).
                    - TUYỆT ĐỐI KHÔNG viết các câu ngớ ngẩn vô lý như "áp dụng giải pháp A nhằm giảm chất lượng hạt gạo" hoặc "phun thuốc nhằm gây thiệt hại"!
-                   - Nếu Impact là tác hại/hậu quả tiêu cực (ví dụ: "giảm chất lượng hạt gạo", "thất thu năng suất"), câu BẮT BUỘC phải diễn đạt là "nhằm HẠN CHẾ/NGĂN NGỪA/KHẮC PHỤC [Impact]" (ví dụ: "...nhằm hạn chế giảm chất lượng hạt gạo").
-                   - Nếu Impact là kết quả tích cực (ví dụ: "tăng năng suất"), câu diễn đạt là "...giúp/nhằm [Impact]".
-                2. QUY TẮC TRÁNH ẢO GIÁC (ANTI-HALLUCINATION): TUYỆT ĐỐI CHỈ sử dụng thông tin, tác nhân, địa danh, tỉnh thành có sẵn trong văn bản bài viết. KHÔNG BAO GIỜ tự bịa thêm tên tỉnh thành hoặc tổ chức không có trong bài!
-                3. Xuất chính xác 1 dòng cấu trúc cho MỖI Vấn đề (Problem) theo đúng định dạng:
+                   - Nếu Impact là tác hại/hậu quả tiêu cực (ví dụ: "giảm chất lượng hạt gạo", "thất thu năng suất"), câu BẮT BUỘC phải diễn đạt là "nhằm HẠN CHẾ / NGĂN NGỪA / KHẮC PHỤC [Impact]" (ví dụ: "...nhằm hạn chế giảm chất lượng hạt gạo").
+                   - Nếu Impact là kết quả tích cực (ví dụ: "tăng năng suất"), câu diễn đạt là "...giúp / nhằm [Impact]".
+                3. QUY TẮC TRÁNH ẢO GIÁC (ANTI-HALLUCINATION): TUYỆT ĐỐI CHỈ sử dụng thông tin, tác nhân, địa danh, tỉnh thành có sẵn trong văn bản bài viết. KHÔNG BAO GIỜ tự bịa thêm tên tỉnh thành hoặc tổ chức không có trong bài!
+                4. Xuất chính xác 1 dòng cấu trúc cho MỖI Vấn đề (Problem) theo đúng định dạng:
                    Actor: <A> | Problem: <P> | Practice: <R> | Impact: <I> | Sentence: <Nội dung câu kịch bản>
-                4. QUY TẮC NGUYÊN VĂN: Các từ/cụm từ chính xác được ghi ở <A>, <P>, <R>, <I> BẮT BUỘC phải xuất hiện nguyên văn (verbatim) trong <Nội dung câu kịch bản> để hệ thống tô màu chính xác cả 4 yếu tố.
+                5. QUY TẮC NGUYÊN VÊN: Các từ/cụm từ chính xác được ghi ở <A>, <P>, <R>, <I> BẮT BUỘC phải xuất hiện nguyên văn (verbatim) trong <Nội dung câu kịch bản> để hệ thống tô màu chính xác cả 4 yếu tố.
                 
                 Example output format:
-                Actor: Nông dân | Problem: Bệnh đạo ôn | Practice: Phun chế phẩm sinh học Trichoderma | Impact: Giảm chất lượng hạt gạo | Sentence: Để khắc phục bệnh đạo ôn, nông dân áp dụng giải pháp phun chế phẩm sinh học Trichoderma nhằm hạn chế giảm chất lượng hạt gạo.
+                Actor: Nông dân | Problem: Bệnh đạo ôn | Practice: Chế phẩm sinh học Trichoderma | Impact: Giảm chất lượng hạt gạo | Sentence: Để khắc phục bệnh đạo ôn, nông dân áp dụng chế phẩm sinh học Trichoderma nhằm hạn chế giảm chất lượng hạt gạo.
                 """
                 text = dspy.InputField(desc="Document text context")
                 prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
