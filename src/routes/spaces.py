@@ -10,6 +10,19 @@ from src.core.templates import templates
 
 logger = logging.getLogger("starfarm.routes.spaces")
 
+def clean_dspy_output(text: str) -> str:
+    """Removes DSPy internal prompt/completion tags like [[ ## completed ]], [[ ## field ]], markdown block ticks, etc."""
+    if not text:
+        return ""
+    import re
+    # Remove [[ ## ... ]] and [[ ... ]] tags
+    text = re.sub(r'\[\[\s*##.*?\s*\]\]', '', str(text))
+    text = re.sub(r'\[\[.*?\]\]', '', text)
+    # Remove markdown code blocks
+    text = re.sub(r'```[a-zA-Z]*', '', text)
+    text = text.replace('```', '')
+    return text.strip()
+
 router = APIRouter()
 
 @router.post("/spaces/save")
@@ -726,11 +739,13 @@ async def extract_prai_ai(
             if not raw_str:
                 return []
             import re
-            parts = re.split(r'[\|\n,]', str(raw_str))
+            cleaned_raw = clean_dspy_output(str(raw_str))
+            parts = re.split(r'[\|\n,]', cleaned_raw)
             items = []
             for p in parts:
                 cleaned = re.sub(r'^\d+[\.\)\-\s]+', '', p).strip()
-                if cleaned and cleaned.lower() not in ["empty", "none", "n/a", "k/a", "implicit"]:
+                cleaned = clean_dspy_output(cleaned)
+                if cleaned and cleaned.lower() not in ["empty", "none", "n/a", "k/a", "implicit", "completed", "none."]:
                     if cleaned not in items:
                         items.append(cleaned)
             return items
@@ -870,15 +885,15 @@ async def synthesize_prai_sentences(
                 kg_relations=kg_formatted
             )
 
-        output_text = res.sentences or ""
+        output_text = clean_dspy_output(res.sentences or "")
         parsed_sentences = []
         
         if output_text:
             import re
             lines = output_text.split("\n")
             for line in lines:
-                line = line.strip()
-                if not line:
+                line = clean_dspy_output(line.strip())
+                if not line or ("completed" in line.lower() and len(line) < 25):
                     continue
                 
                 if "|" in line and "Sentence:" in line:
@@ -888,17 +903,19 @@ async def synthesize_prai_sentences(
                         if ":" in p:
                             k, v = p.split(":", 1)
                             k = k.strip().lower()
-                            v = v.strip()
+                            v = clean_dspy_output(v.strip())
                             if "actor" in k: item["actor"] = v
                             elif "problem" in k: item["problem"] = v
                             elif "practice" in k: item["practice"] = v
                             elif "impact" in k: item["impact"] = v
                             elif "sentence" in k: item["sentence"] = v
                     if item["sentence"]:
+                        item["sentence"] = clean_dspy_output(item["sentence"])
                         parsed_sentences.append(item)
                 else:
                     clean_line = re.sub(r'^\d+[\.\)\-\s]+', '', line).strip()
-                    if clean_line and len(clean_line) > 10:
+                    clean_line = clean_dspy_output(clean_line)
+                    if clean_line and len(clean_line) > 10 and not clean_line.lower().startswith("completed"):
                         parsed_sentences.append({"sentence": clean_line, "lang": lang_code})
 
         await db.spaces_documents.update_one(
