@@ -385,10 +385,16 @@ vertical-align: super;
 
   // 1. Tab Navigation Logic
   function switchTab(tabId) {
+    const validTabs = ['annotated-tab', 'kg-builder-tab', 'graph-tab'];
+    if (!validTabs.includes(tabId)) {
+      tabId = 'annotated-tab';
+    }
+
     // Hide all panels
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
     // Show chosen panel
-    document.getElementById('panel-' + tabId).classList.remove('hidden');
+    const targetPanel = document.getElementById('panel-' + tabId);
+    if (targetPanel) targetPanel.classList.remove('hidden');
 
     // Update button styles
     document.querySelectorAll('[id^="btn-"]').forEach(btn => {
@@ -397,14 +403,43 @@ vertical-align: super;
     });
 
     const activeBtn = document.getElementById('btn-' + tabId);
-    activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
-    activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
+    if (activeBtn) {
+      activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
+      activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
+    }
+
+    // Save to localStorage & update URL hash
+    try {
+      localStorage.setItem('active_space_tab_' + docId, tabId);
+      if (window.location.hash !== '#' + tabId) {
+        history.replaceState(null, '', '#' + tabId);
+      }
+    } catch(e) {}
 
     // If active tab is graph-tab, initialize/redraw the graph
     if (tabId === 'graph-tab') {
       drawGraph();
     }
   }
+
+  // Restore active tab on DOMContentLoaded
+  document.addEventListener('DOMContentLoaded', () => {
+    const hash = window.location.hash.replace('#', '');
+    const validTabs = ['annotated-tab', 'kg-builder-tab', 'graph-tab'];
+    let savedTab = '';
+    try {
+      savedTab = localStorage.getItem('active_space_tab_' + docId);
+    } catch(e) {}
+
+    let initialTab = 'annotated-tab';
+    if (validTabs.includes(hash)) {
+      initialTab = hash;
+    } else if (validTabs.includes(savedTab)) {
+      initialTab = savedTab;
+    }
+
+    switchTab(initialTab);
+  });
 
   // 2. HTML5 Drag and Drop Handlers
   let draggedEntity = null;

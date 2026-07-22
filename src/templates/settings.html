@@ -834,12 +834,19 @@
     }
 
     function switchSettingsTab(tabId) {
+      const validTabs = ['labels-tab', 'predicates-tab'];
+      if (!validTabs.includes(tabId)) {
+        tabId = 'labels-tab';
+      }
+
       // Hide all panels (both left and right side tabs)
       document.querySelectorAll('.settings-tab-panel').forEach(p => p.classList.add('hidden'));
       
       // Show chosen panels (both left and right sides)
-      document.getElementById('panel-' + tabId).classList.remove('hidden');
-      document.getElementById('panel-left-' + tabId).classList.remove('hidden');
+      const rightPanel = document.getElementById('panel-' + tabId);
+      const leftPanel = document.getElementById('panel-left-' + tabId);
+      if (rightPanel) rightPanel.classList.remove('hidden');
+      if (leftPanel) leftPanel.classList.remove('hidden');
 
       // Update button styles
       document.querySelectorAll('[id^="btn-"]').forEach(btn => {
@@ -850,9 +857,36 @@
       });
 
       const activeBtn = document.getElementById('btn-' + tabId);
-      activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
-      activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-[#5f5f5d]');
+        activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
+      }
+
+      try {
+        localStorage.setItem('active_settings_tab', tabId);
+        if (window.location.hash !== '#' + tabId) {
+          history.replaceState(null, '', '#' + tabId);
+        }
+      } catch(e) {}
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const hash = window.location.hash.replace('#', '');
+      const validTabs = ['labels-tab', 'predicates-tab'];
+      let savedTab = '';
+      try {
+        savedTab = localStorage.getItem('active_settings_tab');
+      } catch(e) {}
+
+      let initialTab = 'labels-tab';
+      if (validTabs.includes(hash)) {
+        initialTab = hash;
+      } else if (validTabs.includes(savedTab)) {
+        initialTab = savedTab;
+      }
+
+      switchSettingsTab(initialTab);
+    });
 
     function escapeHtml(str) {
       const div = document.createElement('div');
