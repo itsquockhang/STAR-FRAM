@@ -291,11 +291,42 @@ vertical-align: super;
           class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative">
           
           <!-- Floating Controls inside graph canvas -->
-          <div class="absolute top-3 right-3 z-20 flex items-center gap-2">
+          <div class="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/90 backdrop-blur border border-[#eceae4] p-1 rounded-xl shadow-md">
+            <button 
+              type="button" 
+              onclick="zoomGraph(1.2)"
+              class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
+              title="Zoom In (+)"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+            </button>
+            <button 
+              type="button" 
+              onclick="zoomGraph(0.8)"
+              class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
+              title="Zoom Out (-)"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+              </svg>
+            </button>
+            <button 
+              type="button" 
+              onclick="resetGraphView()"
+              class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
+              title="Center & Fit View"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+            </button>
+            <div class="w-px h-4 bg-[#eceae4] mx-0.5"></div>
             <button 
               type="button" 
               onclick="openGraphModal()"
-              class="px-2.5 py-1.5 bg-white/90 backdrop-blur border border-[#eceae4] hover:border-emerald-500 hover:text-emerald-600 text-xs font-semibold rounded-lg shadow-md transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer"
+              class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
               title="Open graph in full-width modal"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1143,6 +1174,39 @@ vertical-align: super;
     modalNetworkInstance = new vis.Network(container, data, options);
   }
 
+  // Zoom & Center View Helpers
+  function zoomGraph(factor) {
+    if (!networkInstance) return;
+    const currentScale = networkInstance.getScale();
+    networkInstance.moveTo({
+      scale: currentScale * factor,
+      animation: { duration: 250, easingFunction: 'easeInOutQuad' }
+    });
+  }
+
+  function resetGraphView() {
+    if (!networkInstance) return;
+    networkInstance.fit({
+      animation: { duration: 300, easingFunction: 'easeInOutQuad' }
+    });
+  }
+
+  function zoomModalGraph(factor) {
+    if (!modalNetworkInstance) return;
+    const currentScale = modalNetworkInstance.getScale();
+    modalNetworkInstance.moveTo({
+      scale: currentScale * factor,
+      animation: { duration: 250, easingFunction: 'easeInOutQuad' }
+    });
+  }
+
+  function resetModalGraphView() {
+    if (!modalNetworkInstance) return;
+    modalNetworkInstance.fit({
+      animation: { duration: 300, easingFunction: 'easeInOutQuad' }
+    });
+  }
+
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeGraphModal();
@@ -1179,6 +1243,40 @@ vertical-align: super;
       </div>
     </div>
     <div class="flex items-center gap-3">
+      <!-- Zoom & Center Controls -->
+      <div class="flex items-center gap-1 bg-white border border-[#eceae4] p-1 rounded-xl shadow-sm">
+        <button 
+          type="button" 
+          onclick="zoomModalGraph(1.2)"
+          class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
+          title="Zoom In (+)"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+        </button>
+        <button 
+          type="button" 
+          onclick="zoomModalGraph(0.8)"
+          class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
+          title="Zoom Out (-)"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+          </svg>
+        </button>
+        <button 
+          type="button" 
+          onclick="resetModalGraphView()"
+          class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
+          title="Center & Fit View"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+
       <button 
         type="button" 
         onclick="closeGraphModal()" 
