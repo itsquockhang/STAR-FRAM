@@ -715,13 +715,13 @@ async def extract_prai_ai(
 
         class ExtractPRAIFramework(dspy.Signature):
             """
-            Extract structured agricultural knowledge units according to the {P, R, A, I} framework:
+            Extract structured agricultural knowledge units according to the {P, R, A, I} framework based ONLY on facts in the document text:
             - P (Problem): Crop diseases, pests, weeds, climate stresses, physiological disorders (e.g. leaf yellowing, pest infestation).
             - R (Practice): Actionable practices, treatments, pesticide/fertilizer applications, techniques (e.g. pesticide spraying, pruning).
             - A (Actor): Explicit or implicit human actors, farmers, experts, institutions (e.g. farmer, agricultural scientist).
             - I (Impact): Outcomes, yield loss, crop stress, economic or environmental impacts (e.g. yield reduction, crop stress).
             
-            Extract both explicit and implicit instances from the document text.
+            STRICT ANTI-HALLUCINATION RULE: Rely ONLY on the document text. Never invent or hallucinate outside province names, locations, or actors not present in the text!
             Format output as clean items separated by pipes or commas.
             """
             text = dspy.InputField(desc="The document text to analyze")
@@ -830,13 +830,14 @@ async def synthesize_prai_sentences(
         if lang_code == "en":
             class SynthesizePRAISentencesEN(dspy.Signature):
                 """
-                Synthesize structured agricultural PRAI narrative sentences in English based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                Synthesize structured agricultural PRAI narrative sentences in English based ONLY on the provided document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
                 CRITICAL REQUIREMENTS:
-                1. Output strictly 1 structured line per distinct Problem/Situation using the exact format:
+                1. STRICT FAITHFULNESS & GROUNDING: Rely ONLY on facts, entities, locations, and organizations present in the provided input text. NEVER introduce or hallucinate outside location names, province names (e.g., specific province names not in text), actors, or organizations!
+                2. Output strictly 1 structured line per distinct Problem/Situation using the exact format:
                    Actor: <A> | Problem: <P> | Practice: <R> | Impact: <I> | Sentence: <Sentence text>
-                2. Write fluent and natural sentences connecting A, P, R, I. Do not use repetitive rigid phrasing.
-                3. BINDING RULE: The exact words specified in <A>, <P>, <R>, <I> MUST appear verbatim inside <Sentence text> so they can be highlighted accurately.
+                3. Write fluent and natural sentences connecting A, P, R, I without repetitive rigid templates.
+                4. VERBATIM RULE: The exact words specified in <A>, <P>, <R>, <I> MUST appear verbatim inside <Sentence text> so they can be highlighted accurately.
                 
                 Example output format:
                 Actor: Rice farmers | Problem: Brown planthopper | Practice: Biological spraying | Impact: Restored crop growth | Sentence: To control brown planthopper, rice farmers applied biological spraying to achieve restored crop growth.
@@ -850,13 +851,14 @@ async def synthesize_prai_sentences(
         else:
             class SynthesizePRAISentencesVI(dspy.Signature):
                 """
-                Synthesize structured agricultural PRAI narrative sentences in Vietnamese based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                Synthesize structured agricultural PRAI narrative sentences in Vietnamese based ONLY on the provided document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
                 YÊU CẦU BẮT BUỘC & CHẶT CHẼ:
-                1. Xuất chính xác 1 dòng cấu trúc cho MỖI Vấn đề (Problem) theo đúng định dạng:
+                1. QUY TẮC TRÁNH ẢO GIÁC (ANTI-HALLUCINATION): TUYỆT ĐỐI CHỈ sử dụng thông tin, tác nhân, địa danh, tỉnh thành có sẵn trong văn bản bài viết. KHÔNG BAO GIỜ tự bịa thêm các tên tỉnh thành (như "tỉnh Trà Vinh"), địa danh hoặc tổ chức không có trong văn bản!
+                2. Xuất chính xác 1 dòng cấu trúc cho MỖI Vấn đề (Problem) theo đúng định dạng:
                    Actor: <A> | Problem: <P> | Practice: <R> | Impact: <I> | Sentence: <Nội dung câu kịch bản>
-                2. Câu kịch bản diễn đạt tự nhiên, trôi chảy và linh hoạt. Không bắt buộc theo một trật tự cố định.
-                3. QUAN TRỌNG: Các từ/cụm từ chính xác được ghi ở <A>, <P>, <R>, <I> BẮT BUỘC phải xuất hiện nguyên văn (verbatim) trong <Nội dung câu kịch bản> để hệ thống tô màu chính xác cả 4 yếu tố.
+                3. Câu kịch bản diễn đạt tự nhiên, trôi chảy và linh hoạt. Không bắt buộc theo một trật tự cố định.
+                4. QUY TẮC NGUYÊN VĂN: Các từ/cụm từ chính xác được ghi ở <A>, <P>, <R>, <I> BẮT BUỘC phải xuất hiện nguyên văn (verbatim) trong <Nội dung câu kịch bản> để hệ thống tô màu chính xác cả 4 yếu tố.
                 
                 Example output format:
                 Actor: Nông dân | Problem: Bệnh rầy nâu | Practice: Phun thuốc sinh học | Impact: Khôi phục sinh trưởng cây trồng | Sentence: Nhằm đối phó với bệnh rầy nâu, nông dân đã chủ động phun thuốc sinh học giúp khôi phục sinh trưởng cây trồng.
