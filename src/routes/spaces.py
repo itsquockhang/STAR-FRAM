@@ -301,6 +301,33 @@ async def delete_relation(
         return {"success": False, "error": str(e)}
 
 
+@router.post("/spaces/{doc_id}/relations/delete-all")
+async def delete_all_relations(
+    doc_id: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        res = await db.spaces_documents.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$set": {"relations": []}}
+        )
+        if res.matched_count == 0:
+            return {"success": False, "error": "Document not found."}
+
+        logger.info(f"All relations cleared from document {doc_id} by user {session['username']}")
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Failed to delete all relations from doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}
+
+
 @router.post("/spaces/{doc_id}/relations/auto-extract")
 async def auto_extract_relations(
     doc_id: str,
