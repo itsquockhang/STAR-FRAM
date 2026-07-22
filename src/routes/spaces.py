@@ -735,6 +735,8 @@ async def extract_prai_ai(
             predictor = dspy.Predict(ExtractPRAIFramework)
             res = predictor(text=text)
 
+        logger.info(f"=== [DSPy Raw Output - Extract PRAI] ===\nProblems: {getattr(res, 'problems', '')}\nPractices: {getattr(res, 'practices', '')}\nActors: {getattr(res, 'actors', '')}\nImpacts: {getattr(res, 'impacts', '')}\n=========================================")
+
         def parse_items(raw_str):
             if not raw_str:
                 return []
@@ -884,6 +886,8 @@ async def synthesize_prai_sentences(
                 prai_entities=prai_input_str,
                 kg_relations=kg_formatted
             )
+
+        logger.info(f"=== [DSPy Raw Output - Synthesize Sentences ({lang_code})] ===\n{getattr(res, 'sentences', '')}\n=========================================================")
 
         output_text = clean_dspy_output(res.sentences or "")
         parsed_sentences = []
