@@ -1392,6 +1392,31 @@ vertical-align: super;
   // 8. PRAI Framework {P, R, A, I} Extraction Logic
   let initialPraiData = {{ doc.prai | tojson if doc.prai is defined and doc.prai else '{}' }};
 
+  function highlightPraiComponents(sentenceText, item) {
+    if (!sentenceText) return '';
+    let html = escapeHtml(sentenceText);
+
+    const components = [
+      { text: item.actor, bg: 'bg-emerald-100/90 text-emerald-800 border border-emerald-300' },
+      { text: item.problem, bg: 'bg-red-100/90 text-red-800 border border-red-300' },
+      { text: item.practice, bg: 'bg-indigo-100/90 text-indigo-800 border border-indigo-300' },
+      { text: item.impact, bg: 'bg-purple-100/90 text-purple-800 border border-purple-300' }
+    ];
+
+    components.forEach(comp => {
+      if (comp.text && comp.text.trim()) {
+        const target = comp.text.trim();
+        const escapedTarget = escapeHtml(target);
+        if (escapedTarget && html.toLowerCase().includes(escapedTarget.toLowerCase())) {
+          const reg = new RegExp(`(${escapedTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+          html = html.replace(reg, `<mark class="px-1.5 py-0.5 rounded font-bold ${comp.bg}">$1</mark>`);
+        }
+      }
+    });
+
+    return html;
+  }
+
   function renderPraiData(praiObj) {
     if (!praiObj) praiObj = {};
     const gliner = praiObj.gliner || {};
@@ -1465,19 +1490,20 @@ vertical-align: super;
       } else {
         sentencesContainer.innerHTML = sentences.map((item, idx) => {
           const stx = item.sentence || '';
+          const highlightedSentence = highlightPraiComponents(stx, item);
           const actor = item.actor ? `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 rounded text-[11px]">Actor: ${escapeHtml(item.actor)}</span>` : '';
           const problem = item.problem ? `<span class="px-2 py-0.5 bg-red-50 text-red-700 font-semibold border border-red-200 rounded text-[11px]">Problem: ${escapeHtml(item.problem)}</span>` : '';
           const practice = item.practice ? `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200 rounded text-[11px]">Practice: ${escapeHtml(item.practice)}</span>` : '';
           const impact = item.impact ? `<span class="px-2 py-0.5 bg-purple-50 text-purple-700 font-semibold border border-purple-200 rounded text-[11px]">Impact: ${escapeHtml(item.impact)}</span>` : '';
 
           return `
-            <div class="bg-white border border-[#eceae4] rounded-xl p-4 shadow-2xs hover:border-emerald-300 transition-all space-y-2">
+            <div class="bg-white border border-[#eceae4] rounded-xl p-4 shadow-2xs hover:border-emerald-300 transition-all space-y-2.5">
               <div class="flex items-start gap-2">
                 <span class="w-5 h-5 flex items-center justify-center font-bold text-[10px] bg-emerald-100 text-emerald-800 rounded-full shrink-0 mt-0.5">${idx + 1}</span>
-                <p class="text-xs font-medium text-[#1c1c1c] leading-relaxed">${escapeHtml(stx)}</p>
+                <p class="text-xs font-medium text-[#1c1c1c] leading-relaxed">${highlightedSentence}</p>
               </div>
               ${(actor || problem || practice || impact) ? `
-                <div class="flex flex-wrap items-center gap-1.5 pt-1 pl-7 border-t border-[#eceae4]/50">
+                <div class="flex flex-wrap items-center gap-1.5 pt-1.5 pl-7 border-t border-[#eceae4]/50">
                   ${actor} ${problem} ${practice} ${impact}
                 </div>
               ` : ''}
