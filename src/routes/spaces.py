@@ -607,7 +607,7 @@ async def suggest_relations(
         lm = await get_dspy_lm()
 
         with dspy.context(lm=lm):
-            predictor = dspy.Predict(GenerateKGRelations)
+            predictor = dspy.ChainOfThought(GenerateKGRelations)
             log_dspy_prompt(GenerateKGRelations, {"text": doc.get("text", ""), "predicates": ", ".join(pred_labels)}, "Generate KG Relations")
             result = predictor(
                 text=doc.get("text", ""),
@@ -788,7 +788,7 @@ async def extract_prai_ai(
 
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
-            predictor = dspy.Predict(ExtractPRAIFramework)
+            predictor = dspy.ChainOfThought(ExtractPRAIFramework)
             log_dspy_prompt(ExtractPRAIFramework, {"text": text}, "Extract PRAI Framework")
             res = predictor(text=text)
 
@@ -916,14 +916,14 @@ async def synthesize_prai_sentences(
                 Synthesize structured agricultural PRAI narrative sentences in English based ONLY on the provided document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
                 CRITICAL REQUIREMENTS:
-                1. STRICT FAITHFULNESS & GROUNDING: Rely ONLY on facts, entities, locations, and organizations present in the provided input text. NEVER introduce or hallucinate outside location names, province names (e.g., specific province names not in text), actors, or organizations!
-                2. Output strictly 1 structured line per distinct Problem/Situation using the exact format:
+                1. SEMANTIC LOGIC & CAUSE-EFFECT RULE: Practices (R) are applied to CONTROL, MITIGATE, or PREVENT Problems (P) and Negative Damage/Impact (I). NEVER output absurd logic like "applied practice X in order to reduce grain quality"! If Impact is negative (e.g. "grain quality reduction"), phrase it as "to mitigate [Impact]" or "to prevent [Impact]".
+                2. STRICT FAITHFULNESS & GROUNDING: Rely ONLY on facts, entities, locations, and organizations present in the provided input text. NEVER introduce or hallucinate outside location names, province names, actors, or organizations!
+                3. Output strictly 1 structured line per distinct Problem/Situation using the exact format:
                    Actor: <A> | Problem: <P> | Practice: <R> | Impact: <I> | Sentence: <Sentence text>
-                3. Write fluent and natural sentences connecting A, P, R, I without repetitive rigid templates.
                 4. VERBATIM RULE: The exact words specified in <A>, <P>, <R>, <I> MUST appear verbatim inside <Sentence text> so they can be highlighted accurately.
                 
                 Example output format:
-                Actor: Rice farmers | Problem: Brown planthopper | Practice: Biological spraying | Impact: Restored crop growth | Sentence: To control brown planthopper, rice farmers applied biological spraying to achieve restored crop growth.
+                Actor: Farmers | Problem: Rice blast disease | Practice: Spraying Trichoderma bio-agent | Impact: Rice grain quality reduction | Sentence: To control rice blast disease, farmers applied spraying Trichoderma bio-agent to prevent rice grain quality reduction.
                 """
                 text = dspy.InputField(desc="Document text context")
                 prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
@@ -937,14 +937,18 @@ async def synthesize_prai_sentences(
                 Synthesize structured agricultural PRAI narrative sentences in Vietnamese based ONLY on the provided document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
                 YÊU CẦU BẮT BUỘC & CHẶT CHẼ:
-                1. QUY TẮC TRÁNH ẢO GIÁC (ANTI-HALLUCINATION): TUYỆT ĐỐI CHỈ sử dụng thông tin, tác nhân, địa danh, tỉnh thành có sẵn trong văn bản bài viết. KHÔNG BAO GIỜ tự bịa thêm các tên tỉnh thành (như "tỉnh Trà Vinh"), địa danh hoặc tổ chức không có trong văn bản!
-                2. Xuất chính xác 1 dòng cấu trúc cho MỖI Vấn đề (Problem) theo đúng định dạng:
+                1. QUY TẮC LOGIC NGỮ NGHĨA & NGUYÊN NHÂN - KẾT QUẢ (SEMANTIC LOGIC & CAUSE-EFFECT):
+                   - Biện pháp/Kỹ thuật (Practice) được áp dụng là để KHẮC PHỤC/HẠN CHẾ/NGĂN NGỪA Vấn đề (Problem) và Tác hại (Impact).
+                   - TUYỆT ĐỐI KHÔNG viết các câu ngớ ngẩn vô lý như "áp dụng giải pháp A nhằm giảm chất lượng hạt gạo" hoặc "phun thuốc nhằm gây thiệt hại"!
+                   - Nếu Impact là tác hại/hậu quả tiêu cực (ví dụ: "giảm chất lượng hạt gạo", "thất thu năng suất"), câu BẮT BUỘC phải diễn đạt là "nhằm HẠN CHẾ/NGĂN NGỪA/KHẮC PHỤC [Impact]" (ví dụ: "...nhằm hạn chế giảm chất lượng hạt gạo").
+                   - Nếu Impact là kết quả tích cực (ví dụ: "tăng năng suất"), câu diễn đạt là "...giúp/nhằm [Impact]".
+                2. QUY TẮC TRÁNH ẢO GIÁC (ANTI-HALLUCINATION): TUYỆT ĐỐI CHỈ sử dụng thông tin, tác nhân, địa danh, tỉnh thành có sẵn trong văn bản bài viết. KHÔNG BAO GIỜ tự bịa thêm tên tỉnh thành hoặc tổ chức không có trong bài!
+                3. Xuất chính xác 1 dòng cấu trúc cho MỖI Vấn đề (Problem) theo đúng định dạng:
                    Actor: <A> | Problem: <P> | Practice: <R> | Impact: <I> | Sentence: <Nội dung câu kịch bản>
-                3. Câu kịch bản diễn đạt tự nhiên, trôi chảy và linh hoạt. Không bắt buộc theo một trật tự cố định.
                 4. QUY TẮC NGUYÊN VĂN: Các từ/cụm từ chính xác được ghi ở <A>, <P>, <R>, <I> BẮT BUỘC phải xuất hiện nguyên văn (verbatim) trong <Nội dung câu kịch bản> để hệ thống tô màu chính xác cả 4 yếu tố.
                 
                 Example output format:
-                Actor: Nông dân | Problem: Bệnh rầy nâu | Practice: Phun thuốc sinh học | Impact: Khôi phục sinh trưởng cây trồng | Sentence: Nhằm đối phó với bệnh rầy nâu, nông dân đã chủ động phun thuốc sinh học giúp khôi phục sinh trưởng cây trồng.
+                Actor: Nông dân | Problem: Bệnh đạo ôn | Practice: Phun chế phẩm sinh học Trichoderma | Impact: Giảm chất lượng hạt gạo | Sentence: Để khắc phục bệnh đạo ôn, nông dân áp dụng giải pháp phun chế phẩm sinh học Trichoderma nhằm hạn chế giảm chất lượng hạt gạo.
                 """
                 text = dspy.InputField(desc="Document text context")
                 prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
@@ -971,7 +975,7 @@ async def synthesize_prai_sentences(
 
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
-            predictor = dspy.Predict(SigClass)
+            predictor = dspy.ChainOfThought(SigClass)
             log_dspy_prompt(SigClass, {
                 "text": text,
                 "prai_entities": prai_input_str,
