@@ -53,7 +53,17 @@ def is_similar_triple(t1: tuple, t2: tuple, threshold: float = 0.75) -> bool:
     sub_sim = str_sim(s1, s2)
     obj_sim = str_sim(o1, o2)
 
-    return sub_sim >= threshold and obj_sim >= threshold
+def log_dspy_prompt(signature, inputs: dict, action_name: str):
+    """Logs DSPy ChatAdapter system message and formatted prompt for debugging."""
+    try:
+        import dspy
+        adapter = dspy.ChatAdapter()
+        sys_msg = adapter.format_system_message(signature=signature)
+        formatted_msgs = adapter.format(signature=signature, demos=[], inputs=inputs)
+        logger.info(f"=== [DSPy Debug System Message - {action_name}] ===\n{sys_msg}\n=======================================================")
+        logger.info(f"=== [DSPy Debug Formatted Messages - {action_name}] ===\n{formatted_msgs}\n=========================================================")
+    except Exception as e:
+        logger.warning(f"Could not log DSPy adapter prompt for '{action_name}': {e}")
 
 router = APIRouter()
 
@@ -598,6 +608,7 @@ async def suggest_relations(
 
         with dspy.context(lm=lm):
             predictor = dspy.Predict(GenerateKGRelations)
+            log_dspy_prompt(GenerateKGRelations, {"text": doc.get("text", ""), "predicates": ", ".join(pred_labels)}, "Generate KG Relations")
             result = predictor(
                 text=doc.get("text", ""),
                 predicates=", ".join(pred_labels)
@@ -778,6 +789,7 @@ async def extract_prai_ai(
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
             predictor = dspy.Predict(ExtractPRAIFramework)
+            log_dspy_prompt(ExtractPRAIFramework, {"text": text}, "Extract PRAI Framework")
             res = predictor(text=text)
 
         logger.info(f"=== [DSPy Raw Output - Extract PRAI] ===\nProblems: {getattr(res, 'problems', '')}\nPractices: {getattr(res, 'practices', '')}\nActors: {getattr(res, 'actors', '')}\nImpacts: {getattr(res, 'impacts', '')}\n=========================================")
@@ -960,25 +972,11 @@ async def synthesize_prai_sentences(
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
             predictor = dspy.Predict(SigClass)
-
-            # Debug & log exact DSPy system message and formatted chat messages
-            try:
-                adapter = dspy.ChatAdapter()
-                sys_msg = adapter.format_system_message(signature=SigClass)
-                formatted_msgs = adapter.format(
-                    signature=SigClass,
-                    demos=[],
-                    inputs={
-                        "text": text,
-                        "prai_entities": prai_input_str,
-                        "kg_relations": kg_formatted
-                    }
-                )
-                logger.info(f"=== [DSPy Debug System Message - Synthesize ({lang_code})] ===\n{sys_msg}\n=======================================================")
-                logger.info(f"=== [DSPy Debug Formatted Messages - Synthesize ({lang_code})] ===\n{formatted_msgs}\n=========================================================")
-            except Exception as debug_err:
-                logger.warning(f"Could not log DSPy adapter prompt: {debug_err}")
-
+            log_dspy_prompt(SigClass, {
+                "text": text,
+                "prai_entities": prai_input_str,
+                "kg_relations": kg_formatted
+            }, f"Synthesize Sentences ({lang_code})")
             res = predictor(
                 text=text,
                 prai_entities=prai_input_str,

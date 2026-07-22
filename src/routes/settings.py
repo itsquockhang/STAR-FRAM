@@ -10,6 +10,18 @@ from src.core.templates import templates
 
 logger = logging.getLogger("starfarm.routes.settings")
 
+def log_dspy_prompt(signature, inputs: dict, action_name: str):
+    """Logs DSPy ChatAdapter system message and formatted prompt for debugging."""
+    try:
+        import dspy
+        adapter = dspy.ChatAdapter()
+        sys_msg = adapter.format_system_message(signature=signature)
+        formatted_msgs = adapter.format(signature=signature, demos=[], inputs=inputs)
+        logger.info(f"=== [DSPy Debug System Message - {action_name}] ===\n{sys_msg}\n=======================================================")
+        logger.info(f"=== [DSPy Debug Formatted Messages - {action_name}] ===\n{formatted_msgs}\n=========================================================")
+    except Exception as e:
+        logger.warning(f"Could not log DSPy adapter prompt for '{action_name}': {e}")
+
 router = APIRouter()
 
 class LLMConnectionError(RuntimeError):
@@ -350,6 +362,11 @@ async def enhance_label_queries(
         
         with dspy.context(lm=lm):
             predictor = dspy.Predict(GenerateRAGQueries)
+            log_dspy_prompt(GenerateRAGQueries, {
+                "label_name": name,
+                "definition_en": desc_en,
+                "definition_vi": desc_vi
+            }, "Generate RAG Queries")
             result = predictor(
                 label_name=name,
                 definition_en=desc_en,
@@ -437,6 +454,7 @@ async def suggest_label_definition(
         
         with dspy.context(lm=lm):
             predictor = dspy.Predict(GenerateLabelDefinition)
+            log_dspy_prompt(GenerateLabelDefinition, {"label_name": name}, "Generate Label Definition")
             result = predictor(label_name=name)
             
         desc_en = result.definition_en.strip() if result.definition_en else ""
@@ -547,6 +565,7 @@ async def suggest_predicate_definitions(
         
         with dspy.context(lm=lm):
             predictor = dspy.Predict(GeneratePredicateDefinition)
+            log_dspy_prompt(GeneratePredicateDefinition, {"predicate_name": name}, "Suggest Predicate Definition")
             result = predictor(predicate_name=name)
 
         logger.info(f"Predicate definitions suggested for '{name}' using model '{lm.model}'")
@@ -619,6 +638,7 @@ async def add_auto_predicate(
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
             predictor = dspy.Predict(GeneratePredicateDefinition)
+            log_dspy_prompt(GeneratePredicateDefinition, {"predicate_name": raw_pred}, "Add Auto Predicate Definition")
             result = predictor(predicate_name=raw_pred)
 
         from src.routes.spaces import clean_dspy_output
