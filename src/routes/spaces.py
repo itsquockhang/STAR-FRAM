@@ -784,6 +784,7 @@ async def clear_prai(
 @router.post("/spaces/{doc_id}/prai/synthesize-sentences")
 async def synthesize_prai_sentences(
     doc_id: str,
+    lang: str = Query(default="vi"),
     session_id: str | None = Cookie(default=None)
 ):
     if not session_id:
@@ -808,25 +809,45 @@ async def synthesize_prai_sentences(
         import dspy
         from src.routes.settings import get_dspy_lm, LLMConnectionError
 
-        class SynthesizePRAISentences(dspy.Signature):
-            """
-            Synthesize structured agricultural PRAI narrative sentences based on the document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
-            
-            Formulate each sentence following the clear agricultural situation pattern:
-            "[Actor A] khi gặp/đối mặt với [Problem P] đã áp dụng/sử dụng [Practice R] để đạt được/mang lại [Impact I]."
-            
-            Example output format (one per line):
-            Actor: Nông dân | Problem: Bệnh rầy nâu | Practice: Phun thuốc sinh học | Impact: Khôi phục sinh trưởng cây trồng | Sentence: Nông dân khi gặp bệnh rầy nâu đã áp dụng phun thuốc sinh học để khôi phục sinh trưởng cây trồng.
-            """
-            text = dspy.InputField(desc="Document text context")
-            prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
-            kg_relations = dspy.InputField(desc="Knowledge Graph triples (Subject | Predicate | Object)")
-            sentences = dspy.OutputField(desc="Synthesized PRAI narrative lines connecting A, P, R, I")
+        lang_code = lang.lower().strip()
+        if lang_code == "en":
+            class SynthesizePRAISentencesEN(dspy.Signature):
+                """
+                Synthesize structured agricultural PRAI narrative sentences in English based on the document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                
+                Formulate each sentence in English following the pattern:
+                "[Actor A] facing/when encountering [Problem P] applied/used [Practice R] to achieve/bring [Impact I]."
+                
+                Example output format (one per line):
+                Actor: Rice farmer | Problem: Brown planthopper | Practice: Biological spraying | Impact: Restored crop growth | Sentence: Rice farmer when facing brown planthopper applied biological spraying to restore crop growth.
+                """
+                text = dspy.InputField(desc="Document text context")
+                prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
+                kg_relations = dspy.InputField(desc="Knowledge Graph triples (Subject | Predicate | Object)")
+                sentences = dspy.OutputField(desc="Synthesized English PRAI narrative lines connecting A, P, R, I")
+
+            SigClass = SynthesizePRAISentencesEN
+        else:
+            class SynthesizePRAISentencesVI(dspy.Signature):
+                """
+                Synthesize structured agricultural PRAI narrative sentences in Vietnamese based on the document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                
+                Formulate each sentence in Vietnamese following the pattern:
+                "[Actor A] khi gặp/đối mặt với [Problem P] đã áp dụng/sử dụng [Practice R] để đạt được/mang lại [Impact I]."
+                
+                Example output format (one per line):
+                Actor: Nông dân | Problem: Bệnh rầy nâu | Practice: Phun thuốc sinh học | Impact: Khôi phục sinh trưởng cây trồng | Sentence: Nông dân khi gặp bệnh rầy nâu đã áp dụng phun thuốc sinh học để khôi phục sinh trưởng cây trồng.
+                """
+                text = dspy.InputField(desc="Document text context")
+                prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
+                kg_relations = dspy.InputField(desc="Knowledge Graph triples (Subject | Predicate | Object)")
+                sentences = dspy.OutputField(desc="Synthesized Vietnamese PRAI narrative lines connecting A, P, R, I")
+
+            SigClass = SynthesizePRAISentencesVI
 
         # Format inputs for LLM
         kg_formatted = "\n".join([f"{r.get('subject')} | {r.get('predicate')} | {r.get('object')}" for r in relations]) if relations else "None"
         
-        # Combine gliner & ai prai items
         gliner_prai = prai_data.get("gliner", {})
         ai_prai = prai_data.get("ai", {})
         
@@ -842,7 +863,7 @@ async def synthesize_prai_sentences(
 
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
-            predictor = dspy.Predict(SynthesizePRAISentences)
+            predictor = dspy.Predict(SigClass)
             res = predictor(
                 text=text,
                 prai_entities=prai_input_str,
@@ -862,7 +883,7 @@ async def synthesize_prai_sentences(
                 
                 if "|" in line and "Sentence:" in line:
                     parts = line.split("|")
-                    item = {"actor": "", "problem": "", "practice": "", "impact": "", "sentence": ""}
+                    item = {"actor": "", "problem": "", "practice": "", "impact": "", "sentence": "", "lang": lang_code}
                     for p in parts:
                         if ":" in p:
                             k, v = p.split(":", 1)
@@ -878,14 +899,14 @@ async def synthesize_prai_sentences(
                 else:
                     clean_line = re.sub(r'^\d+[\.\)\-\s]+', '', line).strip()
                     if clean_line and len(clean_line) > 10:
-                        parsed_sentences.append({"sentence": clean_line})
+                        parsed_sentences.append({"sentence": clean_line, "lang": lang_code})
 
         await db.spaces_documents.update_one(
             {"_id": ObjectId(doc_id)},
             {"$set": {"prai.sentences": parsed_sentences}}
         )
 
-        logger.info(f"Synthesized {len(parsed_sentences)} PRAI narrative sentences for doc {doc_id}")
+        logger.info(f"Synthesized {len(parsed_sentences)} PRAI narrative sentences ({lang_code}) for doc {doc_id}")
         return {"success": True, "sentences": parsed_sentences}
     except LLMConnectionError as e:
         logger.error(f"Failed to synthesize PRAI sentences for doc {doc_id}: LLM connection error: {e}")
