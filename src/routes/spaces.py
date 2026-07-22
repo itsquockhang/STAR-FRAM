@@ -960,6 +960,25 @@ async def synthesize_prai_sentences(
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
             predictor = dspy.Predict(SigClass)
+
+            # Debug & log exact DSPy system message and formatted chat messages
+            try:
+                adapter = dspy.ChatAdapter()
+                sys_msg = adapter.format_system_message(signature=SigClass)
+                formatted_msgs = adapter.format(
+                    signature=SigClass,
+                    demos=[],
+                    inputs={
+                        "text": text,
+                        "prai_entities": prai_input_str,
+                        "kg_relations": kg_formatted
+                    }
+                )
+                logger.info(f"=== [DSPy Debug System Message - Synthesize ({lang_code})] ===\n{sys_msg}\n=======================================================")
+                logger.info(f"=== [DSPy Debug Formatted Messages - Synthesize ({lang_code})] ===\n{formatted_msgs}\n=========================================================")
+            except Exception as debug_err:
+                logger.warning(f"Could not log DSPy adapter prompt: {debug_err}")
+
             res = predictor(
                 text=text,
                 prai_entities=prai_input_str,
