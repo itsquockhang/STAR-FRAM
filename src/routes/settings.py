@@ -643,6 +643,9 @@ async def add_auto_predicate(
             "message": f"Predicate '{raw_pred}' successfully added to settings.",
             "predicate": new_pred
         }
+    except LLMConnectionError as e:
+        logger.error(f"Auto-add predicate failed due to LLM connection error: {e}")
+        return {"success": False, "error": f"LLM connection error: {e}"}
     except Exception as e:
         logger.error(f"Auto-add predicate failed: {e}")
         return {"success": False, "error": str(e)}

@@ -513,7 +513,7 @@ async def suggest_relations(
             relations = dspy.OutputField(desc="Suggested triples in the format 'Subject | Predicate | Object', one per line")
 
         # Configure DSPy LM
-        from src.routes.settings import get_dspy_lm
+        from src.routes.settings import get_dspy_lm, LLMConnectionError
         lm = await get_dspy_lm()
 
         with dspy.context(lm=lm):
@@ -567,6 +567,9 @@ async def suggest_relations(
 
         logger.info(f"AI suggested {len(suggestions)} relations for doc {doc_id} using model '{lm.model}'")
         return {"success": True, "suggestions": suggestions}
+    except LLMConnectionError as e:
+        logger.error(f"Failed to suggest relations for doc {doc_id}: LLM connection error: {e}")
+        return {"success": False, "error": f"LLM connection error: {e}"}
     except Exception as e:
         logger.error(f"Failed to suggest relations for doc {doc_id}: {e}")
         return {"success": False, "error": str(e)}
