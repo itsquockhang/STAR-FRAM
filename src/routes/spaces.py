@@ -608,3 +608,174 @@ async def suggest_relations(
     except Exception as e:
         logger.error(f"Failed to suggest relations for doc {doc_id}: {e}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/spaces/{doc_id}/prai/extract-gliner")
+async def extract_prai_gliner(
+    doc_id: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        doc = await db.spaces_documents.find_one({"_id": ObjectId(doc_id)})
+        if not doc:
+            return {"success": False, "error": "Document not found."}
+
+        text = doc.get("text", "")
+        model_id = doc.get("model", "gliner2-multi-v1")
+        if not text:
+            return {"success": False, "error": "Document contains no text."}
+
+        from src.services.ner import extract_entities
+        prai_schema = {
+            "Problem": "Agricultural problems, crop diseases, pest infestations, physiological disorders, climate stresses, or weeds",
+            "Practice": "Agricultural practices, farming techniques, treatments, application of pesticides/fertilizers, irrigation, or management actions",
+            "Actor": "Farmers, agricultural experts, traders, scientists, or human actors",
+            "Impact": "Impacts, outcomes, yield losses, environmental consequences, or growth benefits"
+        }
+
+        raw_results = extract_entities(text, prai_schema, model_id=model_id)
+        entities_map = raw_results.get("entities", {})
+        
+        # Helper to format entity list cleanly
+        def format_entities(items):
+            result = []
+            if isinstance(items, list):
+                for item in items:
+                    if isinstance(item, dict):
+                        text_val = item.get("text", "")
+                        conf_val = item.get("confidence")
+                        if text_val:
+                            result.append({"text": text_val, "confidence": round(conf_val, 2) if conf_val is not None else None})
+                    elif isinstance(item, str) and item.strip():
+                        result.append({"text": item.strip(), "confidence": None})
+            return result
+
+        prai_results = {
+            "Problem": format_entities(entities_map.get("Problem", [])),
+            "Practice": format_entities(entities_map.get("Practice", [])),
+            "Actor": format_entities(entities_map.get("Actor", [])),
+            "Impact": format_entities(entities_map.get("Impact", []))
+        }
+
+        await db.spaces_documents.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$set": {"prai.gliner": prai_results}}
+        )
+
+        logger.info(f"GLiNER2 extracted PRAI items for document {doc_id}")
+        return {"success": True, "prai_gliner": prai_results}
+    except Exception as e:
+        logger.error(f"GLiNER2 PRAI extraction failed for doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/spaces/{doc_id}/prai/extract-ai")
+async def extract_prai_ai(
+    doc_id: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        doc = await db.spaces_documents.find_one({"_id": ObjectId(doc_id)})
+        if not doc:
+            return {"success": False, "error": "Document not found."}
+
+        text = doc.get("text", "")
+        if not text:
+            return {"success": False, "error": "Document contains no text."}
+
+        import dspy
+        from src.routes.settings import get_dspy_lm, LLMConnectionError
+
+        class ExtractPRAIFramework(dspy.Signature):
+            """
+            Extract structured agricultural knowledge units according to the {P, R, A, I} framework:
+            - P (Problem): Crop diseases, pests, weeds, climate stresses, physiological disorders (e.g. leaf yellowing, pest infestation).
+            - R (Practice): Actionable practices, treatments, pesticide/fertilizer applications, techniques (e.g. pesticide spraying, pruning).
+            - A (Actor): Explicit or implicit human actors, farmers, experts, institutions (e.g. farmer, agricultural scientist).
+            - I (Impact): Outcomes, yield loss, crop stress, economic or environmental impacts (e.g. yield reduction, crop stress).
+            
+            Extract both explicit and implicit instances from the document text.
+            Format output as clean items separated by pipes or commas.
+            """
+            text = dspy.InputField(desc="The document text to analyze")
+            problems = dspy.OutputField(desc="List of extracted Problems (P), separated by pipes or commas")
+            practices = dspy.OutputField(desc="List of extracted Practices (R), separated by pipes or commas")
+            actors = dspy.OutputField(desc="List of extracted Actors (A), explicit or implicit, separated by pipes or commas")
+            impacts = dspy.OutputField(desc="List of extracted Impacts (I), separated by pipes or commas")
+
+        lm = await get_dspy_lm()
+        with dspy.context(lm=lm):
+            predictor = dspy.Predict(ExtractPRAIFramework)
+            res = predictor(text=text)
+
+        def parse_items(raw_str):
+            if not raw_str:
+                return []
+            import re
+            parts = re.split(r'[\|\n,]', str(raw_str))
+            items = []
+            for p in parts:
+                cleaned = re.sub(r'^\d+[\.\)\-\s]+', '', p).strip()
+                if cleaned and cleaned.lower() not in ["empty", "none", "n/a", "k/a", "implicit"]:
+                    if cleaned not in items:
+                        items.append(cleaned)
+            return items
+
+        prai_ai = {
+            "Problem": parse_items(res.problems),
+            "Practice": parse_items(res.practices),
+            "Actor": parse_items(res.actors),
+            "Impact": parse_items(res.impacts)
+        }
+
+        await db.spaces_documents.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$set": {"prai.ai": prai_ai}}
+        )
+
+        logger.info(f"AI (DSPy) extracted PRAI items for document {doc_id} using model '{lm.model}'")
+        return {"success": True, "prai_ai": prai_ai}
+    except LLMConnectionError as e:
+        logger.error(f"AI PRAI extraction failed for doc {doc_id}: LLM connection error: {e}")
+        return {"success": False, "error": f"LLM connection error: {e}"}
+    except Exception as e:
+        logger.error(f"AI PRAI extraction failed for doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/spaces/{doc_id}/prai/clear")
+async def clear_prai(
+    doc_id: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        await db.spaces_documents.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$unset": {"prai": ""}}
+        )
+        logger.info(f"PRAI extractions cleared for document {doc_id}")
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Failed to clear PRAI for doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}

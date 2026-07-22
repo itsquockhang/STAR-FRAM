@@ -74,6 +74,11 @@ vertical-align: super;
           class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none">
           Visual Graph
         </button>
+        <button onclick="switchTab('prai-tab')" id="btn-prai-tab"
+          class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none flex items-center gap-1.5">
+          <span>PRAI Framework</span>
+          <span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">{P,R,A,I}</span>
+        </button>
       </div>
 
       <!-- Tab 1: Annotated Document -->
@@ -358,6 +363,129 @@ vertical-align: super;
           <div id="networkCanvas" class="w-full h-full"></div>
         </div>
       </div>
+
+      <!-- Tab 4: PRAI Framework {P, R, A, I} -->
+      <div id="panel-prai-tab"
+        class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
+        
+        <!-- Header & LaTeX / Formula description -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
+          <div>
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
+              <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c]">Structured Entity Extraction</h2>
+              <span class="text-xs font-mono font-semibold px-2 py-0.5 bg-amber-100/70 text-amber-800 rounded border border-amber-200">
+                E(Y_i) = { (s_j, t_j, c_j) } | t_j &in; {P, R, A, I}
+              </span>
+            </div>
+            <p class="text-xs text-[#5f5f5d]">
+              Agricultural Situation Abstraction: <strong class="text-red-700">P</strong> (Problems), <strong class="text-indigo-700">R</strong> (Practices), <strong class="text-emerald-700">A</strong> (Actors), and <strong class="text-purple-700">I</strong> (Impacts).
+            </p>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="shrink-0 flex items-center gap-2 flex-wrap">
+            <button 
+              type="button" 
+              onclick="extractPraiGliner(this)"
+              id="extractPraiGlinerBtn"
+              class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              Extract with GLiNER2
+            </button>
+            <button 
+              type="button" 
+              onclick="extractPraiAi(this)"
+              id="extractPraiAiBtn"
+              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+              AI Extract (LLM)
+            </button>
+            <button 
+              type="button" 
+              onclick="clearPraiExtractions(this)"
+              class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors cursor-pointer"
+              title="Clear PRAI Extractions"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4-Card Category Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Category P: Problems -->
+          <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-red-100 text-red-700 rounded-lg border border-red-200">P</span>
+                <div>
+                  <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Problems</h3>
+                  <p class="text-[10px] text-[#5f5f5d]">Diseases, pests, weeds, climate stresses</p>
+                </div>
+              </div>
+              <span id="countP" class="text-[11px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">0</span>
+            </div>
+            <div id="listP" class="space-y-2 min-h-[100px]">
+              <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Problems extracted yet.</div>
+            </div>
+          </div>
+
+          <!-- Category R: Practices -->
+          <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200">R</span>
+                <div>
+                  <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Practices</h3>
+                  <p class="text-[10px] text-[#5f5f5d]">Actions, treatments, fertilizer, techniques</p>
+                </div>
+              </div>
+              <span id="countR" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">0</span>
+            </div>
+            <div id="listR" class="space-y-2 min-h-[100px]">
+              <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Practices extracted yet.</div>
+            </div>
+          </div>
+
+          <!-- Category A: Actors -->
+          <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200">A</span>
+                <div>
+                  <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Actors</h3>
+                  <p class="text-[10px] text-[#5f5f5d]">Farmers, experts, researchers (explicit & implicit)</p>
+                </div>
+              </div>
+              <span id="countA" class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">0</span>
+            </div>
+            <div id="listA" class="space-y-2 min-h-[100px]">
+              <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Actors extracted yet.</div>
+            </div>
+          </div>
+
+          <!-- Category I: Impacts -->
+          <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
+              <div class="flex items-center gap-2">
+                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-purple-100 text-purple-700 rounded-lg border border-purple-200">I</span>
+                <div>
+                  <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Impacts</h3>
+                  <p class="text-[10px] text-[#5f5f5d]">Yield outcomes, crop stress, economic losses</p>
+                </div>
+              </div>
+              <span id="countI" class="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">0</span>
+            </div>
+            <div id="listI" class="space-y-2 min-h-[100px]">
+              <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Impacts extracted yet.</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
     <!-- Sidebar / Entities summary table -->
@@ -451,7 +579,7 @@ vertical-align: super;
 
   // 1. Tab Navigation Logic
   function switchTab(tabId) {
-    const validTabs = ['annotated-tab', 'kg-builder-tab', 'graph-tab'];
+    const validTabs = ['annotated-tab', 'kg-builder-tab', 'graph-tab', 'prai-tab'];
     if (!validTabs.includes(tabId)) {
       tabId = 'annotated-tab';
     }
@@ -491,7 +619,7 @@ vertical-align: super;
   // Restore active tab on DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
     const hash = window.location.hash.replace('#', '');
-    const validTabs = ['annotated-tab', 'kg-builder-tab', 'graph-tab'];
+    const validTabs = ['annotated-tab', 'kg-builder-tab', 'graph-tab', 'prai-tab'];
     let savedTab = '';
     try {
       savedTab = localStorage.getItem('active_space_tab_' + docId);
@@ -505,6 +633,7 @@ vertical-align: super;
     }
 
     switchTab(initialTab);
+    renderPraiData(initialPraiData);
   });
 
   // 2. HTML5 Drag and Drop Handlers
@@ -1219,17 +1348,134 @@ vertical-align: super;
     }
   });
 
-  // 7. Delete document confirmation listener
-  const deleteForm = document.getElementById('deleteDocForm');
-  if (deleteForm) {
-    deleteForm.addEventListener('submit', (e) => {
-      if (!confirm('Are you sure you want to permanently delete this document from Spaces?')) {
-        e.preventDefault();
-      } else {
-        const btn = deleteForm.querySelector('button[type="submit"]');
-        if (btn) { btn.disabled = true; btn.innerText = 'Deleting...'; }
+  // 8. PRAI Framework {P, R, A, I} Extraction Logic
+  let initialPraiData = {{ doc.prai | tojson if doc.prai is defined and doc.prai else '{}' }};
+
+  function renderPraiData(praiObj) {
+    if (!praiObj) praiObj = {};
+    const gliner = praiObj.gliner || {};
+    const ai = praiObj.ai || {};
+
+    const categories = [
+      { key: "Problem", listId: "listP", countId: "countP" },
+      { key: "Practice", listId: "listR", countId: "countR" },
+      { key: "Actor", listId: "listA", countId: "countA" },
+      { key: "Impact", listId: "listI", countId: "countI" }
+    ];
+
+    categories.forEach(cat => {
+      const container = document.getElementById(cat.listId);
+      const countEl = document.getElementById(cat.countId);
+      if (!container || !countEl) return;
+
+      const glinerItems = gliner[cat.key] || [];
+      const aiItems = ai[cat.key] || [];
+
+      const combined = [];
+      const seen = new Set();
+
+      glinerItems.forEach(item => {
+        const txt = typeof item === 'object' ? item.text : item;
+        const conf = typeof item === 'object' ? item.confidence : null;
+        if (txt && !seen.has(txt.toLowerCase())) {
+          seen.add(txt.toLowerCase());
+          combined.push({ text: txt, conf: conf, source: 'GLiNER2' });
+        }
+      });
+
+      aiItems.forEach(item => {
+        const txt = typeof item === 'object' ? item.text : item;
+        if (txt && !seen.has(txt.toLowerCase())) {
+          seen.add(txt.toLowerCase());
+          combined.push({ text: txt, conf: null, source: 'AI (DSPy)' });
+        }
+      });
+
+      countEl.innerText = combined.length;
+
+      if (combined.length === 0) {
+        container.innerHTML = `<div class="text-center py-6 text-xs text-[#5f5f5d] italic">No ${cat.key}s extracted yet.</div>`;
+        return;
       }
+
+      container.innerHTML = combined.map(item => {
+        const badgeColor = item.source === 'GLiNER2' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        const confText = item.conf !== null ? `(${Math.round(item.conf * 100)}%)` : '';
+        return `
+          <div class="flex items-center justify-between p-2.5 bg-white border border-[#eceae4] rounded-lg shadow-2xs hover:border-emerald-300 transition-all">
+            <div class="flex items-center gap-2 overflow-hidden">
+              <span class="text-xs font-semibold text-[#1c1c1c] truncate">${escapeHtml(item.text)}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              ${confText ? `<span class="text-[10px] text-[#5f5f5d] font-mono">${confText}</span>` : ''}
+              <span class="text-[9px] font-bold px-1.5 py-0.5 rounded border ${badgeColor}">${item.source}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
     });
+  }
+
+  async function extractPraiGliner(btn) {
+    if (!btn) btn = document.getElementById('extractPraiGlinerBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Running...`;
+
+    try {
+      const res = await fetch(`/spaces/${docId}/prai/extract-gliner`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        initialPraiData.gliner = data.prai_gliner;
+        renderPraiData(initialPraiData);
+      } else {
+        alert(data.error || 'GLiNER2 extraction failed.');
+      }
+    } catch(err) {
+      alert('Error extracting PRAI items with GLiNER2.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
+
+  async function extractPraiAi(btn) {
+    if (!btn) btn = document.getElementById('extractPraiAiBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> AI Extracting...`;
+
+    try {
+      const res = await fetch(`/spaces/${docId}/prai/extract-ai`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        initialPraiData.ai = data.prai_ai;
+        renderPraiData(initialPraiData);
+      } else {
+        alert(data.error || 'AI extraction failed.');
+      }
+    } catch(err) {
+      alert('Error extracting PRAI items with AI.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
+
+  async function clearPraiExtractions(btn) {
+    if (!confirm('Are you sure you want to clear all PRAI extractions for this document?')) return;
+    try {
+      const res = await fetch(`/spaces/${docId}/prai/clear`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        initialPraiData = {};
+        renderPraiData(initialPraiData);
+      } else {
+        alert(data.error || 'Failed to clear PRAI extractions.');
+      }
+    } catch(err) {
+      alert('Error clearing PRAI extractions.');
+    }
   }
 </script>
 
