@@ -830,15 +830,14 @@ async def synthesize_prai_sentences(
         if lang_code == "en":
             class SynthesizePRAISentencesEN(dspy.Signature):
                 """
-                Synthesize structured agricultural PRAI narrative sentences in English based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                Synthesize fluent, natural, and diverse agricultural PRAI narrative sentences in English based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
-                Generate exactly 1 narrative sentence for EACH distinct Problem identified. Do not skip any problem and do not combine multiple problems into a single line.
+                Generate 1 clear narrative sentence for EACH distinct Problem identified.
                 
-                Formulate each sentence in English following the pattern:
-                "[Actor A] facing/when encountering [Problem P] applied/used [Practice R] to achieve/bring [Impact I]."
+                IMPORTANT: Write sentences naturally and expressively! Do NOT force a rigid or repetitive template. Vary the word order and sentence structure (e.g. starting with Practice, Problem, or Purpose). Ensure each sentence connects Actor (A), Problem (P), Practice (R), and Impact (I) naturally.
                 
                 Example output format (one per line):
-                Actor: Rice farmer | Problem: Brown planthopper | Practice: Biological spraying | Impact: Restored crop growth | Sentence: Rice farmer when facing brown planthopper applied biological spraying to restore crop growth.
+                Actor: Rice farmer | Problem: Brown planthopper | Practice: Biological spraying | Impact: Restored crop growth | Sentence: To effectively combat brown planthopper infestation, rice farmers implemented biological spraying, successfully restoring crop growth.
                 """
                 text = dspy.InputField(desc="Document text context")
                 prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
@@ -849,15 +848,14 @@ async def synthesize_prai_sentences(
         else:
             class SynthesizePRAISentencesVI(dspy.Signature):
                 """
-                Synthesize structured agricultural PRAI narrative sentences in Vietnamese based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                Synthesize fluent, natural, and diverse agricultural PRAI narrative sentences in Vietnamese based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
                 
-                Tạo chính xác 1 câu kịch bản cho MỖI Vấn đề (Problem) riêng biệt được tìm thấy. Không gộp nhiều vấn đề vào 1 câu và không bỏ sót vấn đề nào.
+                Tạo 1 câu kịch bản diễn đạt tự nhiên cho MỖI Vấn đề (Problem) riêng biệt được tìm thấy.
                 
-                Formulate each sentence in Vietnamese following the pattern:
-                "[Actor A] khi gặp/đối mặt với [Problem P] đã áp dụng/sử dụng [Practice R] để đạt được/mang lại [Impact I]."
+                LƯU Ý QUAN TRỌNG: Viết câu một cách tự nhiên, sinh động và linh hoạt! KHÔNG lặp lại một mẫu câu rập khuôn duy nhất (như "...khi gặp...đã áp dụng...để..."). Đa dạng hóa cấu trúc câu (có thể bắt đầu bằng Biện pháp, Vấn đề hoặc Mục đích; sử dụng các từ nối tự nhiên như: nhằm mục đích, để xử lý, nhờ triển khai, được bà con thực hiện...). Đảm bảo kết nối tự nhiên giữa Tác nhân (A), Vấn đề (P), Biện pháp (R), và Tác động (I).
                 
                 Example output format (one per line):
-                Actor: Nông dân | Problem: Bệnh rầy nâu | Practice: Phun thuốc sinh học | Impact: Khôi phục sinh trưởng cây trồng | Sentence: Nông dân khi gặp bệnh rầy nâu đã áp dụng phun thuốc sinh học để khôi phục sinh trưởng cây trồng.
+                Actor: Nông dân | Problem: Bệnh rầy nâu | Practice: Phun thuốc sinh học | Impact: Khôi phục sinh trưởng cây trồng | Sentence: Nhằm xử lý dứt điểm bệnh rầy nâu, nông dân đã chủ động phun thuốc sinh học, giúp cây trồng nhanh chóng khôi phục sinh trưởng.
                 """
                 text = dspy.InputField(desc="Document text context")
                 prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
