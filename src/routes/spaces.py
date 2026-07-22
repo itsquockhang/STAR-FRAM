@@ -571,6 +571,15 @@ async def suggest_relations(
                 predicates=", ".join(pred_labels)
             )
 
+        existing_relations = doc.get("relations", [])
+        existing_set = set()
+        for r in existing_relations:
+            s_c = (r.get("subject") or "").lower().strip()
+            p_c = (r.get("predicate") or "").lower().strip()
+            o_c = (r.get("object") or "").lower().strip()
+            if s_c and p_c and o_c:
+                existing_set.add((s_c, p_c, o_c))
+
         registered_set = set()
         for p in predicates:
             if p.get("name"): registered_set.add(p["name"].lower().replace(" ", "_"))
@@ -590,19 +599,21 @@ async def suggest_relations(
                     pred = parts[1].strip()
                     obj = parts[2].strip()
                     
-                    # Clean potential bullet points or leading numbers
                     import re
                     sub = re.sub(r'^\d+[\.\)\-\s]+', '', sub).strip()
                     pred = re.sub(r'^\d+[\.\)\-\s]+', '', pred).strip()
                     obj = re.sub(r'^\d+[\.\)\-\s]+', '', obj).strip()
                     
-                    # Skip empty components
                     if not sub or not pred or not obj:
                         continue
 
+                    sub_clean = sub.lower().strip()
                     pred_clean = pred.lower().strip()
+                    obj_clean = obj.lower().strip()
+
                     pred_slug = pred_clean.replace(" ", "_")
                     in_settings = (pred_clean in registered_set) or (pred_slug in registered_set)
+                    already_exists = (sub_clean, pred_clean, obj_clean) in existing_set
 
                     # Prevent duplicate suggestions in output
                     if not any(s["subject"] == sub and s["predicate"] == pred and s["object"] == obj for s in suggestions):
@@ -610,7 +621,8 @@ async def suggest_relations(
                             "subject": sub,
                             "predicate": pred,
                             "object": obj,
-                            "in_settings": in_settings
+                            "in_settings": in_settings,
+                            "already_exists": already_exists
                         })
 
         logger.info(f"AI suggested {len(suggestions)} relations for doc {doc_id} using model '{lm.model}'")
