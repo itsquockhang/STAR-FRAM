@@ -77,7 +77,8 @@ vertical-align: super;
         <button onclick="switchTab('prai-tab')" id="btn-prai-tab"
           class="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 border-transparent text-[#5f5f5d] hover:text-[#1c1c1c] transition-all cursor-pointer outline-none flex items-center gap-1.5">
           <span>PRAI Framework</span>
-          <span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">{P,R,A,I}</span>
+          <span
+            class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded font-mono font-bold">{P,R,A,I}</span>
         </button>
       </div>
 
@@ -183,14 +184,11 @@ vertical-align: super;
         <!-- Relations Table -->
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-xs font-bold uppercase tracking-wider text-[#1c1c1c]">Relations Table</h3>
-          <button 
-            type="button" 
-            id="deleteAllRelationsBtn"
-            onclick="deleteAllRelations(this)"
+          <button type="button" id="deleteAllRelationsBtn" onclick="deleteAllRelations(this)"
             class="text-[11px] font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-            title="Delete all relationship triples in this document"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5">
+            title="Delete all relationship triples in this document">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5">
               <polyline points="3 6 5 6 21 6"></polyline>
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
               <line x1="10" y1="11" x2="10" y2="17"></line>
@@ -277,15 +275,14 @@ vertical-align: super;
         <div class="flex items-center justify-between border-b border-[#eceae4]/60 pb-4 mb-6">
           <div>
             <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c] mb-1">Knowledge Graph Visualization</h2>
-            <p class="text-xs text-[#5f5f5d]">Zoom, pan, and drag nodes to explore the generated entity relationships.</p>
+            <p class="text-xs text-[#5f5f5d]">Zoom, pan, and drag nodes to explore the generated entity relationships.
+            </p>
           </div>
-          <button 
-            type="button" 
-            onclick="openGraphModal()"
+          <button type="button" onclick="openGraphModal()"
             class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
-            title="Open graph in full-width modal"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            title="Open graph in full-width modal">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <polyline points="15 3 21 3 21 9"></polyline>
               <polyline points="9 21 3 21 3 15"></polyline>
               <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -297,47 +294,38 @@ vertical-align: super;
 
         <div id="graphContainer"
           class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative">
-          
+
           <!-- Floating Controls inside graph canvas -->
-          <div class="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/90 backdrop-blur border border-[#eceae4] p-1 rounded-xl shadow-md">
-            <button 
-              type="button" 
-              onclick="zoomGraph(1.2)"
+          <div
+            class="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/90 backdrop-blur border border-[#eceae4] p-1 rounded-xl shadow-md">
+            <button type="button" onclick="zoomGraph(1.2)"
               class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
-              title="Zoom In (+)"
-            >
+              title="Zoom In (+)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
               </svg>
             </button>
-            <button 
-              type="button" 
-              onclick="zoomGraph(0.8)"
+            <button type="button" onclick="zoomGraph(0.8)"
               class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
-              title="Zoom Out (-)"
-            >
+              title="Zoom Out (-)">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
               </svg>
             </button>
-            <button 
-              type="button" 
-              onclick="resetGraphView()"
+            <button type="button" onclick="resetGraphView()"
               class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
-              title="Center & Fit View"
-            >
+              title="Center & Fit View">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
             </button>
             <div class="w-px h-4 bg-[#eceae4] mx-0.5"></div>
-            <button 
-              type="button" 
-              onclick="openGraphModal()"
+            <button type="button" onclick="openGraphModal()"
               class="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-              title="Open graph in full-width modal"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              title="Open graph in full-width modal">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 3 21 3 21 9"></polyline>
                 <polyline points="9 21 3 21 3 15"></polyline>
                 <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -367,63 +355,65 @@ vertical-align: super;
       <!-- Tab 4: PRAI Framework {P, R, A, I} -->
       <div id="panel-prai-tab"
         class="tab-panel hidden bg-[#fcfbf9] border border-[#eceae4] rounded-2xl p-6 lg:p-8 shadow-[0_4px_24px_rgba(28,28,28,0.03)]">
-        
+
         <!-- Header & LaTeX / Formula description -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
+        <div
+          class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#eceae4]/60 pb-5 mb-6">
           <div>
             <div class="flex items-center gap-2 mb-1 flex-wrap">
               <h2 class="text-xl font-semibold tracking-tight text-[#1c1c1c]">Structured Entity Extraction</h2>
             </div>
             <p class="text-xs text-[#5f5f5d]">
-              Agricultural Situation Abstraction: <strong class="text-red-700">P</strong> (Problems), <strong class="text-indigo-700">R</strong> (Practices), <strong class="text-emerald-700">A</strong> (Actors), and <strong class="text-purple-700">I</strong> (Impacts).
+              Agricultural Situation Abstraction: <strong class="text-red-700">P</strong> (Problems), <strong
+                class="text-indigo-700">R</strong> (Practices), <strong class="text-emerald-700">A</strong> (Actors),
+              and <strong class="text-purple-700">I</strong> (Impacts).
             </p>
           </div>
 
           <!-- Action Buttons -->
           <div class="shrink-0 flex items-center gap-2 flex-wrap">
-            <button 
-              type="button" 
-              onclick="extractPraiGliner(this)"
-              id="extractPraiGlinerBtn"
-              class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <button type="button" onclick="extractPraiGliner(this)" id="extractPraiGlinerBtn"
+              class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
               Extract with GLiNER2
             </button>
-            <button 
-              type="button" 
-              onclick="extractPraiAi(this)"
-              id="extractPraiAiBtn"
-              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
-            >
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            <button type="button" onclick="extractPraiAi(this)" id="extractPraiAiBtn"
+              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
               AI Extract
             </button>
-            <button 
-              type="button" 
-              onclick="clearPraiExtractions(this)"
+            <button type="button" onclick="clearPraiExtractions(this)"
               class="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors cursor-pointer"
-              title="Clear PRAI Extractions"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              title="Clear PRAI Extractions">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             </button>
           </div>
         </div>
 
         <!-- 4-Card Category Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
+
           <!-- Category P: Problems -->
           <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-red-100 text-red-700 rounded-lg border border-red-200">P</span>
+                <span
+                  class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-red-100 text-red-700 rounded-lg border border-red-200">P</span>
                 <div>
                   <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Problems</h3>
                   <p class="text-[10px] text-[#5f5f5d]">Diseases, pests, weeds, climate stresses</p>
                 </div>
               </div>
-              <span id="countP" class="text-[11px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">0</span>
+              <span id="countP"
+                class="text-[11px] font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full border border-red-100">0</span>
             </div>
             <div id="listP" class="space-y-2 min-h-[100px]">
               <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Problems extracted yet.</div>
@@ -434,13 +424,15 @@ vertical-align: super;
           <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200">R</span>
+                <span
+                  class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200">R</span>
                 <div>
                   <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Practices</h3>
                   <p class="text-[10px] text-[#5f5f5d]">Actions, treatments, fertilizer, techniques</p>
                 </div>
               </div>
-              <span id="countR" class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">0</span>
+              <span id="countR"
+                class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">0</span>
             </div>
             <div id="listR" class="space-y-2 min-h-[100px]">
               <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Practices extracted yet.</div>
@@ -451,13 +443,15 @@ vertical-align: super;
           <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200">A</span>
+                <span
+                  class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200">A</span>
                 <div>
                   <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Actors</h3>
                   <p class="text-[10px] text-[#5f5f5d]">Farmers, experts, researchers (explicit & implicit)</p>
                 </div>
               </div>
-              <span id="countA" class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">0</span>
+              <span id="countA"
+                class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">0</span>
             </div>
             <div id="listA" class="space-y-2 min-h-[100px]">
               <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Actors extracted yet.</div>
@@ -468,13 +462,15 @@ vertical-align: super;
           <div class="bg-white border border-[#eceae4] rounded-xl p-5 shadow-sm">
             <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#eceae4]">
               <div class="flex items-center gap-2">
-                <span class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-purple-100 text-purple-700 rounded-lg border border-purple-200">I</span>
+                <span
+                  class="w-7 h-7 flex items-center justify-center font-bold text-xs bg-purple-100 text-purple-700 rounded-lg border border-purple-200">I</span>
                 <div>
                   <h3 class="text-xs font-bold text-[#1c1c1c] uppercase tracking-wider">Impacts</h3>
                   <p class="text-[10px] text-[#5f5f5d]">Yield outcomes, crop stress, economic losses</p>
                 </div>
               </div>
-              <span id="countI" class="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">0</span>
+              <span id="countI"
+                class="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">0</span>
             </div>
             <div id="listI" class="space-y-2 min-h-[100px]">
               <div class="text-center py-6 text-xs text-[#5f5f5d] italic">No Impacts extracted yet.</div>
@@ -489,22 +485,25 @@ vertical-align: super;
             <div>
               <h3 class="text-base font-bold tracking-tight text-[#1c1c1c] flex items-center gap-2">
                 <span>PRAI Narrative Synthesis</span>
-                <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">PRAI + KG</span>
+                <span
+                  class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">PRAI
+                  + KG</span>
               </h3>
-              <p class="text-xs text-[#5f5f5d]">Synthesizes complete narrative sentences combining Actor (A), Problem (P), Practice (R), and Impact (I).</p>
+              <p class="text-xs text-[#5f5f5d]">Synthesizes complete narrative sentences combining Actor (A), Problem
+                (P), Practice (R), and Impact (I).</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-              <select id="praiSentencesLang" class="text-xs bg-white border border-[#eceae4] rounded-lg px-2.5 py-2 font-medium text-[#1c1c1c] outline-none shadow-2xs cursor-pointer hover:border-emerald-300 transition-colors">
+              <select id="praiSentencesLang"
+                class="text-xs bg-white border border-[#eceae4] rounded-lg px-2.5 py-2 font-medium text-[#1c1c1c] outline-none shadow-2xs cursor-pointer hover:border-emerald-300 transition-colors">
                 <option value="vi">🇻🇳 Vietnamese (Tiếng Việt)</option>
                 <option value="en">🇬🇧 English</option>
               </select>
-              <button 
-                type="button" 
-                onclick="synthesizePraiSentences(this)"
-                id="synthesizePraiSentencesBtn"
-                class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-2 cursor-pointer shrink-0 active:scale-95"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.603 15.11a2 2 0 00-1.782.915l-1.29 2.15a2 2 0 001.718 3.028h15.502a2 2 0 001.718-3.028l-1.29-2.15zM12 3v9m0 0l-3-3m3 3l3-3"/></svg>
+              <button type="button" onclick="synthesizePraiSentences(this)" id="synthesizePraiSentencesBtn"
+                class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-2 cursor-pointer shrink-0 active:scale-95">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.603 15.11a2 2 0 00-1.782.915l-1.29 2.15a2 2 0 001.718 3.028h15.502a2 2 0 001.718-3.028l-1.29-2.15zM12 3v9m0 0l-3-3m3 3l3-3" />
+                </svg>
                 Synthesize Sentences (AI)
               </button>
             </div>
@@ -512,7 +511,8 @@ vertical-align: super;
 
           <div id="praiSentencesContainer" class="space-y-3">
             <div class="text-center py-6 text-xs text-[#5f5f5d] italic bg-white border border-[#eceae4] rounded-xl p-4">
-              No PRAI narrative sentences generated yet. Click <strong>"Synthesize Sentences (AI)"</strong> to construct structured narratives.
+              No PRAI narrative sentences generated yet. Click <strong>"Synthesize Sentences (AI)"</strong> to construct
+              structured narratives.
             </div>
           </div>
         </div>
@@ -649,7 +649,7 @@ vertical-align: super;
       if (window.location.hash !== '#' + tabId) {
         history.replaceState(null, '', '#' + tabId);
       }
-    } catch(e) {}
+    } catch (e) { }
 
     // If active tab is graph-tab, initialize/redraw the graph
     if (tabId === 'graph-tab') {
@@ -664,7 +664,7 @@ vertical-align: super;
     let savedTab = '';
     try {
       savedTab = localStorage.getItem('active_space_tab_' + docId);
-    } catch(e) {}
+    } catch (e) { }
 
     let initialTab = 'annotated-tab';
     if (validTabs.includes(hash)) {
@@ -1529,7 +1529,7 @@ vertical-align: super;
       } else {
         alert(data.error || 'GLiNER2 extraction failed.');
       }
-    } catch(err) {
+    } catch (err) {
       alert('Error extracting PRAI items with GLiNER2.');
     } finally {
       btn.disabled = false;
@@ -1552,7 +1552,7 @@ vertical-align: super;
       } else {
         alert(data.error || 'AI extraction failed.');
       }
-    } catch(err) {
+    } catch (err) {
       alert('Error extracting PRAI items with AI.');
     } finally {
       btn.disabled = false;
@@ -1571,7 +1571,7 @@ vertical-align: super;
       } else {
         alert(data.error || 'Failed to clear PRAI extractions.');
       }
-    } catch(err) {
+    } catch (err) {
       alert('Error clearing PRAI extractions.');
     }
   }
@@ -1594,7 +1594,7 @@ vertical-align: super;
       } else {
         alert(data.error || 'Failed to synthesize PRAI sentences.');
       }
-    } catch(err) {
+    } catch (err) {
       alert('Error synthesizing PRAI narrative sentences.');
     } finally {
       btn.disabled = false;
@@ -1604,12 +1604,14 @@ vertical-align: super;
 </script>
 
 <!-- Full Width Knowledge Graph Modal -->
-<div id="graphModal" class="fixed inset-0 z-[9999] hidden flex-col bg-[#fcfbf9]/95 backdrop-blur-md transition-all duration-200">
+<div id="graphModal"
+  class="fixed inset-0 z-[9999] hidden flex-col bg-[#fcfbf9]/95 backdrop-blur-md transition-all duration-200">
   <!-- Modal Header -->
   <div class="flex items-center justify-between px-6 py-4 border-b border-[#eceae4] bg-white/90 shadow-sm shrink-0">
     <div class="flex items-center gap-3">
       <div class="p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 3 21 3 21 9"></polyline>
           <polyline points="9 21 3 21 3 15"></polyline>
           <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -1624,45 +1626,34 @@ vertical-align: super;
     <div class="flex items-center gap-3">
       <!-- Zoom & Center Controls -->
       <div class="flex items-center gap-1 bg-white border border-[#eceae4] p-1 rounded-xl shadow-sm">
-        <button 
-          type="button" 
-          onclick="zoomModalGraph(1.2)"
+        <button type="button" onclick="zoomModalGraph(1.2)"
           class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
-          title="Zoom In (+)"
-        >
+          title="Zoom In (+)">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
         </button>
-        <button 
-          type="button" 
-          onclick="zoomModalGraph(0.8)"
+        <button type="button" onclick="zoomModalGraph(0.8)"
           class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
-          title="Zoom Out (-)"
-        >
+          title="Zoom Out (-)">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
           </svg>
         </button>
-        <button 
-          type="button" 
-          onclick="resetModalGraphView()"
+        <button type="button" onclick="resetModalGraphView()"
           class="p-1.5 hover:bg-emerald-50 hover:text-emerald-600 rounded-lg text-[#1c1c1c] transition-colors cursor-pointer"
-          title="Center & Fit View"
-        >
+          title="Center & Fit View">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
       </div>
 
-      <button 
-        type="button" 
-        onclick="closeGraphModal()" 
-        class="px-3.5 py-1.5 bg-white border border-[#eceae4] hover:border-red-300 hover:bg-red-50 hover:text-red-600 text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer"
-      >
+      <button type="button" onclick="closeGraphModal()"
+        class="px-3.5 py-1.5 bg-white border border-[#eceae4] hover:border-red-300 hover:bg-red-50 hover:text-red-600 text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
         </svg>
         Close (ESC)
       </button>

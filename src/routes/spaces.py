@@ -1,7 +1,7 @@
 import logging
 import datetime
 from bson import ObjectId
-from fastapi import APIRouter, Form, Cookie, Request, HTTPException, status
+from fastapi import APIRouter, Form, Cookie, Request, HTTPException, Query, status
 from fastapi.responses import RedirectResponse, HTMLResponse
 from src.core.database import get_db
 from src.core.auth import get_session
