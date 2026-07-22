@@ -830,7 +830,9 @@ async def synthesize_prai_sentences(
         if lang_code == "en":
             class SynthesizePRAISentencesEN(dspy.Signature):
                 """
-                Synthesize structured agricultural PRAI narrative sentences in English based on the document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                Synthesize structured agricultural PRAI narrative sentences in English based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                
+                Generate exactly 1 narrative sentence for EACH distinct Problem identified. Do not skip any problem and do not combine multiple problems into a single line.
                 
                 Formulate each sentence in English following the pattern:
                 "[Actor A] facing/when encountering [Problem P] applied/used [Practice R] to achieve/bring [Impact I]."
@@ -847,7 +849,9 @@ async def synthesize_prai_sentences(
         else:
             class SynthesizePRAISentencesVI(dspy.Signature):
                 """
-                Synthesize structured agricultural PRAI narrative sentences in Vietnamese based on the document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                Synthesize structured agricultural PRAI narrative sentences in Vietnamese based on document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+                
+                Tạo chính xác 1 câu kịch bản cho MỖI Vấn đề (Problem) riêng biệt được tìm thấy. Không gộp nhiều vấn đề vào 1 câu và không bỏ sót vấn đề nào.
                 
                 Formulate each sentence in Vietnamese following the pattern:
                 "[Actor A] khi gặp/đối mặt với [Problem P] đã áp dụng/sử dụng [Practice R] để đạt được/mang lại [Impact I]."
