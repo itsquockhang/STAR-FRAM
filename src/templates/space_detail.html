@@ -1394,6 +1394,8 @@ vertical-align: super;
 
   function highlightPraiComponents(sentenceText, item, praiObj) {
     if (!sentenceText) return '';
+    const text = String(sentenceText);
+    if (!text.trim()) return '';
     
     const gliner = (praiObj && praiObj.gliner) ? praiObj.gliner : {};
     const ai = (praiObj && praiObj.ai) ? praiObj.ai : {};
@@ -1431,22 +1433,50 @@ vertical-align: super;
       });
     });
 
-    // Sort by phrase length descending
+    // Sort by phrase length descending to prioritize longer phrases
     targets.sort((a, b) => b.phrase.length - a.phrase.length);
 
-    let html = escapeHtml(sentenceText);
+    // Find non-overlapping match intervals in plain text
+    const lowerText = text.toLowerCase();
+    const intervals = [];
 
     targets.forEach(t => {
-      const p = t.phrase;
-      const escapedP = escapeHtml(p);
-      if (!escapedP) return;
+      const phraseLower = t.phrase.toLowerCase();
+      let pos = 0;
+      while ((pos = lowerText.indexOf(phraseLower, pos)) !== -1) {
+        const start = pos;
+        const end = pos + phraseLower.length;
+        pos += 1;
 
-      const escapedRegexStr = escapedP.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-      const safeRegex = new RegExp(`(?<!<[^>]*)${escapedRegexStr}(?![^<]*>)`, 'gi');
-      html = html.replace(safeRegex, `<mark class="${t.bg}">$&</mark>`);
+        // Skip if overlaps with any existing interval
+        const overlaps = intervals.some(inv => !(end <= inv.start || start >= inv.end));
+        if (!overlaps) {
+          intervals.push({ start, end, bg: t.bg });
+        }
+      }
     });
 
-    return html;
+    // Sort intervals by start index ascending
+    intervals.sort((a, b) => a.start - b.start);
+
+    // Build HTML by slicing plain text
+    let resultHtml = '';
+    let lastIdx = 0;
+
+    intervals.forEach(inv => {
+      if (inv.start > lastIdx) {
+        resultHtml += escapeHtml(text.slice(lastIdx, inv.start));
+      }
+      const matchedText = text.slice(inv.start, inv.end);
+      resultHtml += `<mark class="${inv.bg}">${escapeHtml(matchedText)}</mark>`;
+      lastIdx = inv.end;
+    });
+
+    if (lastIdx < text.length) {
+      resultHtml += escapeHtml(text.slice(lastIdx));
+    }
+
+    return resultHtml;
   }
 
   function renderPraiData(praiObj) {
