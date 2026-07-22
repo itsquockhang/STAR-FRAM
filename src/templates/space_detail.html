@@ -487,21 +487,14 @@ vertical-align: super;
               <p class="text-xs text-[#5f5f5d]">Synthesizes complete narrative sentences combining Actor (A), Problem
                 (P), Practice (R), and Impact (I).</p>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <select id="praiSentencesLang"
-                class="text-xs bg-white border border-[#eceae4] rounded-lg px-2.5 py-2 font-medium text-[#1c1c1c] outline-none shadow-2xs cursor-pointer hover:border-emerald-300 transition-colors">
-                <option value="vi">🇻🇳 Vietnamese (Tiếng Việt)</option>
-                <option value="en">🇬🇧 English</option>
-              </select>
-              <button type="button" onclick="synthesizePraiSentences(this)" id="synthesizePraiSentencesBtn"
-                class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-2 cursor-pointer shrink-0 active:scale-95">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.603 15.11a2 2 0 00-1.782.915l-1.29 2.15a2 2 0 001.718 3.028h15.502a2 2 0 001.718-3.028l-1.29-2.15zM12 3v9m0 0l-3-3m3 3l3-3" />
-                </svg>
-                Synthesize Sentences (AI)
-              </button>
-            </div>
+            <button type="button" onclick="synthesizePraiSentences(this)" id="synthesizePraiSentencesBtn"
+              class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-2 cursor-pointer shrink-0 active:scale-95">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.603 15.11a2 2 0 00-1.782.915l-1.29 2.15a2 2 0 001.718 3.028h15.502a2 2 0 001.718-3.028l-1.29-2.15zM12 3v9m0 0l-3-3m3 3l3-3" />
+              </svg>
+              Synthesize Sentences (AI)
+            </button>
           </div>
 
           <div id="praiSentencesContainer" class="space-y-3">
@@ -1673,15 +1666,12 @@ vertical-align: super;
 
   async function synthesizePraiSentences(btn) {
     if (!btn) btn = document.getElementById('synthesizePraiSentencesBtn');
-    const langSelect = document.getElementById('praiSentencesLang');
-    const selectedLang = langSelect ? langSelect.value : 'vi';
-
     const originalText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Synthesizing...`;
 
     try {
-      const res = await fetch(`/spaces/${docId}/prai/synthesize-sentences?lang=${selectedLang}`, { method: 'POST' });
+      const res = await fetch(`/spaces/${docId}/prai/synthesize-sentences`, { method: 'POST' });
       const data = await res.json();
       if (data.success) {
         initialPraiData.sentences = data.sentences;

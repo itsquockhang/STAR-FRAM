@@ -843,10 +843,32 @@ async def clear_prai(
         return {"success": False, "error": str(e)}
 
 
+def detect_text_language(text: str) -> str:
+    """Detect if document text is primarily English ('en') or Vietnamese ('vi')."""
+    if not text:
+        return "vi"
+    import re
+    vi_accent_pattern = re.compile(r'[àáảãạăắằẳẵặâấầẩẫậèéẻẽẹêếềểễệđìíỉĩịòóỏõọôốồổỗộơớờởỡợùúủũụưứừửữựỳýỷỹỵÀÁẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬÈÉẺẼẸÊẾỀỂỄỆĐÌÍỈĨỊÒÓỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÙÚỦŨỤƯỨỪỬỮỰỲÝỶỸỴ]')
+    vi_matches = len(vi_accent_pattern.findall(text))
+    if vi_matches >= 2:
+        return "vi"
+    
+    words = [w.lower() for w in re.findall(r'\b[a-zA-Z]+\b', text)]
+    if not words:
+        return "vi"
+    
+    en_stop_words = {"the", "is", "and", "in", "of", "to", "for", "with", "on", "at", "by", "from", "that", "this", "are", "was", "be", "has", "have"}
+    en_count = sum(1 for w in words if w in en_stop_words)
+    if en_count >= 2:
+        return "en"
+    
+    return "vi"
+
+
 @router.post("/spaces/{doc_id}/prai/synthesize-sentences")
 async def synthesize_prai_sentences(
     doc_id: str,
-    lang: str = Query(default="vi"),
+    lang: str | None = Query(default=None),
     session_id: str | None = Cookie(default=None)
 ):
     if not session_id:
@@ -864,6 +886,10 @@ async def synthesize_prai_sentences(
         text = doc.get("text", "")
         if not text:
             return {"success": False, "error": "Document contains no text."}
+
+        # Auto-detect language if not explicitly passed
+        if not lang or lang.strip().lower() not in ["vi", "en"]:
+            lang = detect_text_language(text)
 
         relations = doc.get("relations", [])
         prai_data = doc.get("prai", {})
