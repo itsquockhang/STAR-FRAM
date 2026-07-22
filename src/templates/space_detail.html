@@ -276,38 +276,32 @@ vertical-align: super;
           </div>
           <button 
             type="button" 
-            onclick="toggleFullscreenGraph()"
-            class="px-3 py-1.5 bg-white border border-[#eceae4] hover:border-emerald-500 hover:text-emerald-600 text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer"
-            title="Toggle full width / fullscreen mode"
+            onclick="openGraphModal()"
+            class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            title="Open graph in full-width modal"
           >
-            <svg class="w-4 h-4 fullscreen-expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
             </svg>
-            <svg class="w-4 h-4 fullscreen-compress-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15L4 20m0 0h4m-4 0v-4m11 0l5 5m0 0h-4m4 0v-4M9 9L4 4m0 0h4m-4 0v4m11 0l5-5m0 0h-4m4 0v4"/>
-            </svg>
-            <span class="fullscreen-btn-text">Full Width</span>
+            <span>Full Width Modal</span>
           </button>
         </div>
 
         <div id="graphContainer"
-          class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative transition-all duration-200">
+          class="w-full h-[500px] bg-white border border-[#eceae4] rounded-xl overflow-hidden relative">
           
           <!-- Floating Controls inside graph canvas -->
           <div class="absolute top-3 right-3 z-20 flex items-center gap-2">
             <button 
               type="button" 
-              onclick="toggleFullscreenGraph()"
+              onclick="openGraphModal()"
               class="px-2.5 py-1.5 bg-white/90 backdrop-blur border border-[#eceae4] hover:border-emerald-500 hover:text-emerald-600 text-xs font-semibold rounded-lg shadow-md transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer"
-              title="Toggle full width / fullscreen mode"
+              title="Open graph in full-width modal"
             >
-              <svg class="w-3.5 h-3.5 fullscreen-expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
               </svg>
-              <svg class="w-3.5 h-3.5 fullscreen-compress-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15L4 20m0 0h4m-4 0v-4m11 0l5 5m0 0h-4m4 0v-4M9 9L4 4m0 0h4m-4 0v4m11 0l5-5m0 0h-4m4 0v4"/>
-              </svg>
-              <span class="fullscreen-btn-text">Full Width</span>
+              <span>Full Width</span>
             </button>
           </div>
 
@@ -1025,45 +1019,137 @@ vertical-align: super;
     networkInstance = new vis.Network(container, data, options);
   }
 
-  let isGraphFullscreen = false;
+  // 6. Full Width Knowledge Graph Modal Logic
+  let modalNetworkInstance = null;
 
-  function toggleFullscreenGraph() {
-    const container = document.getElementById('graphContainer');
-    const expandIcons = document.querySelectorAll('.fullscreen-expand-icon');
-    const compressIcons = document.querySelectorAll('.fullscreen-compress-icon');
-    const btnTexts = document.querySelectorAll('.fullscreen-btn-text');
+  function openGraphModal() {
+    const modal = document.getElementById('graphModal');
+    if (!modal) return;
 
-    isGraphFullscreen = !isGraphFullscreen;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
 
-    if (isGraphFullscreen) {
-      container.classList.add('fixed', 'top-4', 'left-4', 'right-4', 'bottom-4', 'z-[9999]', 'h-[calc(100vh-32px)]', 'shadow-2xl', 'ring-4', 'ring-emerald-500/20');
-      container.classList.remove('h-[500px]');
-      expandIcons.forEach(i => i.classList.add('hidden'));
-      compressIcons.forEach(i => i.classList.remove('hidden'));
-      btnTexts.forEach(t => t.textContent = "Exit Full Width");
-    } else {
-      container.classList.remove('fixed', 'top-4', 'left-4', 'right-4', 'bottom-4', 'z-[9999]', 'h-[calc(100vh-32px)]', 'shadow-2xl', 'ring-4', 'ring-emerald-500/20');
-      container.classList.add('h-[500px]');
-      expandIcons.forEach(i => i.classList.remove('hidden'));
-      compressIcons.forEach(i => i.classList.add('hidden'));
-      btnTexts.forEach(t => t.textContent = "Full Width");
-    }
-
+    // Give browser a moment to render modal dimensions
     setTimeout(() => {
-      if (networkInstance) {
-        networkInstance.redraw();
-        networkInstance.fit();
+      drawModalGraph();
+    }, 50);
+  }
+
+  function closeGraphModal() {
+    const modal = document.getElementById('graphModal');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+
+    if (modalNetworkInstance) {
+      modalNetworkInstance.destroy();
+      modalNetworkInstance = null;
+    }
+  }
+
+  function drawModalGraph() {
+    const rows = document.querySelectorAll('#relationsTableBody tr');
+    const edges = [];
+    const nodeSet = new Set();
+
+    rows.forEach(row => {
+      if (row.id === 'noRelationsRow') return;
+      const cols = row.querySelectorAll('td');
+      if (cols.length < 3) return;
+
+      const subject = cols[0].textContent.trim();
+      const predicate = cols[1].textContent.trim();
+      const object = cols[2].textContent.trim();
+
+      nodeSet.add(subject);
+      nodeSet.add(object);
+
+      edges.push({
+        from: subject,
+        to: object,
+        label: predicate,
+        arrows: 'to',
+        font: { align: 'horizontal', size: 10, color: '#4b5563', background: '#f9fafb' },
+        color: { color: '#9ca3af', hover: '#4b5563', highlight: '#374151' }
+      });
+    });
+
+    const container = document.getElementById('modalNetworkCanvas');
+    if (!container) return;
+
+    const colorPalettes = [
+      { bg: '#ecfdf5', border: '#10b981', text: '#065f46' }, // 0: emerald
+      { bg: '#eff6ff', border: '#3b82f6', text: '#1e3a8a' }, // 1: blue
+      { bg: '#fefce8', border: '#eab308', text: '#713f12' }, // 2: yellow
+      { bg: '#fef2f2', border: '#ef4444', text: '#7f1d1d' }, // 3: red
+      { bg: '#faf5ff', border: '#a855f7', text: '#581c87' }, // 4: purple
+      { bg: '#fdf2f8', border: '#ec4899', text: '#831843' }, // 5: pink
+      { bg: '#f0fdfa', border: '#14b8a6', text: '#115e59' }, // 6: teal
+      { bg: '#fff7ed', border: '#f97316', text: '#7c2d12' }  // 7: orange
+    ];
+
+    const nodes = Array.from(nodeSet).map(name => {
+      const lowerName = name.toLowerCase().trim();
+      const paletteIdx = entityColors[lowerName] !== undefined ? entityColors[lowerName] : 0;
+      const palette = colorPalettes[paletteIdx];
+
+      return {
+        id: name,
+        label: name,
+        shape: 'box',
+        color: {
+          background: palette.bg,
+          border: palette.border,
+          hover: { background: palette.bg, border: palette.border },
+          highlight: { background: palette.bg, border: palette.border }
+        },
+        borderWidth: 1.5,
+        font: { size: 13, color: palette.text, face: 'Outfit, Inter, sans-serif' },
+        margin: 12,
+        shadow: {
+          enabled: true,
+          color: 'rgba(28,28,28,0.06)',
+          size: 6,
+          x: 0,
+          y: 3
+        }
+      };
+    });
+
+    const data = {
+      nodes: new vis.DataSet(nodes),
+      edges: new vis.DataSet(edges)
+    };
+
+    const options = {
+      physics: {
+        stabilization: true,
+        barnesHut: {
+          gravitationalConstant: -3000,
+          centralGravity: 0.2,
+          springLength: 160,
+          springConstant: 0.04
+        }
+      },
+      interaction: {
+        hover: true
       }
-    }, 100);
+    };
+
+    if (modalNetworkInstance) {
+      modalNetworkInstance.destroy();
+    }
+    modalNetworkInstance = new vis.Network(container, data, options);
   }
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isGraphFullscreen) {
-      toggleFullscreenGraph();
+    if (e.key === 'Escape') {
+      closeGraphModal();
     }
   });
 
-  // 6. Delete document confirmation listener
+  // 7. Delete document confirmation listener
   const deleteForm = document.getElementById('deleteDocForm');
   if (deleteForm) {
     deleteForm.addEventListener('submit', (e) => {
@@ -1076,4 +1162,39 @@ vertical-align: super;
     });
   }
 </script>
+
+<!-- Full Width Knowledge Graph Modal -->
+<div id="graphModal" class="fixed inset-0 z-[9999] hidden flex-col bg-[#fcfbf9]/95 backdrop-blur-md transition-all duration-200">
+  <!-- Modal Header -->
+  <div class="flex items-center justify-between px-6 py-4 border-b border-[#eceae4] bg-white/90 shadow-sm shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="p-2 bg-emerald-50 border border-emerald-100 rounded-lg text-emerald-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+        </svg>
+      </div>
+      <div>
+        <h2 class="text-base font-bold text-[#1c1c1c]">Knowledge Graph Full View</h2>
+        <p class="text-xs text-[#5f5f5d]">{{ doc.title }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button 
+        type="button" 
+        onclick="closeGraphModal()" 
+        class="px-3.5 py-1.5 bg-white border border-[#eceae4] hover:border-red-300 hover:bg-red-50 hover:text-red-600 text-xs font-semibold rounded-lg shadow-sm transition-all duration-150 flex items-center gap-1.5 text-[#1c1c1c] cursor-pointer"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        Close (ESC)
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Body / Fullscreen Graph Canvas -->
+  <div class="flex-1 w-full relative p-4 bg-[#fcfbf9] overflow-hidden">
+    <div id="modalNetworkCanvas" class="w-full h-full border border-[#eceae4] rounded-xl bg-white shadow-inner"></div>
+  </div>
+</div>
 {% endblock %}
