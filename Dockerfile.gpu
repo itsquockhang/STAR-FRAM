@@ -9,6 +9,8 @@ WORKDIR /app
 # Install dependencies.
 # Since PyTorch is already pre-installed in this image, we install the other packages directly.
 # This prevents downloading a new PyTorch package and saves gigabytes of download size.
+# Kept in sync with pyproject.toml (minus the mlx/mlx-whisper extras, which are
+# macOS-arm64-only and irrelevant to this CUDA image).
 RUN pip install --no-cache-dir \
     "gliner2 @ git+https://github.com/fastino-ai/GLiNER2.git" \
     "bcrypt>=5.0.0" \
@@ -22,10 +24,13 @@ RUN pip install --no-cache-dir \
     "redis>=8.0.1" \
     "uvicorn[standard]>=0.51.0" \
     "tqdm" \
-    "mammoth" \
     "yt-dlp" \
     "faster-whisper" \
-    "soundfile"
+    "soundfile" \
+    "trafilatura>=2.1.0" \
+    "chonkie>=1.7.0" \
+    "dspy" \
+    "litellm<1.91.0"
 
 # Copy the application code
 COPY src/ ./src

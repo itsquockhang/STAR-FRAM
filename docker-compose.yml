@@ -38,7 +38,16 @@ services:
       - qdrant
       - mongodb
       - redis
+    # Load SECRET_KEY, CONDUCTOR_API_BASE, TRANSLATE_API_BASE, HF_TOKEN, and the
+    # other provider keys from .env. Docker Compose does NOT pass .env into the
+    # container automatically (it's only used for variable substitution in this
+    # file), so without env_file the app silently falls back to the insecure
+    # default SECRET_KEY and the public default LLM endpoints.
+    env_file:
+      - .env
     environment:
+      # Override host/port values from .env (which target localhost for bare-metal
+      # dev) so the app talks to the in-network service names instead.
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
       - QDRANT_GRPC_PORT=6334
