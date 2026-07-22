@@ -16,7 +16,7 @@ class LLMConnectionError(RuntimeError):
     pass
 
 
-# Global circuit breaker state for Conductor LLM connection
+# Global circuit breaker state for LLM connection
 _llm_online = True
 _llm_last_checked = 0.0
 _llm_offline_reason = ""
@@ -29,7 +29,7 @@ async def get_conductor_model() -> str:
     current_time = time.time()
     # Circuit breaker: if marked offline within last 15 seconds, fail immediately without waiting for HTTP timeout
     if not _llm_online and (current_time - _llm_last_checked < 15.0):
-        raise LLMConnectionError(f"Server LLM (Conductor) is offline. (Circuit Breaker active. Reason: {_llm_offline_reason})")
+        raise LLMConnectionError(f"Server LLM is offline. (Circuit Breaker active. Reason: {_llm_offline_reason})")
 
     import httpx
     conductor_api_base = os.getenv("CONDUCTOR_API_BASE", "https://www-conductor.quockhang.io.vn/v1")
@@ -49,7 +49,7 @@ async def get_conductor_model() -> str:
             _llm_online = False
             _llm_last_checked = current_time
             _llm_offline_reason = reason
-            raise LLMConnectionError(f"Server LLM (Conductor) returned status code {resp.status_code}. Please check server logs.")
+            raise LLMConnectionError(f"Server LLM returned status code {resp.status_code}. Please check server logs.")
     except LLMConnectionError as e:
         raise e
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.RequestError) as e:
@@ -57,7 +57,7 @@ async def get_conductor_model() -> str:
         _llm_online = False
         _llm_last_checked = current_time
         _llm_offline_reason = "Connection failed/Timeout"
-        raise LLMConnectionError("Server LLM (Conductor) is offline or unreachable. Please verify serve.sh is running.")
+        raise LLMConnectionError("Server LLM is offline or unreachable. Please verify serve.sh is running.")
     except Exception as e:
         logger.warning(f"Failed to dynamically fetch conductor model, using fallback: {e}")
     return "google/gemma-4-E2B-it-qat-w4a16-ct"
