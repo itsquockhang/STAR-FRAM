@@ -772,19 +772,22 @@ async def extract_prai_ai(
         class ExtractPRAIFramework(dspy.Signature):
             """
             Extract structured agricultural knowledge units according to the {P, R, A, I} framework based ONLY on facts in the document text:
-            - P (Problem): Crop diseases, pests, weeds, climate stresses, physiological disorders (e.g. leaf yellowing, pest infestation).
-            - R (Practice): Actionable practices, treatments, pesticide/fertilizer applications, techniques (e.g. pesticide spraying, pruning).
-            - A (Actor): Explicit or implicit human actors, farmers, experts, institutions (e.g. farmer, agricultural scientist).
-            - I (Impact): Outcomes, yield loss, crop stress, economic or environmental impacts (e.g. yield reduction, crop stress).
+            - P (Problem): Root cause crop diseases, pests, weeds, climate stresses, physiological disorders (e.g. rice blast disease, leaf yellowing, pest infestation).
+            - R (Practice): Actionable agricultural practices, treatments, pesticide/fertilizer applications, techniques (e.g. pesticide spraying, pruning, using resistant varieties).
+            - A (Actor): Explicit or implicit human actors, farmers, experts, institutions, government departments (e.g. farmers, agricultural scientist, Department of Agriculture).
+            - I (Impact): Outcomes, yield loss, crop damage, economic/environmental impacts, scale/affected land area (e.g. 15,000 hectares affected, 30% yield loss, severe crop damage).
+            
+            IMPORTANT CLASSIFICATION RULE:
+            - Put land area, affected scale, or damage stats (e.g. "15,000 hectares affected", "10 ha damaged", "crop yield loss") strictly under Impact (I), NOT under Problem (P). Problem is strictly the biological/environmental cause or disease itself.
             
             STRICT ANTI-HALLUCINATION RULE: Rely ONLY on the document text. Never invent or hallucinate outside province names, locations, or actors not present in the text!
-            Format output as clean items separated by pipes or commas.
+            Format output items separated by pipes (|). Do NOT use commas as item separators because commas appear in names, numbers (e.g. 15,000), or list descriptions.
             """
             text = dspy.InputField(desc="The document text to analyze")
-            problems = dspy.OutputField(desc="List of extracted Problems (P), separated by pipes or commas")
-            practices = dspy.OutputField(desc="List of extracted Practices (R), separated by pipes or commas")
-            actors = dspy.OutputField(desc="List of extracted Actors (A), explicit or implicit, separated by pipes or commas")
-            impacts = dspy.OutputField(desc="List of extracted Impacts (I), separated by pipes or commas")
+            problems = dspy.OutputField(desc="List of extracted Problems (P): specific crop diseases, pests, weeds, climate stresses. Separated ONLY by pipes (|)")
+            practices = dspy.OutputField(desc="List of extracted Practices (R): actionable practices, treatments, chemicals, techniques. Separated ONLY by pipes (|)")
+            actors = dspy.OutputField(desc="List of extracted Actors (A): explicit or implicit human actors, experts, institutions. Separated ONLY by pipes (|)")
+            impacts = dspy.OutputField(desc="List of extracted Impacts (I): outcomes, yield loss, crop damage, affected areas/hectares, economic impacts. Separated ONLY by pipes (|)")
 
         lm = await get_dspy_lm()
         with dspy.context(lm=lm):
@@ -799,7 +802,12 @@ async def extract_prai_ai(
                 return []
             import re
             cleaned_raw = clean_dspy_output(str(raw_str))
-            parts = re.split(r'[\|\n,]', cleaned_raw)
+            if '|' in cleaned_raw:
+                parts = re.split(r'[\|\n]', cleaned_raw)
+            elif ';' in cleaned_raw:
+                parts = re.split(r'[;\n]', cleaned_raw)
+            else:
+                parts = re.split(r'\n|(?<!\d),(?!\d)', cleaned_raw)
             items = []
             for p in parts:
                 cleaned = re.sub(r'^\d+[\.\)\-\s]+', '', p).strip()
