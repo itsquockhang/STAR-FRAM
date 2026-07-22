@@ -207,7 +207,7 @@ vertical-align: super;
               </tr>
             </thead>
             <tbody class="divide-y divide-[#eceae4]" id="relationsTableBody">
-              {% for rel in doc.get('relations', []) %}
+              {% for rel in doc.get('relations', []) | sort(attribute='subject', case_sensitive=False) %}
               <tr class="hover:bg-[#1c1c1c]/[0.015] transition-colors duration-150 text-xs">
                 <td class="py-2.5 px-4 font-semibold text-[#1c1c1c]">{{ rel.subject }}</td>
                 <td
@@ -1004,6 +1004,21 @@ vertical-align: super;
   }
 
   // 4. Table Helpers
+  function sortRelationsTable() {
+    const tbody = document.getElementById('relationsTableBody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr:not(#noRelationsRow)'));
+    if (rows.length <= 1) return;
+
+    rows.sort((a, b) => {
+      const subA = (a.cells[0]?.textContent || '').trim().toLowerCase();
+      const subB = (b.cells[0]?.textContent || '').trim().toLowerCase();
+      return subA.localeCompare(subB, 'vi', { sensitivity: 'base' });
+    });
+
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
   function addRelationToTable(subject, predicate, object) {
     const tbody = document.getElementById('relationsTableBody');
     const noRelationsRow = document.getElementById('noRelationsRow');
@@ -1033,6 +1048,7 @@ vertical-align: super;
         </td>
       `;
     tbody.appendChild(tr);
+    sortRelationsTable();
   }
 
   function repopulateRelationsTable(relations) {
@@ -1048,7 +1064,11 @@ vertical-align: super;
       return;
     }
 
-    relations.forEach(rel => {
+    const sortedRelations = Array.from(relations).sort((a, b) => 
+      (a.subject || '').trim().toLowerCase().localeCompare((b.subject || '').trim().toLowerCase(), 'vi', { sensitivity: 'base' })
+    );
+
+    sortedRelations.forEach(rel => {
       addRelationToTable(rel.subject, rel.predicate, rel.object);
     });
   }
