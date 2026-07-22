@@ -1392,26 +1392,58 @@ vertical-align: super;
   // 8. PRAI Framework {P, R, A, I} Extraction Logic
   let initialPraiData = {{ doc.prai | tojson if doc.prai is defined and doc.prai else '{}' }};
 
-  function highlightPraiComponents(sentenceText, item) {
+  function highlightPraiComponents(sentenceText, item, praiObj) {
     if (!sentenceText) return '';
-    let html = escapeHtml(sentenceText);
+    
+    const gliner = (praiObj && praiObj.gliner) ? praiObj.gliner : {};
+    const ai = (praiObj && praiObj.ai) ? praiObj.ai : {};
 
-    const components = [
-      { text: item.actor, bg: 'bg-emerald-100/90 text-emerald-800 border border-emerald-300' },
-      { text: item.problem, bg: 'bg-red-100/90 text-red-800 border border-red-300' },
-      { text: item.practice, bg: 'bg-indigo-100/90 text-indigo-800 border border-indigo-300' },
-      { text: item.impact, bg: 'bg-purple-100/90 text-purple-800 border border-purple-300' }
+    function collectCategoryPhrases(key, itemVal) {
+      const set = new Set();
+      if (itemVal && typeof itemVal === 'string' && itemVal.trim()) {
+        itemVal.split(/[|,]/).forEach(p => { if (p.trim()) set.add(p.trim()); });
+      }
+      (gliner[key] || []).forEach(it => {
+        const txt = typeof it === 'object' ? it.text : it;
+        if (txt && txt.trim()) set.add(txt.trim());
+      });
+      (ai[key] || []).forEach(it => {
+        const txt = typeof it === 'object' ? it.text : it;
+        if (txt && txt.trim()) set.add(txt.trim());
+      });
+      return Array.from(set);
+    }
+
+    const catConfigs = [
+      { key: "Problem", bg: 'bg-red-100 text-red-800 border border-red-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.problem : '' },
+      { key: "Practice", bg: 'bg-indigo-100 text-indigo-800 border border-indigo-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.practice : '' },
+      { key: "Actor", bg: 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.actor : '' },
+      { key: "Impact", bg: 'bg-purple-100 text-purple-800 border border-purple-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.impact : '' }
     ];
 
-    components.forEach(comp => {
-      if (comp.text && comp.text.trim()) {
-        const target = comp.text.trim();
-        const escapedTarget = escapeHtml(target);
-        if (escapedTarget && html.toLowerCase().includes(escapedTarget.toLowerCase())) {
-          const reg = new RegExp(`(${escapedTarget.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
-          html = html.replace(reg, `<mark class="px-1.5 py-0.5 rounded font-bold ${comp.bg}">$1</mark>`);
+    const targets = [];
+    catConfigs.forEach(cfg => {
+      const phrases = collectCategoryPhrases(cfg.key, cfg.val);
+      phrases.forEach(phrase => {
+        if (phrase && phrase.trim().length >= 2) {
+          targets.push({ phrase: phrase.trim(), bg: cfg.bg, key: cfg.key });
         }
-      }
+      });
+    });
+
+    // Sort by phrase length descending
+    targets.sort((a, b) => b.phrase.length - a.phrase.length);
+
+    let html = escapeHtml(sentenceText);
+
+    targets.forEach(t => {
+      const p = t.phrase;
+      const escapedP = escapeHtml(p);
+      if (!escapedP) return;
+
+      const escapedRegexStr = escapedP.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const safeRegex = new RegExp(`(?<!<[^>]*)${escapedRegexStr}(?![^<]*>)`, 'gi');
+      html = html.replace(safeRegex, `<mark class="${t.bg}">$&</mark>`);
     });
 
     return html;
@@ -1490,7 +1522,7 @@ vertical-align: super;
       } else {
         sentencesContainer.innerHTML = sentences.map((item, idx) => {
           const stx = item.sentence || '';
-          const highlightedSentence = highlightPraiComponents(stx, item);
+          const highlightedSentence = highlightPraiComponents(stx, item, praiObj);
           const actor = item.actor ? `<span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 rounded text-[11px]">Actor: ${escapeHtml(item.actor)}</span>` : '';
           const problem = item.problem ? `<span class="px-2 py-0.5 bg-red-50 text-red-700 font-semibold border border-red-200 rounded text-[11px]">Problem: ${escapeHtml(item.problem)}</span>` : '';
           const practice = item.practice ? `<span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200 rounded text-[11px]">Practice: ${escapeHtml(item.practice)}</span>` : '';
