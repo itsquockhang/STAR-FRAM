@@ -779,3 +779,117 @@ async def clear_prai(
     except Exception as e:
         logger.error(f"Failed to clear PRAI for doc {doc_id}: {e}")
         return {"success": False, "error": str(e)}
+
+
+@router.post("/spaces/{doc_id}/prai/synthesize-sentences")
+async def synthesize_prai_sentences(
+    doc_id: str,
+    session_id: str | None = Cookie(default=None)
+):
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session = await get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db = get_db()
+    try:
+        doc = await db.spaces_documents.find_one({"_id": ObjectId(doc_id)})
+        if not doc:
+            return {"success": False, "error": "Document not found."}
+
+        text = doc.get("text", "")
+        if not text:
+            return {"success": False, "error": "Document contains no text."}
+
+        relations = doc.get("relations", [])
+        prai_data = doc.get("prai", {})
+
+        import dspy
+        from src.routes.settings import get_dspy_lm, LLMConnectionError
+
+        class SynthesizePRAISentences(dspy.Signature):
+            """
+            Synthesize structured agricultural PRAI narrative sentences based on the document text, extracted PRAI entities {Problem, Practice, Actor, Impact}, and Knowledge Graph triples.
+            
+            Formulate each sentence following the clear agricultural situation pattern:
+            "[Actor A] khi gặp/đối mặt với [Problem P] đã áp dụng/sử dụng [Practice R] để đạt được/mang lại [Impact I]."
+            
+            Example output format (one per line):
+            Actor: Nông dân | Problem: Bệnh rầy nâu | Practice: Phun thuốc sinh học | Impact: Khôi phục sinh trưởng cây trồng | Sentence: Nông dân khi gặp bệnh rầy nâu đã áp dụng phun thuốc sinh học để khôi phục sinh trưởng cây trồng.
+            """
+            text = dspy.InputField(desc="Document text context")
+            prai_entities = dspy.InputField(desc="Extracted PRAI entities (P, R, A, I)")
+            kg_relations = dspy.InputField(desc="Knowledge Graph triples (Subject | Predicate | Object)")
+            sentences = dspy.OutputField(desc="Synthesized PRAI narrative lines connecting A, P, R, I")
+
+        # Format inputs for LLM
+        kg_formatted = "\n".join([f"{r.get('subject')} | {r.get('predicate')} | {r.get('object')}" for r in relations]) if relations else "None"
+        
+        # Combine gliner & ai prai items
+        gliner_prai = prai_data.get("gliner", {})
+        ai_prai = prai_data.get("ai", {})
+        
+        prai_summary = []
+        for k in ["Problem", "Practice", "Actor", "Impact"]:
+            g_items = [i.get("text") if isinstance(i, dict) else i for i in gliner_prai.get(k, [])]
+            a_items = ai_prai.get(k, [])
+            combined = list(dict.fromkeys([x for x in (g_items + a_items) if x]))
+            if combined:
+                prai_summary.append(f"{k}s: {', '.join(combined)}")
+        
+        prai_input_str = "\n".join(prai_summary) if prai_summary else "None"
+
+        lm = await get_dspy_lm()
+        with dspy.context(lm=lm):
+            predictor = dspy.Predict(SynthesizePRAISentences)
+            res = predictor(
+                text=text,
+                prai_entities=prai_input_str,
+                kg_relations=kg_formatted
+            )
+
+        output_text = res.sentences or ""
+        parsed_sentences = []
+        
+        if output_text:
+            import re
+            lines = output_text.split("\n")
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                if "|" in line and "Sentence:" in line:
+                    parts = line.split("|")
+                    item = {"actor": "", "problem": "", "practice": "", "impact": "", "sentence": ""}
+                    for p in parts:
+                        if ":" in p:
+                            k, v = p.split(":", 1)
+                            k = k.strip().lower()
+                            v = v.strip()
+                            if "actor" in k: item["actor"] = v
+                            elif "problem" in k: item["problem"] = v
+                            elif "practice" in k: item["practice"] = v
+                            elif "impact" in k: item["impact"] = v
+                            elif "sentence" in k: item["sentence"] = v
+                    if item["sentence"]:
+                        parsed_sentences.append(item)
+                else:
+                    clean_line = re.sub(r'^\d+[\.\)\-\s]+', '', line).strip()
+                    if clean_line and len(clean_line) > 10:
+                        parsed_sentences.append({"sentence": clean_line})
+
+        await db.spaces_documents.update_one(
+            {"_id": ObjectId(doc_id)},
+            {"$set": {"prai.sentences": parsed_sentences}}
+        )
+
+        logger.info(f"Synthesized {len(parsed_sentences)} PRAI narrative sentences for doc {doc_id}")
+        return {"success": True, "sentences": parsed_sentences}
+    except LLMConnectionError as e:
+        logger.error(f"Failed to synthesize PRAI sentences for doc {doc_id}: LLM connection error: {e}")
+        return {"success": False, "error": f"LLM connection error: {e}"}
+    except Exception as e:
+        logger.error(f"Failed to synthesize PRAI sentences for doc {doc_id}: {e}")
+        return {"success": False, "error": str(e)}
