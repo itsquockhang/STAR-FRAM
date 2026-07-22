@@ -23,6 +23,38 @@ def clean_dspy_output(text: str) -> str:
     text = text.replace('```', '')
     return text.strip()
 
+import difflib
+
+def is_similar_triple(t1: tuple, t2: tuple, threshold: float = 0.75) -> bool:
+    """
+    Check if two triples (s1, p1, o1) and (s2, p2, o2) are semantically similar.
+    Uses difflib SequenceMatcher fuzzy similarity and substring containment checks.
+    """
+    s1, p1, o1 = t1
+    s2, p2, o2 = t2
+
+    def str_sim(a: str, b: str) -> float:
+        if a == b:
+            return 1.0
+        if not a or not b:
+            return 0.0
+        if (len(a) >= 3 and a in b) or (len(b) >= 3 and b in a):
+            return 0.95
+        return difflib.SequenceMatcher(None, a, b).ratio()
+
+    # Predicate check: exact, slug, or similarity
+    p1_slug = p1.replace(" ", "_")
+    p2_slug = p2.replace(" ", "_")
+    pred_match = (p1 == p2) or (p1_slug == p2_slug) or (str_sim(p1, p2) >= 0.7)
+
+    if not pred_match:
+        return False
+
+    sub_sim = str_sim(s1, s2)
+    obj_sim = str_sim(o1, o2)
+
+    return sub_sim >= threshold and obj_sim >= threshold
+
 router = APIRouter()
 
 @router.post("/spaces/save")
@@ -572,13 +604,13 @@ async def suggest_relations(
             )
 
         existing_relations = doc.get("relations", [])
-        existing_set = set()
+        existing_triples = []
         for r in existing_relations:
             s_c = (r.get("subject") or "").lower().strip()
             p_c = (r.get("predicate") or "").lower().strip()
             o_c = (r.get("object") or "").lower().strip()
             if s_c and p_c and o_c:
-                existing_set.add((s_c, p_c, o_c))
+                existing_triples.append((s_c, p_c, o_c))
 
         registered_set = set()
         for p in predicates:
@@ -610,10 +642,11 @@ async def suggest_relations(
                     sub_clean = sub.lower().strip()
                     pred_clean = pred.lower().strip()
                     obj_clean = obj.lower().strip()
+                    target_t = (sub_clean, pred_clean, obj_clean)
 
                     pred_slug = pred_clean.replace(" ", "_")
                     in_settings = (pred_clean in registered_set) or (pred_slug in registered_set)
-                    already_exists = (sub_clean, pred_clean, obj_clean) in existing_set
+                    already_exists = any(is_similar_triple(target_t, ex_t, threshold=0.75) for ex_t in existing_triples)
 
                     # Prevent duplicate suggestions in output
                     if not any(s["subject"] == sub and s["predicate"] == pred and s["object"] == obj for s in suggestions):
