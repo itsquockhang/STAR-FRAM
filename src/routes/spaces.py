@@ -413,6 +413,14 @@ async def auto_extract_relations(
             relations_map[pred["name"]] = desc
         schema.relations(relations_map)
 
+        import json
+        schema_dict = {
+            "entities": labels,
+            "relations": relations_map,
+            "schema_internal": schema.to_dict() if hasattr(schema, "to_dict") else (schema.__dict__ if hasattr(schema, "__dict__") else str(schema))
+        }
+        logger.info(f"[GLiNER2 Auto-Extract Debug] Schema Input JSON:\n{json.dumps(schema_dict, indent=2, ensure_ascii=False)}")
+
         # Extract
         results = model.extract(text, schema)
         relation_extraction = results.get("relation_extraction", {})
