@@ -1414,10 +1414,10 @@ vertical-align: super;
     }
 
     const catConfigs = [
-      { key: "Problem", bg: 'bg-red-100 text-red-800 border border-red-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.problem : '' },
-      { key: "Practice", bg: 'bg-indigo-100 text-indigo-800 border border-indigo-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.practice : '' },
-      { key: "Actor", bg: 'bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.actor : '' },
-      { key: "Impact", bg: 'bg-purple-100 text-purple-800 border border-purple-300 font-bold px-1.5 py-0.5 rounded shadow-2xs', val: item ? item.impact : '' }
+      { key: "Problem", bg: 'inline-block my-1 px-2 py-0.5 rounded-md font-bold bg-red-100 text-red-800 border border-red-300 shadow-2xs', val: item ? item.problem : '' },
+      { key: "Practice", bg: 'inline-block my-1 px-2 py-0.5 rounded-md font-bold bg-indigo-100 text-indigo-800 border border-indigo-300 shadow-2xs', val: item ? item.practice : '' },
+      { key: "Actor", bg: 'inline-block my-1 px-2 py-0.5 rounded-md font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs', val: item ? item.actor : '' },
+      { key: "Impact", bg: 'inline-block my-1 px-2 py-0.5 rounded-md font-bold bg-purple-100 text-purple-800 border border-purple-300 shadow-2xs', val: item ? item.impact : '' }
     ];
 
     const targets = [];
@@ -1559,7 +1559,7 @@ vertical-align: super;
             <div class="bg-white border border-[#eceae4] rounded-xl p-4 shadow-2xs hover:border-emerald-300 transition-all space-y-2.5">
               <div class="flex items-start gap-2">
                 <span class="w-5 h-5 flex items-center justify-center font-bold text-[10px] bg-emerald-100 text-emerald-800 rounded-full shrink-0 mt-0.5">${idx + 1}</span>
-                <p class="text-xs font-medium text-[#1c1c1c] leading-loose">${highlightedSentence}</p>
+                <p class="text-xs font-medium text-[#1c1c1c] leading-[2.5]">${highlightedSentence}</p>
               </div>
               ${(actor || problem || practice || impact) ? `
                 <div class="flex flex-wrap items-center gap-1.5 pt-1.5 pl-7 border-t border-[#eceae4]/50">
