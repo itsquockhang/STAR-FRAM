@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+*.egg-info/
 
 # Data (Docker bind mounts)
 data/
@@ -15,3 +16,6 @@ data/
 .vscode/
 *.swp
 *.swo
+
+# Temporary files
+tmp/
